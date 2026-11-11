@@ -1,16 +1,17 @@
 import { workspaceTaskDefaults } from '../taskFilters';
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import {
   DndContext, DragEndEvent, PointerSensor, useSensor, useSensors, useDraggable, useDroppable,
 } from '@dnd-kit/core';
 import { Crosshair, Zap } from 'lucide-react';
-import { cn, Badge } from '@cortex/ui';
+import { cn, Badge } from '@nexus/ui';
 import {
   QuadrantKey, QUADRANTS, Task, matrixTasks, quadrantOf, subtreeProgress, buildChildrenMap, quadrantToPriority,
-} from '@cortex/core';
-import { useCortex } from '@cortex/crdt';
+} from '@nexus/core';
+import { useNexus } from '@nexus/crdt';
 import { useTaskViewData } from '../useTaskViewData';
+import { useTaskDomFocus } from '../useTaskDomFocus';
 import { useTaskWindow } from '../TaskWindowControls';
 import { windowDueAt } from '../taskWindow';
 import { useUI } from '@/state/ui';
@@ -29,12 +30,14 @@ export function MatrixView() {
   const { range } = useTaskWindow();
   const [params] = useSearchParams();
   const projectId = params.get('project');
-  const store = useCortex();
+  const store = useNexus();
   const ui = useUI();
   const [now] = useState(() => new Date());
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
-  const tasks = useMemo(() => matrixTasks(data.tasks, now, data.settings.completedDisplay !== 'hidden'), [data.tasks, now, data.settings.completedDisplay]);
+  const tasks = useMemo(() => matrixTasks(data.tasks, now, true).filter(task => data.settings.completedDisplay !== 'hidden' || task.status !== 'done' || task.id === data.focusedTaskId), [data.tasks, now, data.settings.completedDisplay, data.focusedTaskId]);
+  const region = useRef<HTMLDivElement>(null);
+  useTaskDomFocus(region, 'data-matrix-task', tasks);
   const childrenMap = useMemo(() => buildChildrenMap(data.tasks), [data.tasks]);
   // 任意层级的任务都进矩阵(子任务设了重要/紧急同样该被看见),按到期先后排序
   const byQ = useMemo(() => {
@@ -58,7 +61,7 @@ export function MatrixView() {
   };
 
   return (
-    <div className="h-full overflow-y-auto p-4 pb-24 md:p-6">
+    <div ref={region} className="h-full overflow-y-auto p-4 pb-24 md:p-6">
       <DndContext sensors={sensors} onDragEnd={onDragEnd}>
         {/* 轴标 */}
         <div className="mb-2 flex items-center justify-between px-1 text-[10px] uppercase tracking-widest text-muted/70">
@@ -67,7 +70,7 @@ export function MatrixView() {
         </div>
         <div className="grid grid-cols-1 gap-2 md:grid-cols-2 md:gap-3" style={{ maxWidth: 1200 }}>
           {QUADRANTS.map((q) => (
-            <QuadrantCell key={q.key} quadrant={q} tasks={byQ[q.key]} childrenMap={childrenMap} onNew={() => {
+            <QuadrantCell key={q.key} quadrant={q} tasks={byQ[q.key]} focusedId={data.focusedTaskId} childrenMap={childrenMap} onNew={() => {
               const siblings = tasks.filter((t) => t.parentId === projectId);
               const created = store.createTask({ title: '', ...workspaceTaskDefaults(new URLSearchParams(window.location.search), undefined, windowDueAt(range)), priority: quadrantToPriority(q.key), parentId: projectId, important: q.important, urgent: q.urgent, order: Math.max(-1000, ...siblings.map((task) => task.order)) + 1000 });
               ui.selectTask(created.id);
@@ -86,15 +89,20 @@ function QuadrantCell({
   quadrant,
   tasks,
   childrenMap,
+  focusedId,
   onNew,
 }: {
   quadrant: (typeof QUADRANTS)[number];
   tasks: Task[];
   childrenMap: Map<string | null, Task[]>;
+  focusedId: string | null;
   onNew: () => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: `q-${quadrant.key}` });
   const style = QUADRANT_STYLE[quadrant.key];
+  const visible = tasks.slice(0, 24);
+  const focused = tasks.find(task => task.id === focusedId);
+  if (focused && !visible.includes(focused)) visible.push(focused);
   return (
     <div
       ref={setNodeRef}
@@ -116,11 +124,11 @@ function QuadrantCell({
         <Badge>{tasks.length}</Badge>
       </div>
       <div className="flex flex-col gap-1">
-        {tasks.slice(0, 24).map((t) => (
-          <MatrixChip key={t.id} task={t} progress={subtreeProgress(t.id, childrenMap)} />
+        {visible.map((t) => (
+          <MatrixChip key={t.id} task={t} focused={t.id === focusedId} progress={subtreeProgress(t.id, childrenMap)} />
         ))}
-        {tasks.length > 24 && (
-          <div className="px-1 text-[10px] text-muted/60">+{tasks.length - 24} 条更多</div>
+        {tasks.length > visible.length && (
+          <div className="px-1 text-[10px] text-muted/60">+{tasks.length - visible.length} 条更多</div>
         )}
         {tasks.length === 0 && (
           <div className="flex flex-1 items-center justify-center py-8 text-xs text-muted/40">拖任务进来 / 双击新建</div>
@@ -130,15 +138,18 @@ function QuadrantCell({
   );
 }
 
-function MatrixChip({ task, progress }: { task: Task; progress: { done: number; total: number } }) {
+function MatrixChip({ task, progress, focused }: { task: Task; progress: { done: number; total: number }; focused: boolean }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: task.id });
   const ui = useUI();
-  const store = useCortex();
+  const store = useNexus();
   return (
     <div
       ref={setNodeRef}
       {...attributes}
       {...listeners}
+      data-task-detail-trigger
+      data-matrix-task={task.id}
+      data-focused={focused || undefined}
       onClick={() => !isDragging && ui.selectTask(task.id)}
       onContextMenu={(e) => {
         e.preventDefault();
@@ -148,6 +159,7 @@ function MatrixChip({ task, progress }: { task: Task; progress: { done: number; 
         'group flex cursor-grab touch-none items-center gap-2 rounded-xl glass px-2.5 py-2 text-sm transition-all active:cursor-grabbing active:scale-[0.98]',
         isDragging && 'opacity-40',
         task.status === 'done' && 'opacity-50',
+        focused && 'ring-2 ring-[var(--accent-solid)]',
       )}
     >
       <PriorityDot task={task} />

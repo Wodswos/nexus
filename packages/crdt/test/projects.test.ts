@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import * as Y from 'yjs';
-import { isProject } from '@cortex/core';
-import { CortexStore, DOC_IDS } from '../src/store';
+import { isProject } from '@nexus/core';
+import { NexusStore, DOC_IDS } from '../src/store';
 
 describe('project identity through edits, sync, undo and export', () => {
   it('deletes and restores a project subtree atomically, including repeated deletion after undo', () => {
-    const store = new CortexStore('u');
+    const store = new NexusStore('u');
     const project = store.createProject('Project');
     const child = store.createTask({ title: 'child', parentId: project.id, status: 'todo' });
     const grandchild = store.createTask({ title: 'grandchild', parentId: child.id, status: 'todo' });
@@ -27,7 +27,7 @@ describe('project identity through edits, sync, undo and export', () => {
     store.destroy();
   });
   it('creates a project root in sibling order and protects it from drag or type changes', () => {
-    const store = new CortexStore('u');
+    const store = new NexusStore('u');
     store.createTask({ title: 'existing', order: 30, status: 'todo' });
     const project = store.createProject('  Project A  ');
     const other = store.createProject('Project B');
@@ -40,7 +40,7 @@ describe('project identity through edits, sync, undo and export', () => {
     store.destroy();
   });
   it('keeps an internal group ordinary when outdented and preserves a legacy project on its first edit', () => {
-    const store = new CortexStore('u');
+    const store = new NexusStore('u');
     store.importJSON({ tasks: [
       { id: 'legacy', title: 'old project', kind: 'node', parentId: null, status: 'todo' },
       { id: 'group', title: 'inner group', kind: 'node', parentId: 'legacy', status: 'todo' },
@@ -54,24 +54,24 @@ describe('project identity through edits, sync, undo and export', () => {
     store.destroy();
   });
   it('retains the project ID, children and root invariant across remote legacy writes and backup restore', () => {
-    const a = new CortexStore('u');
+    const a = new NexusStore('u');
     const project = a.createProject('Project');
     const child = a.createTask({ title: 'work', status: 'todo', parentId: project.id });
-    const b = new CortexStore('u');
+    const b = new NexusStore('u');
     for (const id of DOC_IDS) Y.applyUpdate(b.docs[id], Y.encodeStateAsUpdate(a.docs[id]), 'remote');
     // Simulate an older client which does not know the project root invariant.
     const raw = b.docs.tasks.getMap<Y.Map<unknown>>('items').get(project.id)!;
     raw.set('parentId', child.id);
     Y.applyUpdate(a.docs.tasks, Y.encodeStateAsUpdate(b.docs.tasks), 'remote');
     expect(a.getData().tasks.find((task) => task.id === project.id)?.parentId).toBeNull();
-    const restored = new CortexStore('u');
+    const restored = new NexusStore('u');
     restored.importJSON(a.exportSnapshot());
     expect(restored.getData().tasks).toEqual(a.getData().tasks);
     expect(restored.getData().tasks.find((task) => task.id === child.id)?.parentId).toBe(project.id);
     a.destroy(); b.destroy(); restored.destroy();
   });
   it('archives and restores a project with undo without changing its child tasks', () => {
-    const store = new CortexStore('u');
+    const store = new NexusStore('u');
     const project = store.createProject('Project');
     const child = store.createTask({ title: 'work', status: 'todo', parentId: project.id });
     store.stopUndoCapture();

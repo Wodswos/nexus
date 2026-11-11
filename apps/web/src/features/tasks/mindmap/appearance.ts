@@ -1,4 +1,4 @@
-import { type MindColor, type MindFont, type Task } from '@cortex/core';
+import { type MindColor, type MindFont, type Task } from '@nexus/core';
 import type { CSSProperties } from 'react';
 
 export const DEFAULT_MIND_FONT: MindFont = 'lxgw-wenkai';

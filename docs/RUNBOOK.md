@@ -1,11 +1,28 @@
 # 部署与构建手册
 
+## 项目更名与兼容性
+
+产品与开发包已由 Cortex 更名为 Nexus,工作区包名使用 `@nexus/*`。
+已有部署继续通过 `docker compose --env-file .env.local` 管理 `cortex` 服务与容器,
+当前目录名可以保留。现有 `PUBLIC_ORIGIN`、`COOKIE_SECURE` 和 `data/` 挂载保持不变。
+
+为延续现有账号、离线数据和集成,以下标识保留旧名称,无需手动迁移或清空数据:
+
+- SQLite 文件 `data/cortex.db`、会话 Cookie `cortex_session`、浏览器 IndexedDB 与本地偏好键。
+- 备份格式 `cortex.export` / `cortex.server-export`、API 账号校验头 `X-Cortex-User` 与 `ctx_` Token。
+- macOS/iOS Bundle Identifier `app.cortex.desktop` / `app.cortex.ios`、原生会话存储及通知标识。
+- 日历事件 UID 的 `@cortex` 后缀,防止重新导入时产生重复事件。
+
+原生构建推荐使用 `NEXUS_DESKTOP_API_ORIGIN`、`VITE_NEXUS_API_ORIGIN` 和
+`NEXUS_MOBILE_URL`;仍接受对应的旧 `CORTEX_*` / `VITE_CORTEX_API_ORIGIN` 配置。
+新名称配置优先,未提供时回退到旧配置。
+
 ## 服务与公网
 
 Node.js ≥22.13;推荐 Docker Compose。单进程提供静态 Web、HTTP API 和两条 WebSocket 通道。
 
 ```bash
-PUBLIC_ORIGIN=https://cortex.example.com docker compose up -d --build
+PUBLIC_ORIGIN=https://nexus.example.com docker compose up -d --build
 curl http://127.0.0.1:30090/healthz
 ```
 
@@ -32,7 +49,7 @@ data/ssh/<账号 UUID>/id_ed25519
 # 或 id_rsa;同目录 known_hosts 保存该账号信任的主机
 ```
 
-不再挂载宿主机 `~/.ssh`,禁用全局 SSH 配置、默认密钥和 agent。目标格式为 `user@host[:port]`,IPv6 写作 `user@[::1]:22`。两个 Cortex 账号若使用同一远端 UNIX 账号和凭据,远端权限仍相同;需要远端会话隔离时应配置不同的 UNIX 账号/凭据。Cortex 无法隔离远端机器本身授予的权限。
+不再挂载宿主机 `~/.ssh`,禁用全局 SSH 配置、默认密钥和 agent。目标格式为 `user@host[:port]`,IPv6 写作 `user@[::1]:22`。两个 Nexus 账号若使用同一远端 UNIX 账号和凭据,远端权限仍相同;需要远端会话隔离时应配置不同的 UNIX 账号/凭据。Nexus 无法隔离远端机器本身授予的权限。
 
 旧客户端档案在账户首次在线时迁入 vault 并移除同步中的明文密码。旧快照、历史客户端及旧备份可能仍包含明文凭据,应更换曾保存的密码并按敏感文件保管旧备份。被删的服务端档案不会由现代客户端自动重建;历史链接可在设置中重新配置。
 
@@ -49,7 +66,7 @@ data/ssh/<账号 UUID>/id_ed25519
 ```bash
 docker compose stop
 # 将 data/ 整体备份至受控位置,保留文件权限
-tar czf cortex-data.tgz data/
+tar czf nexus-data.tgz data/
 docker compose start
 ```
 
@@ -67,7 +84,7 @@ corepack pnpm dev
 corepack pnpm typecheck
 corepack pnpm test
 corepack pnpm build
-corepack pnpm --filter @cortex/e2e exec playwright install chromium webkit
+corepack pnpm --filter @nexus/e2e exec playwright install chromium webkit
 corepack pnpm e2e
 ```
 
@@ -80,7 +97,7 @@ corepack pnpm e2e
 在装有 Xcode Command Line Tools、Rust 与 Tauri 依赖的 Mac 上:
 
 ```bash
-corepack pnpm --filter @cortex/desktop dev
+corepack pnpm --filter @nexus/desktop dev
 corepack pnpm build:desktop
 ```
 
@@ -89,7 +106,7 @@ corepack pnpm build:desktop
 桌面包默认连接 `http://115.190.3.4:30090`，可以在构建时指定其他服务器来源。
 
 ```bash
-CORTEX_DESKTOP_API_ORIGIN=https://cortex.example.com corepack pnpm build:desktop
+NEXUS_DESKTOP_API_ORIGIN=https://nexus.example.com corepack pnpm build:desktop
 ```
 
 桌面包通过原生 HTTP 发送账号请求，并将会话 Cookie 保存在 WebKit 的原生存储中。同步和终端 WebSocket 使用同一个服务器地址。服务端为 `tauri://localhost` 来源的 WebSocket 校验一次性会话票据。开发模式通过 Vite 代理连接本机服务。
@@ -97,14 +114,14 @@ CORTEX_DESKTOP_API_ORIGIN=https://cortex.example.com corepack pnpm build:desktop
 ## iPhone Capacitor 壳
 
 默认打包本地 Web 和本地数据库,使用 `apps/web/.env.mobile` 中的
-`VITE_CORTEX_API_ORIGIN` 连接账号服务器。目前对应现有部署
+`VITE_NEXUS_API_ORIGIN` 连接账号服务器。目前对应现有部署
 `http://115.190.3.4:30090`。Web 构建仍保持同源请求,不会使用移动端专用地址。
 
 ```bash
-corepack pnpm --filter @cortex/mobile sync
+corepack pnpm --filter @nexus/mobile sync
 # 更换原生 App 后端时,构建与 iOS 配置使用同一个环境变量:
-VITE_CORTEX_API_ORIGIN=https://cortex.example.com corepack pnpm --filter @cortex/mobile sync
-corepack pnpm --filter @cortex/mobile open:ios
+VITE_NEXUS_API_ORIGIN=https://nexus.example.com corepack pnpm --filter @nexus/mobile sync
+corepack pnpm --filter @nexus/mobile open:ios
 ```
 
 原生 HTTP 通过 CapacitorHttp 使用系统 Cookie 存储,不把会话令牌写入
@@ -129,12 +146,12 @@ Team、Bundle Identifier 和其他 Info.plist 配置。原生工程本身被 git
 移动任务页使用两行紧凑工具栏：标题、五视图图标与更多在第一行，时间范围与日期摘要在第二行。
 隐藏已完成、模板、保存快捷视图及收集箱移入更多菜单；移动导航不单列收集箱。
 底栏内容高度由 56px 收至 48px，系统底部安全区完整保留。日期摘要点击后在二级弹窗编辑，应用才修改区间。
-总体结构、尺寸、手势、详情、习惯与原生通知的完整设计见 [移动端 UI 设计](MOBILE_UI_DESIGN.md)。
+全应用交互约定见 [交互设计](ui-design/INTERACTION_DESIGN.md)。总体结构、尺寸、手势、详情、习惯与原生通知的完整设计见 [移动端 UI 设计](ui-design/MOBILE_UI_DESIGN.md)。
 
 需要加载整个远程网页而非本地资源时,可选择已有的 HTTPS 远程模式:
 
 ```bash
-CORTEX_MOBILE_URL=https://cortex.example.com corepack pnpm --filter @cortex/mobile sync
+NEXUS_MOBILE_URL=https://nexus.example.com corepack pnpm --filter @nexus/mobile sync
 # 首次需要生成平台工程:
 cd apps/mobile
 corepack pnpm exec cap add ios
@@ -196,6 +213,14 @@ Ctrl/⌘ + Enter 查看任务详情。Tab 添加子任务，Enter 添加同级�
 
 ## 工作区与时间区间
 
+任务详情顶部标明「跳转到」，提供「列表／导图／四象限／甘特图／日历」定位入口；离开前先提交当前标题与备注草稿。
+定位链接使用 `focusTask`，进入所属项目或独立任务分支，展开祖先、选中目标并调整画布／滚动位置。
+日历定位到截止／开始日期或关联日程所在日；无日期时进入未排期区域。明确定位可临时显示目标已完成任务，
+不改写「隐藏已完成」偏好；重新选筛选条件或日期范围会清除定位。链接不修改任务排期或层级。
+导图默认单击打开统一详情，右上角「任务交互设置」可关闭，偏好随账号同步；悬浮详情按钮与「⌘／Ctrl + Enter」保留，双击编辑标题。右键「跳转到视图」可进入所属项目五视图、当前任务或有效快捷视图。
+详情已打开时，点选其他导图节点或日历任务会复用面板并切换内容；旧任务保存完成后的关闭操作
+不会关闭新选中的详情。移动端打开详情不自动聚焦输入框，保留原有的下拉关闭手势。
+
 侧栏将「今天／本周」合并为「当前任务」，默认打开本周甘特图；工作区内选择今天、
 本周、本月或自定义起止日期。当前任务的列表、导图、四象限、甘特图和日历均隐藏未排期任务，
 包括「全部时间」；仅保留已排期任务所需的项目／祖先上下文。当前任务不再提供「未排期」选项或甘特图未排期栏，
@@ -247,6 +272,34 @@ Ctrl/⌘ + Enter 查看任务详情。Tab 添加子任务，Enter 添加同级�
 任务菜单「清除日期」同时清除开始与截止日期，支持批量操作、一次撤销和本地持久化；
 不改动子任务或关联日程。详情中单独日期字段的清除按钮只清除对应字段。
 
+## 任务工作区
+
+任务详情正文按「日期与优先级 → 工作区 → 描述 → 子任务」排列；列表、导图、甘特、四象限和日历共用同一详情面板。
+开始／截止日期使用月历面板，支持今天、明天、下周、手动日期和时间。点击「应用时间」才保存，取消或 Esc 放弃草稿；
+开始日期确认后，原先未设置的截止日期会自动打开，取消截止编辑保留已确认的开始日期。日期月历遵循账号的周起始日。
+
+优先级、项目时间范围、更多筛选与快捷视图设置共用选项面板，显示当前选择与优先级颜色，
+支持键盘方向键、Home／End、Enter 和 Esc。关闭子面板返回原控件，不同时关闭任务详情。
+桌面日期区间可点击日历按钮选择或直接输入；手机自定义区间显示月历、区间高亮和天数预览，点击「应用日期」才更新范围。
+
+任务详情中的「工作区」集中保存这项任务使用的 tmux、网页、GitHub PR、dsh、Agent 和笔记链接。
+点击「添加」选择资源类型；未使用的类型不占据表单。每类可关联多项，同一资源可以分别关联不同任务，
+同一任务内重复添加相同资源会沿用已有记录。普通 GitHub PR 网址会自动识别，也可显式添加 Enterprise PR。
+
+资源可以命名、重命名、置顶，以及通过菜单上移／下移；排序在置顶和普通资源组内分别生效。
+任务顶部提供工作区定位按钮及前三个置顶资源的快捷入口。名称、排序、置顶和目标随账号同步，
+包含在 JSON 和 Yjs 备份中；沿用原有 links 文档和关联 ID，旧 tmux、Agent、Obsidian、语雀及网页记录直接显示。
+
+网页和 PR 在新标签页打开；本阶段不枚举或定位已有浏览器标签页，不查询 PR 的实时状态。
+dsh 支持 HTTP(S) 会话网址和 `dsh://` 应用链接；后者要求当前设备已安装并注册相应工具。
+Agent 支持 HTTP(S) 和 `agent://`，笔记支持 HTTP(S) 和 `obsidian://`。链接不保存外部工具登录态，
+工作区只引用 SSH 连接档案，继续使用服务端现有的账号独立凭据。
+
+tmux 支持关联已有会话、创建并关联，以及打开现有终端弹窗；手机打开终端时暂时收起详情，关闭终端后返回同一任务。
+解除关联、完成任务和软删除任务均不会结束远端会话；
+「结束远程会话」需要单独确认，并保留资源关联以供之后重新连接或解除。连接失败与暂无会话分别显示，
+不会自动移除资源。连接状态保留在当前设备，不作为工作区配置同步。
+
 ## 习惯与提醒
 
 右上角可切换「按提醒时间／手动排序」，默认按配置时间从早到晚排列，未设置时间的排在最后，
@@ -276,7 +329,7 @@ Ctrl/⌘ + Enter 查看任务详情。Tab 添加子任务，Enter 添加同级�
 
 iPhone 原生 App 使用 Capacitor LocalNotifications。可在「设置 → 通知 → 开启手机通知」或习惯编辑表单中主动授权；
 启动应用只查询权限，不自动弹授权框。授权后同时支持应用内提示、系统横幅及锁屏／后台本地通知，
-点击系统通知跳转到当前账号对应的习惯并展开记录。被系统拒绝时，需到 iPhone「设置 → 通知 → Cortex」重新开启。
+点击系统通知跳转到当前账号对应的习惯并展开记录。被系统拒绝时，需到 iPhone「设置 → 通知 → Nexus」重新开启。
 系统专注模式、静音和通知样式仍由用户的 iOS 设置决定。
 
 应用按设备本地日期为未来 14 天生成单次提醒，并保留最早的最多 60 条待发送习惯通知，
@@ -306,6 +359,8 @@ HTTP 公网网页仍只保证应用内提醒；安全上下文且浏览器支持
 
 Agent REST API 覆盖任务、项目、习惯打卡与复盘；在设置的「Agent API」中创建或撤销
 账号专用的只读／读写 Token。Swagger 为 `/api/docs`，OpenAPI JSON 为 `/api/openapi.json`，
+公开的 Agent 指南为 `/api/guide.md`，同内容的 Skill 下载地址为 `/api/skill.md`。
+构建会把 `docs/skills/nexus-api/SKILL.md` 复制到服务端 `dist/docs/agent-guide.md` 并装入镜像；本地开发直接读取源文档，缺少文档时返回 503。
 具体调用、幂等重试、ETag 和复盘时区规则见 [API.md](API.md)。Token 摘要和 24 小时幂等记录
 保存在 SQLite；部署／恢复仍需完整备份 data。业务 JSON 备份不包含 Token。
 

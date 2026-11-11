@@ -11,7 +11,7 @@ const pkgs = (name: string) => path.resolve(root, '../../packages', name);
 
 export default defineConfig({
   plugins: [react(), tailwindcss(), {
-    name: 'cortex-offline-shell',
+    name: 'nexus-offline-shell',
     apply: 'build',
     // CSS-only lazy chunks are removed by Vite. Cache the final emitted assets.
     generateBundle: { order: 'post', handler(_options, bundle) {
@@ -25,11 +25,11 @@ export default defineConfig({
   }],
   resolve: {
     alias: {
-      '@cortex/core': pkgs('core/src/index.ts'),
-      '@cortex/crdt': pkgs('crdt/src/index.ts'),
-      '@cortex/ui/theme.css': pkgs('ui/src/theme.css'),
-      '@cortex/ui': pkgs('ui/src/index.ts'),
-      '@cortex/platform': pkgs('platform/src/index.ts'),
+      '@nexus/core': pkgs('core/src/index.ts'),
+      '@nexus/crdt': pkgs('crdt/src/index.ts'),
+      '@nexus/ui/theme.css': pkgs('ui/src/theme.css'),
+      '@nexus/ui': pkgs('ui/src/index.ts'),
+      '@nexus/platform': pkgs('platform/src/index.ts'),
       '@': path.resolve(root, 'src'),
     },
   },

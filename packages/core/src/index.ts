@@ -19,3 +19,5 @@ export * from './reviews';
 export * from './mindAppearance';
 export * from './trash';
 export * from './savedViews';
+export * from './workspace';
+export * from './taskBatch';

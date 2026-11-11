@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react';
 import { Panel, useReactFlow, useStore } from '@xyflow/react';
 import { Crosshair, Maximize2, Minus, Plus, SlidersHorizontal, X } from 'lucide-react';
-import type { Settings } from '@cortex/core';
-import { cn } from '@cortex/ui';
+import type { Settings } from '@nexus/core';
+import { cn } from '@nexus/ui';
 import { DEFAULT_PAN_SPEED, MIN_PAN_SPEED, MAX_PAN_SPEED } from './panSpeed';
 
 type EdgeStyle = Settings['mindEdgeStyle'];

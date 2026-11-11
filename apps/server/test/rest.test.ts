@@ -22,7 +22,7 @@ async function start() {
   child.stderr!.on('data', bytes => { diagnostic += bytes; });
   await new Promise<void>((resolve, reject) => {
     const timeout = setTimeout(() => reject(new Error(diagnostic)), 10000);
-    child.stdout!.on('data', bytes => { const match = /Cortex server on :(\d+)/.exec(String(bytes)); if (match) { base = `http://127.0.0.1:${match[1]}`; clearTimeout(timeout); resolve(); } });
+    child.stdout!.on('data', bytes => { const match = /Nexus server on :(\d+)/.exec(String(bytes)); if (match) { base = `http://127.0.0.1:${match[1]}`; clearTimeout(timeout); resolve(); } });
     child.once('exit', () => { clearTimeout(timeout); reject(new Error(diagnostic)); });
   });
 }
@@ -159,6 +159,28 @@ it('publishes self-contained Swagger/OpenAPI with resolvable schemas and correct
   const html = await request('/api/docs', 'GET', undefined, '').then(response => response.text());
   expect(html).toContain('/api/docs/swagger-ui-bundle.js'); expect(html).toContain('persistAuthorization:false'); expect(html).not.toContain('unpkg');
   expect((await request('/api/v1/not-a-resource')).status).toBe(404);
+});
+it('publishes the canonical Agent guide anonymously and keeps documentation links discoverable', async () => {
+  const source = readFileSync(new URL('../../../docs/skills/nexus-api/SKILL.md', import.meta.url), 'utf8');
+  for (const path of ['/api/guide.md', '/api/skill.md']) {
+    const response = await request(path, 'GET', undefined, '');
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toBe(path === '/api/guide.md' ? 'text/plain; charset=utf-8' : 'text/markdown; charset=utf-8');
+    expect(response.headers.get('content-disposition')).toBe(path === '/api/skill.md' ? 'attachment; filename="SKILL.md"' : null);
+    expect(response.headers.get('x-content-type-options')).toBe('nosniff');
+    expect(response.headers.get('cache-control')).toBe('no-store');
+    const document = await response.text();
+    expect(document).toBe(source);
+    expect(document).not.toContain(token);
+    expect(document).not.toContain(cookie);
+  }
+  const html = await request('/api/docs', 'GET', undefined, '').then(response => response.text());
+  expect(html).toContain('href="/api/guide.md"');
+  expect(html).toContain('href="/api/skill.md"');
+  const spec = await request('/api/openapi.json', 'GET', undefined, '').then(response => response.json()) as any;
+  expect(spec.info.description).toContain('/api/guide.md');
+  expect((await request('/api/guide.md/credentials.key', 'GET', undefined, '')).status).toBe(404);
+  expect((await request('/api/v1/tasks', 'GET', undefined, '')).status).toBe(401);
 });
 it('persists API writes and idempotency before responding, across immediate server restart', async () => {
   const key = { 'Idempotency-Key': 'survive-restart' };

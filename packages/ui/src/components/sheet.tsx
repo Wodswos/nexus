@@ -13,6 +13,7 @@ import { cn } from '../utils';
 export const Sheet = DialogPrimitive.Root;
 export const SheetTrigger = DialogPrimitive.Trigger;
 export const SheetClose = DialogPrimitive.Close;
+export const SheetTitle = DialogPrimitive.Title;
 
 export const SheetContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
@@ -21,46 +22,71 @@ export const SheetContent = React.forwardRef<
     title?: string;
     /** 是否渲染深色遮罩(float 默认不渲染) */
     overlay?: boolean;
+    /** Caller supplies the title, scroll region and visual frame. */
+    bare?: boolean;
   }
->(({ className, children, side = 'right', title, overlay = side === 'bottom', ...props }, ref) => (
-  <DialogPrimitive.Portal>
-    {overlay && <DialogPrimitive.Overlay className="fixed inset-0 z-40 bg-black/55 backdrop-blur-[2px] " />}
-    <DialogPrimitive.Content
-      ref={ref}
-      className={cn(
-        'fixed z-50 bg-[var(--background)] border-[var(--border)] outline-none',
-        side === 'right' && 'inset-y-0 right-0 w-full max-w-[380px] border-l ',
-        side === 'left' && 'inset-y-0 left-0 w-full max-w-[320px] border-r ',
-        side === 'bottom' &&
-          'inset-x-0 bottom-0 max-h-[92vh] rounded-t-2xl border-t pb-[env(safe-area-inset-bottom)] ',
-        side === 'float' && 'right-4 top-16 w-[min(420px,92vw)] rounded-2xl border ',
-        className,
+>(
+  (
+    {
+      className,
+      children,
+      side = 'right',
+      title,
+      overlay = side === 'bottom',
+      bare = false,
+      ...props
+    },
+    ref,
+  ) => (
+    <DialogPrimitive.Portal>
+      {overlay && (
+        <DialogPrimitive.Overlay className="fixed inset-0 z-40 bg-black/55 backdrop-blur-[2px] " />
       )}
-      {...props}
-    >
-      {side === 'bottom' && <div className="mx-auto mt-2 h-1 w-10 rounded-full bg-[var(--border-strong)]" />}
-      <div className="flex items-center justify-between px-4 pt-4 pb-2">
-        <DialogPrimitive.Title className="text-sm font-semibold text-muted">
-          {title ?? ''}
-        </DialogPrimitive.Title>
-        <DialogPrimitive.Close className="rounded-md p-1 text-muted transition-colors hover:text-foreground">
-          <X className="h-4 w-4" />
-        </DialogPrimitive.Close>
-      </div>
-      <div
-        data-sheet-scroll
+      <DialogPrimitive.Content
+        ref={ref}
         className={cn(
-          'overflow-y-auto px-4 pb-6',
-          side === 'right' || side === 'left'
-            ? 'absolute inset-x-0 top-12 bottom-0'
-            : side === 'float'
-              ? 'max-h-[calc(100dvh-8rem)]'
-              : 'max-h-[80vh]',
+          'fixed z-50 bg-[var(--background)] border-[var(--border)] outline-none',
+          side === 'right' && 'inset-y-0 right-0 w-full max-w-[380px] border-l ',
+          side === 'left' && 'inset-y-0 left-0 w-full max-w-[320px] border-r ',
+          side === 'bottom' &&
+            'inset-x-0 bottom-0 max-h-[92vh] rounded-t-2xl border-t pb-[env(safe-area-inset-bottom)] ',
+          side === 'float' && 'right-4 top-16 w-[min(420px,92vw)] rounded-2xl border ',
+          className,
         )}
+        {...props}
       >
-        {children}
-      </div>
-    </DialogPrimitive.Content>
-  </DialogPrimitive.Portal>
-));
+        {bare ? (
+          children
+        ) : (
+          <>
+            {side === 'bottom' && (
+              <div className="mx-auto mt-2 h-1 w-10 rounded-full bg-[var(--border-strong)]" />
+            )}
+            <div className="flex items-center justify-between px-4 pt-4 pb-2">
+              <DialogPrimitive.Title className="text-sm font-semibold text-muted">
+                {title ?? ''}
+              </DialogPrimitive.Title>
+              <DialogPrimitive.Close className="rounded-md p-1 text-muted transition-colors hover:text-foreground">
+                <X className="h-4 w-4" />
+              </DialogPrimitive.Close>
+            </div>
+            <div
+              data-sheet-scroll
+              className={cn(
+                'overflow-y-auto px-4 pb-6',
+                side === 'right' || side === 'left'
+                  ? 'absolute inset-x-0 top-12 bottom-0'
+                  : side === 'float'
+                    ? 'max-h-[calc(100dvh-8rem)]'
+                    : 'max-h-[80vh]',
+              )}
+            >
+              {children}
+            </div>
+          </>
+        )}
+      </DialogPrimitive.Content>
+    </DialogPrimitive.Portal>
+  ),
+);
 SheetContent.displayName = 'SheetContent';

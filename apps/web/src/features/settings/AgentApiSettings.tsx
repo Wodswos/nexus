@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ExternalLink, KeyRound, Trash2, Copy } from 'lucide-react';
-import { api, apiUrl, type AgentToken } from '@cortex/crdt';
-import { Button, Input, Card, CardHeader, CardTitle, CardContent } from '@cortex/ui';
+import { api, apiUrl, type AgentToken } from '@nexus/crdt';
+import { Button, Input, Card, CardHeader, CardTitle, CardContent } from '@nexus/ui';
 
 export function AgentApiSettings() {
   const [tokens, setTokens] = useState<AgentToken[]>([]);

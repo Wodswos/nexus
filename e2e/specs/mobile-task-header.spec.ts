@@ -1,3 +1,4 @@
+import { expectSelectValue, selectValue } from '../controls';
 import { expect, test, type Page } from '@playwright/test';
 
 test.use({ serviceWorkers: 'block', viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
@@ -89,7 +90,7 @@ test('mobile date editing applies atomically and cancellation preserves the sele
   await seed(page);
   const before = page.url();
   const period = page.getByRole('combobox', { name: '任务时间范围', exact: true });
-  await period.selectOption('custom');
+  await selectValue(period, 'custom');
   const dialog = page.getByRole('dialog', { name: '选择日期区间', exact: true });
   await expect(dialog).toBeVisible();
   await expect(page).toHaveURL(before);
@@ -98,7 +99,7 @@ test('mobile date editing applies atomically and cancellation preserves the sele
   await expect(page).toHaveURL(before);
   await dialog.getByRole('button', { name: '取消', exact: true }).click();
   await expect(page).toHaveURL(before);
-  await expect(period).toHaveValue('week');
+  await expectSelectValue(period, 'week');
   await expect(period).toBeFocused();
   const dateButton = page.getByRole('button', { name: /^编辑日期区间/ });
   await dateButton.click();

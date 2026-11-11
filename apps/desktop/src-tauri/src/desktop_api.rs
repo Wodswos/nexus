@@ -17,7 +17,9 @@ pub(crate) struct DesktopApi {
 
 impl DesktopApi {
     pub(crate) fn new() -> Result<Self, &'static str> {
-        let configured = option_env!("CORTEX_DESKTOP_API_ORIGIN").unwrap_or(DEFAULT_ORIGIN);
+        let configured = option_env!("NEXUS_DESKTOP_API_ORIGIN")
+            .or(option_env!("CORTEX_DESKTOP_API_ORIGIN"))
+            .unwrap_or(DEFAULT_ORIGIN);
         let origin = Url::parse(configured).map_err(|_| "invalid desktop API origin")?;
         if !matches!(origin.scheme(), "http" | "https")
             || origin.host_str().is_none()

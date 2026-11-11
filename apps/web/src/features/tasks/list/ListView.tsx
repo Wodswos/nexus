@@ -1,4 +1,7 @@
 import { workspaceTaskDefaults } from '../taskFilters';
+import { focusedTaskPath } from '../taskNavigation';
+import { useTaskDomFocus } from '../useTaskDomFocus';
+import { TaskBatchActions } from '@/shared/TaskBatchEditor';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import {
@@ -19,7 +22,7 @@ import {
 } from '@dnd-kit/core';
 import { getEventCoordinates } from '@dnd-kit/utilities';
 import { ChevronRight, Play, Plus, MoreHorizontal, Folder, GripVertical } from 'lucide-react';
-import { cn, EmptyState, Badge } from '@cortex/ui';
+import { cn, EmptyState, Badge } from '@nexus/ui';
 import {
   Task,
   activeTasks,
@@ -38,8 +41,8 @@ import {
   descendantsOf,
   priorityOf,
   workProgress,
-} from '@cortex/core';
-import { useCortex, useCortexData } from '@cortex/crdt';
+} from '@nexus/core';
+import { useNexus, useNexusData } from '@nexus/crdt';
 import { useUI } from '@/state/ui';
 import { useTimer } from '@/focus/timer';
 import {
@@ -73,9 +76,9 @@ const previewBesidePointer: Modifier = ({ activatorEvent, activeNodeRect, overla
 };
 
 export function ListView() {
-  const data = useCortexData();
+  const data = useNexusData();
   const viewData = useTaskViewData({ window: true });
-  const store = useCortex();
+  const store = useNexus();
   const ui = useUI();
   const [now] = useState(() => new Date());
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
@@ -130,14 +133,19 @@ export function ListView() {
   const childrenMap = useMemo(() => buildChildrenMap(visibleTasks), [visibleTasks]);
   const progressMap = useMemo(() => workProgress(active), [active]);
   // 隐藏模式:整棵子树都完成的行不再渲染(根级过滤在 groupRoots,子级在这里)
-  const hiddenDone = useMemo(() => (showDone ? null : fullyDoneIds(data.tasks)), [data.tasks, showDone]);
+  const hiddenDone = useMemo(() => {
+    if (showDone) return null;
+    const gone = fullyDoneIds(data.tasks);
+    for (const id of focusedTaskPath(data.tasks, params)) gone.delete(id);
+    return gone;
+  }, [data.tasks, showDone, params]);
 
   // 分组只对「根级」;子树跟随父级展示
   const groups = useMemo(
     () => projectId
       ? [{ key: 'project', label: '项目内容', tasks: (childrenMap.get(projectId) ?? []).filter((task) => !hiddenDone?.has(task.id)) }]
-      : groupRoots(visibleTasks, now, undefined, { showDone }),
-    [projectId, childrenMap, hiddenDone, visibleTasks, now, showDone],
+      : groupRoots(visibleTasks, now, undefined, { showDone: showDone || !!viewData.focusedTaskId }),
+    [projectId, childrenMap, hiddenDone, visibleTasks, now, showDone, viewData.focusedTaskId],
   );
 
   /** 每组展开后的可见行:从组内根任务 DFS(子树跟随父级,应用折叠状态) */
@@ -167,6 +175,7 @@ export function ListView() {
 
   // 可见行(含子树)的展示顺序 → 用索引算 shift 区间
   const flatOrder = useMemo(() => rowsByGroup.flatMap((g) => g.rows.map((r) => r.task.id)), [rowsByGroup]);
+  useTaskDomFocus(listRef, 'data-task-id', rowsByGroup, id => { setSelectedIds([id]); setAnchorId(id); });
   const rowsById = useMemo(
     () => new Map(rowsByGroup.flatMap((group) => group.rows.map((row) => [row.task.id, row] as const))),
     [rowsByGroup],
@@ -287,7 +296,7 @@ export function ListView() {
     const onDown = (e: MouseEvent) => {
       const t = e.target as HTMLElement | null;
       if (!t) return;
-      if (t.closest('[data-row], [data-inspector], button, a, input, textarea, select')) return;
+      if (t.closest('[data-row], [data-inspector], [data-task-detail-portal], button, a, input, textarea, select')) return;
       clearSelection();
     };
     window.addEventListener('mousedown', onDown);
@@ -578,7 +587,7 @@ export function ListView() {
 
       {/* 多选浮动操作条 */}
       {selectedIds.length > 1 && (
-        <div className="fixed bottom-6 left-1/2 z-40 flex -translate-x-1/2 items-center gap-2 rounded-2xl glass-raised px-3 py-2 text-xs shadow-xl">
+        <div role="toolbar" aria-label="所选任务操作" className="fixed bottom-6 left-1/2 z-40 flex max-w-[calc(100vw-24px)] -translate-x-1/2 flex-wrap items-center justify-center gap-1 rounded-2xl glass-raised px-3 py-2 text-xs shadow-xl">
           <span className="px-1 text-muted">已选 {selectedIds.length} 项</span>
           {pickAttach ? (
             <>
@@ -594,6 +603,7 @@ export function ListView() {
             </>
           ) : (
             <>
+              <TaskBatchActions ids={selectedIds} />
               <button
                 onClick={() => setPickAttach(true)}
                 className="rounded-full border border-[var(--border-strong)] px-3 py-1 text-muted transition-colors hover:text-foreground"
@@ -671,8 +681,8 @@ function TaskRow({
   /** 本行已进入编辑态,父级可清掉 forceEdit 标记 */
   onConsumed: () => void;
 }) {
-  const data = useCortexData();
-  const store = useCortex();
+  const data = useNexusData();
+  const store = useNexus();
   const ui = useUI();
   const navigate = useNavigate();
   const timerStart = useTimer((s) => s.start);
@@ -771,7 +781,7 @@ function TaskRow({
   };
 
   const openMenu = (x: number, y: number) =>
-    ui.openTaskMenu(task.id, x, y, selectionIds.length > 1 ? selectionIds : undefined);
+    ui.openTaskMenu(task.id, x, y, selectionIds.includes(task.id) ? selectionIds : [task.id]);
 
   return (
     <div

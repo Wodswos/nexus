@@ -8,3 +8,5 @@ export * from './components/dialog';
 export * from './components/segmented';
 export * from './components/dropdown';
 export * from './components/misc';
+export * from './components/select';
+export * from './components/popover';

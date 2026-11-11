@@ -1,13 +1,13 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
-import { Button, Dialog, DialogContent } from '@cortex/ui';
-import { currentStore, useCortex } from '@cortex/crdt';
-import { isProject, taskBranchIds } from '@cortex/core';
+import { Button, Dialog, DialogContent } from '@nexus/ui';
+import { currentStore, useNexus } from '@nexus/crdt';
+import { isProject, taskBranchIds } from '@nexus/core';
 import { useUI } from '@/state/ui';
 
 export function TaskDeletionDialog() {
   const request = useUI((state) => state.taskDeletion);
-  const store = useCortex();
+  const store = useNexus();
   useEffect(() => {
     if (request && request.userId !== store.userId && useUI.getState().taskDeletion === request) useUI.getState().cancelTaskDeletion();
   }, [request, store.userId]);
@@ -16,7 +16,7 @@ export function TaskDeletionDialog() {
 }
 
 function ConfirmDeletion({ request }: { request: NonNullable<ReturnType<typeof useUI.getState>['taskDeletion']> }) {
-  const store = useCortex();
+  const store = useNexus();
   const [data] = useState(() => store.getData());
   const navigate = useNavigate();
   const location = useLocation();

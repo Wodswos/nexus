@@ -1,13 +1,13 @@
 import { useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { ArrowLeft, ArrowRight, Bell, BookOpen, Check, ChevronDown, Download, PencilLine } from 'lucide-react';
-import { Button, cn, Segmented, SegmentedList, SegmentedTrigger } from '@cortex/ui';
-import { useCortex, useCortexData } from '@cortex/crdt';
+import { Button, cn, Segmented, SegmentedList, SegmentedTrigger } from '@nexus/ui';
+import { useNexus, useNexusData } from '@nexus/crdt';
 import {
   addDays, dateFromDayKey, dayKeyOf, fmtDuration, periodOfReview, reviewFacts, reviewId,
   reviewMarkdown, reviewPeriod, validDayKey, type Review, type ReviewFacts, type ReviewKind,
   type ReviewPeriod, type ReviewTaskFact, type Settings,
-} from '@cortex/core';
+} from '@nexus/core';
 import { useUI } from '@/state/ui';
 import { useReviewDraft, type ReviewTextField } from './useReviewDraft';
 import { useReviewClock } from './ReviewReminder';
@@ -19,8 +19,8 @@ function periodLabel(period: ReviewPeriod) {
 }
 
 export default function ReviewsPage() {
-  const data = useCortexData();
-  const store = useCortex();
+  const data = useNexusData();
+  const store = useNexus();
   const [params, setParams] = useSearchParams();
   const timeline = params.get('view') === 'timeline';
   const timelineParams = new URLSearchParams({ view: 'timeline' });
@@ -67,8 +67,8 @@ export default function ReviewsPage() {
 }
 
 function ReviewEditor({ period, now }: { period: ReviewPeriod; now: number }) {
-  const data = useCortexData();
-  const store = useCortex();
+  const data = useNexusData();
+  const store = useNexus();
   const draft = useReviewDraft(period);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -100,7 +100,7 @@ function ReviewEditor({ period, now }: { period: ReviewPeriod; now: number }) {
       if (!review) return;
       const snapshot = review.completedAt != null && review.facts ? review.facts : reviewFacts(store.getData(), period);
       const url = URL.createObjectURL(new Blob([reviewMarkdown(review, snapshot)], { type: 'text/markdown;charset=utf-8' }));
-      const anchor = document.createElement('a'); anchor.href = url; anchor.download = `cortex-${period.kind}-${period.start}.md`; anchor.click();
+      const anchor = document.createElement('a'); anchor.href = url; anchor.download = `nexus-${period.kind}-${period.start}.md`; anchor.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch { setError('导出前保存失败，请保留页面并重试'); }
   };
@@ -198,7 +198,7 @@ function ReviewHistory({ reviews, selectedId }: { reviews: Review[]; selectedId:
 }
 
 function ReminderSettings({ settings }: { settings: Settings }) {
-  const store = useCortex();
+  const store = useNexus();
   const [status, setStatus] = useState('');
   const update = async (patch: Partial<Settings>) => {
     store.stopUndoCapture(); store.updateSettings(patch); store.stopUndoCapture();

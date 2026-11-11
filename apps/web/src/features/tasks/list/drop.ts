@@ -1,4 +1,4 @@
-import { canReparent, type Task } from '@cortex/core';
+import { canReparent, type Task } from '@nexus/core';
 
 export const TASK_INDENT = 16;
 

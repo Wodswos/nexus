@@ -19,5 +19,5 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm build
-      - run: pnpm --filter @cortex/e2e exec playwright install --with-deps ${{ matrix.browser }}
+      - run: pnpm --filter @nexus/e2e exec playwright install --with-deps ${{ matrix.browser }}
       - run: pnpm e2e --project=${{ matrix.browser }}

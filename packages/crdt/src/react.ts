@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react';
-import { CortexData, EMPTY_DATA } from '@cortex/core';
-import { CortexStore, DOC_IDS } from './store';
+import { NexusData, EMPTY_DATA } from '@nexus/core';
+import { NexusStore, DOC_IDS } from './store';
 
 /**
  * 全局单例 store(按 userId 切换重建)。
@@ -8,19 +8,19 @@ import { CortexStore, DOC_IDS } from './store';
  * - 登录后:userId = 账号 id,本地数据由 absorbLocal 迁入
  */
 
-let current: CortexStore | null = null;
+let current: NexusStore | null = null;
 const storeListeners = new Set<() => void>();
 
-export function currentStore(): CortexStore | null {
+export function currentStore(): NexusStore | null {
   return current;
 }
 
-export function setCortexUser(userId: string): CortexStore {
+export function setNexusUser(userId: string): NexusStore {
   if (current?.userId === userId) return current;
-  return setCortexStore(new CortexStore(userId));
+  return setNexusStore(new NexusStore(userId));
 }
 
-export function setCortexStore(store: CortexStore): CortexStore {
+export function setNexusStore(store: NexusStore): NexusStore {
   if (current === store) return store;
   current?.destroy();
   current = store;
@@ -33,20 +33,20 @@ function subscribeStore(fn: () => void): () => void {
   return () => storeListeners.delete(fn);
 }
 
-export function useCortex(): CortexStore {
+export function useNexus(): NexusStore {
   const store = useSyncExternalStore(subscribeStore, () => current);
-  if (!store) throw new Error('CortexStore not initialized — call setCortexUser first');
+  if (!store) throw new Error('NexusStore not initialized — call setNexusUser first');
   return store;
 }
 
-export function useCortexData(): CortexData {
-  const store = useCortex();
+export function useNexusData(): NexusData {
+  const store = useNexus();
   return useSyncExternalStore(store.subscribe, store.getData);
 }
 
 /** 浏览器端:每个 doc 挂 y-indexeddb 持久化;返回清理函数 */
 export interface PersistenceHandle { destroy(): Promise<void>; flush(): Promise<void> }
-export async function attachPersistence(store: CortexStore): Promise<PersistenceHandle> {
+export async function attachPersistence(store: NexusStore): Promise<PersistenceHandle> {
   if (!(globalThis as { indexedDB?: unknown }).indexedDB) return { async destroy() {}, async flush() {} };
   const { IndexeddbPersistence } = await import('y-indexeddb');
   const providers = DOC_IDS.map(

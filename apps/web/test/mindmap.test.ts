@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Task } from '@cortex/core';
+import type { Task } from '@nexus/core';
 import { layoutMindTree, mindMetrics } from '../src/features/tasks/mindmap/layout';
 import { initialMapPosition, mapPositionKey, positionToViewport, readMapPosition, rememberMapPosition } from '../src/features/tasks/mindmap/viewport';
 

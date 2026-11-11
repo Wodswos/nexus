@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { MindFont, Task } from '@cortex/core';
+import type { MindFont, Task } from '@nexus/core';
 import { DEFAULT_MIND_FONT } from './appearance';
 
 const loaders: Partial<Record<MindFont, () => Promise<unknown>>> = {

@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Check, Folder, X } from 'lucide-react';
-import { cn, Badge } from '@cortex/ui';
+import { cn, Badge } from '@nexus/ui';
 import {
   EventKind,
   Task,
@@ -13,7 +13,7 @@ import {
   PRIORITY_ORDER,
   priorityOf,
   taskViewStatus,
-} from '@cortex/core';
+} from '@nexus/core';
 
 /** A quiet visual mark with a larger independent pointer target. */
 export function TaskCheckbox({
@@ -220,126 +220,7 @@ export function KindToggle({
   );
 }
 
-/**
- * 日期时间输入:未设置时显示「—」(而不是浏览器 datetime-local 自带的 yyyy/mm/dd 占位),
- * 点一下才换成原生选择器;设了值则直接显示值 + 可清除。
- * autoOpenKey:父级联动信号(变化即进入编辑态)——「开始时间」选完自动弹出「截止时间」,
- * 一次手势连续选两段,不用再去找第二个字段。
- */
-export function DateTimeField({
-  value,
-  onChange,
-  className,
-  title,
-  autoOpenKey,
-}: {
-  value: number | null | undefined;
-  onChange: (v: number | null) => void;
-  className?: string;
-  title?: string;
-  autoOpenKey?: number;
-}) {
-  const [editing, setEditing] = useState(false);
-  const ref = React.useRef<HTMLInputElement>(null);
-
-  const toLocal = (ms: number) => {
-    const d = new Date(ms);
-    const pad = (n: number) => String(n).padStart(2, '0');
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  };
-  const label = (ms: number) => {
-    const d = new Date(ms);
-    const pad = (n: number) => String(n).padStart(2, '0');
-    return `${d.getMonth() + 1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  };
-
-  // 父级把 autoOpenKey +1 = 请求自动打开(开始选完链到截止)。
-  // 必须跳过挂载时的首跑:抽屉/面板不随任务切换卸载,autoOpenKey 会残留旧值,
-  // 字段重新挂载时若不跳过,新任务的截止会被无缘无故弹开
-  const seenAutoOpen = React.useRef(false);
-  useEffect(() => {
-    if (!seenAutoOpen.current) {
-      seenAutoOpen.current = true;
-      return;
-    }
-    if (!autoOpenKey) return;
-    setEditing(true);
-  }, [autoOpenKey]);
-
-  useEffect(() => {
-    if (!editing) return;
-    const el = ref.current;
-    el?.focus();
-    // 原生选择器:支持 showPicker 的浏览器直接弹出,否则退化为聚焦后手动输入
-    try {
-      (el as HTMLInputElement & { showPicker?: () => void })?.showPicker?.();
-    } catch {
-      /* 用户手势外调用会抛错,忽略 */
-    }
-  }, [editing]);
-
-  if (value != null && !editing) {
-    return (
-      <span className={cn('flex items-center gap-1', className)}>
-        <button
-          type="button"
-          onClick={() => setEditing(true)}
-          className="min-w-0 flex-1 truncate rounded-md border border-[var(--border-strong)] bg-transparent px-1.5 py-1 text-left text-[11px] tabular hover:border-[var(--accent-from)]"
-          title={title}
-        >
-          {label(value)}
-        </button>
-        <button
-          type="button"
-          onClick={() => onChange(null)}
-          className="shrink-0 rounded p-0.5 text-muted/60 hover:text-[var(--danger)]"
-          title="清除时间"
-        >
-          <X className="h-3 w-3" />
-        </button>
-      </span>
-    );
-  }
-
-  if (editing) {
-    return (
-      <input
-        ref={ref}
-        type="datetime-local"
-        value={value != null ? toLocal(value) : ''}
-        onChange={(e) => {
-          onChange(e.target.value ? new Date(e.target.value).getTime() : null);
-          setEditing(false);
-        }}
-        onBlur={() => setEditing(false)}
-        onKeyDown={(e) => {
-          if (e.key !== 'Escape') return;
-          // Esc 只退出本输入框(抽屉层面的拦截在外层 onEscapeKeyDown 里做)
-          e.stopPropagation();
-          setEditing(false);
-        }}
-        className={cn(
-          'rounded-md border border-[var(--border-strong)] bg-transparent px-1.5 py-1 text-[11px] outline-none',
-          className,
-        )}
-      />
-    );
-  }
-
-  return (
-    <button
-      type="button"
-      onClick={() => setEditing(true)}
-      title={title ?? '点击设置时间'}
-      className={cn(
-        'rounded-md border border-dashed border-[var(--border-strong)] px-1.5 py-1 text-left text-[11px] text-muted/70 transition-colors hover:border-[var(--accent-from)] hover:text-foreground',
-        className,
-      )}
-    >
-      —
-    </button>
-  );
-}
+export { DateTimeField } from './TaskDateField';
 
 /** 自动状态徽标:完成 + 开始/截止时间窗推导(taskViewStatus),零操作 */
 export function StatusBadge({ task }: { task: Task }) {

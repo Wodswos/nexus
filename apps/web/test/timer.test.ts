@@ -1,7 +1,7 @@
 import { beforeEach, afterEach, describe, it, expect, vi } from 'vitest';
-import { CortexStore } from '@cortex/crdt';
+import { NexusStore } from '@nexus/crdt';
 import { bindTimer, unbindTimer, useTimer } from '../src/focus/timer';
-vi.mock('@cortex/platform', () => ({ chime: vi.fn(), notify: vi.fn() }));
+vi.mock('@nexus/platform', () => ({ chime: vi.fn(), notify: vi.fn() }));
 let storage: Map<string, string>;
 beforeEach(() => {
   vi.useFakeTimers(); vi.setSystemTime(new Date('2026-10-26T08:00:00Z'));
@@ -11,7 +11,7 @@ beforeEach(() => {
 afterEach(() => { unbindTimer(); vi.useRealTimers(); vi.unstubAllGlobals(); });
 describe('account-scoped timer recovery', () => {
   it('restores its scheduler and finishes once after reloading', () => {
-    const store = new CortexStore('a'); bindTimer(store);
+    const store = new NexusStore('a'); bindTimer(store);
     useTimer.getState().start({ min: 0.1 }); vi.advanceTimersByTime(3000);
     unbindTimer(); bindTimer(store); vi.advanceTimersByTime(3000);
     expect(store.getData().sessions).toHaveLength(1);
@@ -20,7 +20,7 @@ describe('account-scoped timer recovery', () => {
     expect(store.getData().sessions).toHaveLength(1);
   });
   it('records expiration while closed and deduplicates a replay of the unfinished mirror', () => {
-    const store = new CortexStore('a'); bindTimer(store); useTimer.getState().start({ min: 0.1 });
+    const store = new NexusStore('a'); bindTimer(store); useTimer.getState().start({ min: 0.1 });
     unbindTimer(); const unfinished = storage.get('cortex-timer:a')!;
     vi.advanceTimersByTime(10000); bindTimer(store);
     expect(store.getData().sessions).toHaveLength(1);
@@ -28,7 +28,7 @@ describe('account-scoped timer recovery', () => {
     expect(store.getData().sessions).toHaveLength(1);
   });
   it('keeps each account timer and completion records isolated', () => {
-    const a = new CortexStore('a'), b = new CortexStore('b');
+    const a = new NexusStore('a'), b = new NexusStore('b');
     bindTimer(a); useTimer.getState().start({ min: 0.1, taskId: 'a-task' });
     bindTimer(b); expect(useTimer.getState().status).toBe('idle');
     useTimer.getState().start({ min: 0.1 }); vi.advanceTimersByTime(6000);
@@ -37,7 +37,7 @@ describe('account-scoped timer recovery', () => {
     expect(b.getData().sessions).toHaveLength(1);
   });
   it('does not silently replace an active session and excludes paused time from partial credit', () => {
-    const a = new CortexStore('a'); bindTimer(a); useTimer.getState().start({ min: 25 });
+    const a = new NexusStore('a'); bindTimer(a); useTimer.getState().start({ min: 25 });
     const id = useTimer.getState().sessionId;
     useTimer.getState().start({ min: 90 }); expect(useTimer.getState().sessionId).toBe(id);
     vi.advanceTimersByTime(60000); useTimer.getState().pause();

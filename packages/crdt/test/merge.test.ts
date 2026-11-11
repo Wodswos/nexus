@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import * as Y from 'yjs';
-import { logCountOn } from '@cortex/core';
-import { CortexStore } from '../src/store';
+import { logCountOn } from '@nexus/core';
+import { NexusStore } from '../src/store';
 
 /** 模拟同步:双向交换全量 state(等价于 SyncStep1/2 收敛后的结果) */
-function syncStores(a: CortexStore, b: CortexStore): void {
+function syncStores(a: NexusStore, b: NexusStore): void {
   for (const id of ['root', 'tasks', 'events', 'links', 'sessions', 'habits', 'habitLogs'] as const) {
     const ua = Y.encodeStateAsUpdate(a.docs[id]);
     const ub = Y.encodeStateAsUpdate(b.docs[id]);
@@ -13,16 +13,16 @@ function syncStores(a: CortexStore, b: CortexStore): void {
   }
 }
 
-function assertConverged(a: CortexStore, b: CortexStore): void {
-  const normalized = (store: CortexStore) => Object.fromEntries(Object.entries(store.exportJSON()).map(([key, value]) => [key,
+function assertConverged(a: NexusStore, b: NexusStore): void {
+  const normalized = (store: NexusStore) => Object.fromEntries(Object.entries(store.exportJSON()).map(([key, value]) => [key,
     Array.isArray(value) ? [...value].sort((a, b) => a.id.localeCompare(b.id)) : value]));
   expect(normalized(a)).toEqual(normalized(b));
 }
 
 describe('CRDT 双端合并', () => {
   it('一端创建,另一端可见', () => {
-    const A = new CortexStore('u1');
-    const B = new CortexStore('u1');
+    const A = new NexusStore('u1');
+    const B = new NexusStore('u1');
     A.createTask({ title: '买牛奶', status: 'todo', dueAt: 123 });
     syncStores(A, B);
     expect(B.exportJSON().tasks).toHaveLength(1);
@@ -32,8 +32,8 @@ describe('CRDT 双端合并', () => {
 
   it('双端离线并发改同一任务的不同字段 → 都保留(×20 确定性)', () => {
     for (let round = 0; round < 20; round++) {
-      const A = new CortexStore('u1');
-      const B = new CortexStore('u1');
+      const A = new NexusStore('u1');
+      const B = new NexusStore('u1');
       const t = A.createTask({ title: '原题', status: 'todo' });
       syncStores(A, B); // 双端都有 t
 
@@ -58,8 +58,8 @@ describe('CRDT 双端合并', () => {
   });
 
   it('双端各自建任务 → 合并后都在', () => {
-    const A = new CortexStore('u1');
-    const B = new CortexStore('u1');
+    const A = new NexusStore('u1');
+    const B = new NexusStore('u1');
     A.createTask({ title: 'A 的' });
     B.createTask({ title: 'B 的' });
     syncStores(A, B);
@@ -69,8 +69,8 @@ describe('CRDT 双端合并', () => {
   });
 
   it('软删子树同步到对端', () => {
-    const A = new CortexStore('u1');
-    const B = new CortexStore('u1');
+    const A = new NexusStore('u1');
+    const B = new NexusStore('u1');
     const root = A.createTask({ title: 'root', status: 'todo' });
     const child = A.createTask({ title: 'child', status: 'todo', parentId: root.id });
     A.softDeleteTask(root.id);
@@ -82,9 +82,9 @@ describe('CRDT 双端合并', () => {
   });
 });
 
-describe('CortexStore CRUD', () => {
+describe('NexusStore CRUD', () => {
   it('toggle 状态机 completedAt', () => {
-    const s = new CortexStore('u1');
+    const s = new NexusStore('u1');
     const t = s.createTask({ title: 'x', status: 'todo' });
     s.toggleTaskDone(t.id);
     expect(s.getData().tasks[0]!.status).toBe('done');
@@ -95,7 +95,7 @@ describe('CortexStore CRUD', () => {
   });
 
   it('renumberParent 规范化兄弟 order', () => {
-    const s = new CortexStore('u1');
+    const s = new NexusStore('u1');
     const a = s.createTask({ title: 'a', status: 'todo', order: 0 });
     s.createTask({ title: 'b', status: 'todo', order: 1 });
     // 疯狂中点挤压
@@ -114,7 +114,7 @@ describe('CortexStore CRUD', () => {
   });
 
   it('logHabit 增减与删除', () => {
-    const s = new CortexStore('u1');
+    const s = new NexusStore('u1');
     const h = s.createHabit({ name: '喝水', targetPerDay: 8 });
     s.logHabit(h.id, '2026-08-29', 1, 8);
     s.logHabit(h.id, '2026-08-29', 1, 8);
@@ -126,7 +126,7 @@ describe('CortexStore CRUD', () => {
   });
 
   it('ensureTag 大小写不敏感去重', () => {
-    const s = new CortexStore('u1');
+    const s = new NexusStore('u1');
     const a = s.ensureTag('Work');
     const b = s.ensureTag('work');
     expect(a.id).toBe(b.id);
@@ -134,9 +134,9 @@ describe('CortexStore CRUD', () => {
   });
 
   it('importJSON/absorbLocal', () => {
-    const local = new CortexStore('local');
+    const local = new NexusStore('local');
     local.createTask({ title: '本地任务', status: 'todo' });
-    const acc = new CortexStore('u9');
+    const acc = new NexusStore('u9');
     const n = acc.absorbLocal(local);
     expect(n).toBe(1);
     expect(acc.getData().tasks[0]!.ownerId).toBe('u9');

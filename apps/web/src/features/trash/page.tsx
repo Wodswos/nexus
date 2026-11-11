@@ -1,22 +1,22 @@
 import React, { useId, useMemo, useRef, useState } from 'react';
 import { ChevronDown, ChevronRight, Circle, Folder, RotateCcw, Search, Trash2 } from 'lucide-react';
-import { Button, Dialog, DialogContent, EmptyState, Input, cn } from '@cortex/ui';
-import { useCortex, useCortexData } from '@cortex/crdt';
-import { ancestorsOf, buildChildrenMap, isProject, isStructural, normalizeTaskForest, taskBranchIds, trashRoots, type Task } from '@cortex/core';
+import { Button, Dialog, DialogContent, EmptyState, Input, cn } from '@nexus/ui';
+import { useNexus, useNexusData } from '@nexus/crdt';
+import { ancestorsOf, buildChildrenMap, isProject, isStructural, normalizeTaskForest, taskBranchIds, trashRoots, type Task } from '@nexus/core';
 
 type PermanentDelete = { ids: string[]; title: string; count: number; empty: boolean };
 const labelOf = (task: Task) => isProject(task) ? '项目' : isStructural(task) ? '分组' : '任务';
 const dateOf = (stamp: number) => new Date(stamp).toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
 
 export default function TrashPage() {
-  const store = useCortex();
+  const store = useNexus();
   // Reset drafts and pending dialogs when the active account changes.
   return <TrashContents key={store.userId} />;
 }
 
 function TrashContents() {
-  const store = useCortex();
-  const data = useCortexData();
+  const store = useNexus();
+  const data = useNexusData();
   const [query, setQuery] = useState('');
   const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
   const [previewId, setPreviewId] = useState<string | null>(null);

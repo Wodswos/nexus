@@ -1,5 +1,5 @@
-import { addDays, dayKeyOf, habitReminderSlot, habitReminderTimes, startOfDay, type Habit, type HabitLog } from '@cortex/core';
-import type { HabitNotificationPlan } from '@cortex/platform';
+import { addDays, dayKeyOf, habitReminderSlot, habitReminderTimes, startOfDay, type Habit, type HabitLog } from '@nexus/core';
+import type { HabitNotificationPlan } from '@nexus/platform';
 
 export const HABIT_REMINDER_IDLE_MS = 15_000;
 export const HABIT_REMINDER_FADE_MS = 250;
@@ -39,7 +39,7 @@ export function planHabitNotifications(owner: string, habits: Habit[], logs: Hab
       // replace future OS requests with the new local wall-clock occurrence.
       const nativeKey = `${key}:tz:${scheduled.getTimezoneOffset()}`;
       plans.push({ key: until > scheduled.getTime() ? `${nativeKey}:snooze:${until}` : nativeKey,
-        habitId: habit.id, title: `该${habit.name}了`, body: `${time} · 打开 Cortex，完成今天的习惯。`, at });
+        habitId: habit.id, title: `该${habit.name}了`, body: `${time} · 打开 Nexus，完成今天的习惯。`, at });
     }
   }
   return plans.sort((a, b) => a.at - b.at || a.key.localeCompare(b.key));

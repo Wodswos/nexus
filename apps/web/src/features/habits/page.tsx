@@ -4,9 +4,9 @@ import { Plus, Check, Flame, Trash2, Pencil, ChevronDown, Clock, Bell, Minus, Gr
 import { DndContext, KeyboardSensor, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, useSortable, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { cn, Button, Dialog, DialogContent, EmptyState } from '@cortex/ui';
-import { dayKeyOf, habitStreak, heatmapWeeks, isDueOn, weekDone, logCountOn, heatmapDays, habitReminderTimes, sortedHabits, habitOrderAfterMove, type Habit, type Cadence, type HabitLog, type Settings } from '@cortex/core';
-import { useCortex, useCortexData } from '@cortex/crdt';
+import { cn, Button, Dialog, DialogContent, EmptyState } from '@nexus/ui';
+import { dayKeyOf, habitStreak, heatmapWeeks, isDueOn, weekDone, logCountOn, heatmapDays, habitReminderTimes, sortedHabits, habitOrderAfterMove, type Habit, type Cadence, type HabitLog, type Settings } from '@nexus/core';
+import { useNexus, useNexusData } from '@nexus/crdt';
 import { HabitDialog } from './HabitDialog';
 import { useHabitClock } from './clock';
 
@@ -14,12 +14,12 @@ const EMPTY_LOGS: HabitLog[] = [];
 const cadenceLabel = (cadence: Cadence) => cadence.type === 'daily' ? '每天' : cadence.type === 'weekly' ? cadence.days?.length ? `每周${[...cadence.days].sort((a, b) => a - b).map(day => ['一', '二', '三', '四', '五', '六', '日'][day - 1]).join('、')}` : `每周 ${cadence.timesPerWeek} 次` : cadence.type === 'interval' ? `每 ${cadence.everyNDays} 天` : '自定义频率';
 
 export default function HabitsPage() {
-  const store = useCortex();
+  const store = useNexus();
   return <HabitWorkspace key={store.userId} />;
 }
 function HabitWorkspace() {
-  const store = useCortex();
-  const data = useCortexData();
+  const store = useNexus();
+  const data = useNexusData();
   const now = useHabitClock();
   const today = dayKeyOf(now);
   const [params] = useSearchParams();
@@ -76,7 +76,7 @@ function HabitWorkspace() {
   </div>;
 }
 function HabitRow({ habit, logs, today, now, open, onToggle, onEdit, onDelete }: { habit: Habit; logs: HabitLog[]; today: string; now: number; open: boolean; onToggle: () => void; onEdit: () => void; onDelete: () => void }) {
-  const store = useCortex();
+  const store = useNexus();
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: habit.id });
   const count = logCountOn(logs, habit.id, today), target = habit.targetPerDay ?? 1;
   const done = count >= target;
@@ -130,7 +130,7 @@ function HabitHistory({ habit, logs, today }: { habit: Habit; logs: HabitLog[]; 
   </>;
 }
 function DeleteHabitDialog({ habit, onClose }: { habit: Habit; onClose: () => void }) {
-  const store = useCortex();
+  const store = useNexus();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   return <Dialog open onOpenChange={open => { if (!open && !busy) onClose(); }}><DialogContent title="删除习惯"><p className="break-words text-sm leading-relaxed">从列表移除「{habit.name}」？历史打卡记录会保留，可通过页面顶部的撤销恢复。</p>{error && <p role="alert" className="mt-2 text-xs text-[var(--danger)]">{error}</p>}<div className="mt-5 flex justify-end gap-2"><Button variant="ghost" disabled={busy} onClick={onClose}>取消</Button><Button variant="danger" disabled={busy} onClick={() => {

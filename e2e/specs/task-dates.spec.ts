@@ -1,3 +1,4 @@
+import { selectValue } from '../controls';
 import { test, expect, type Page } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 
@@ -38,7 +39,7 @@ test('clear dates removes a remaining start date and its week signal, persists t
   await page.getByRole('tab', { name: '列表', exact: true }).click();
   await page.getByRole('region', { name: '工作概览', exact: true }).getByRole('button', { name: '本周', exact: true }).click();
   await expect(page.locator('[data-row][data-task-id="start_only"]')).toHaveCount(0);
-  await page.getByRole('combobox', { name: '任务时间范围', exact: true }).selectOption('undated');
+  await selectValue(page.getByRole('combobox', { name: '任务时间范围', exact: true }), 'undated');
   await expect(page.locator('[data-row][data-task-id="start_only"]')).toBeVisible();
   const data = await exported(page);
   expect(data.tasks.find((value: any) => value.id === 'start_only')).toMatchObject({ startAt: null, dueAt: null });

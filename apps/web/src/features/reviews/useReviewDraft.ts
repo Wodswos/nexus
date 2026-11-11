@@ -1,13 +1,13 @@
 import { useCallback, useLayoutEffect, useRef, useState } from 'react';
-import { useCortex, useCortexData } from '@cortex/crdt';
-import { reviewId, type Review, type ReviewPeriod } from '@cortex/core';
+import { useNexus, useNexusData } from '@nexus/crdt';
+import { reviewId, type Review, type ReviewPeriod } from '@nexus/core';
 
 export type ReviewTextField = 'highlights' | 'friction' | 'resolution' | 'nextSteps';
 type Patch = Partial<Pick<Review, ReviewTextField>>;
 
 export function useReviewDraft(period: ReviewPeriod) {
-  const store = useCortex();
-  const data = useCortexData();
+  const store = useNexus();
+  const data = useNexusData();
   const id = reviewId(period);
   const review = data.reviews.find(value => value.id === id);
   const pending = useRef<Patch>({});

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import * as Y from 'yjs';
-import { CortexStore } from '../src/store';
+import { NexusStore } from '../src/store';
 
 /**
  * 撤销/重做:Y.UndoManager 只追踪 origin=null 的本地写入。
@@ -9,7 +9,7 @@ import { CortexStore } from '../src/store';
 
 describe('撤销 / 重做', () => {
   it('标题修改:undo 回旧值,redo 回新值', () => {
-    const s = new CortexStore('u1');
+    const s = new NexusStore('u1');
     const t = s.createTask({ title: '旧标题', status: 'todo' });
     s.stopUndoCapture();
     s.updateTask(t.id, { title: '新标题' });
@@ -22,7 +22,7 @@ describe('撤销 / 重做', () => {
   });
 
   it('新建后 undo = 该任务消失,redo = 回来', () => {
-    const s = new CortexStore('u1');
+    const s = new NexusStore('u1');
     const t = s.createTask({ title: '临时', status: 'todo' });
     s.stopUndoCapture();
     expect(s.undo()).toBe(true);
@@ -33,7 +33,7 @@ describe('撤销 / 重做', () => {
   });
 
   it('批量软删子树:一次 undo 全部恢复', () => {
-    const s = new CortexStore('u1');
+    const s = new NexusStore('u1');
     const root = s.createTask({ title: '根', status: 'todo' });
     s.createTask({ title: '子', status: 'todo', parentId: root.id });
     s.createTask({ title: '孙', status: 'todo', parentId: root.id });
@@ -46,7 +46,7 @@ describe('撤销 / 重做', () => {
   });
 
   it('reparent(拖拽挂靠):undo 回原父级', () => {
-    const s = new CortexStore('u1');
+    const s = new NexusStore('u1');
     const a = s.createTask({ title: 'A', status: 'todo' });
     const b = s.createTask({ title: 'B', status: 'todo' });
     const c = s.createTask({ title: 'C', status: 'todo', parentId: b.id });
@@ -59,7 +59,7 @@ describe('撤销 / 重做', () => {
   });
 
   it('stopUndoCapture 切分撤销单元:连续两次标题修改分两次撤', () => {
-    const s = new CortexStore('u1');
+    const s = new NexusStore('u1');
     const t = s.createTask({ title: 'v0', status: 'todo' });
     s.stopUndoCapture();
     s.updateTask(t.id, { title: 'v1' });
@@ -73,7 +73,7 @@ describe('撤销 / 重做', () => {
   });
 
   it('设置修改(hiddenRoots)可撤销', () => {
-    const s = new CortexStore('u1');
+    const s = new NexusStore('u1');
     s.stopUndoCapture();
     s.updateSettings({ hiddenRoots: ['x'] });
     s.stopUndoCapture();
@@ -83,8 +83,8 @@ describe('撤销 / 重做', () => {
   });
 
   it('远端更新不可撤销(origin ≠ null)', () => {
-    const A = new CortexStore('u1');
-    const B = new CortexStore('u2');
+    const A = new NexusStore('u1');
+    const B = new NexusStore('u2');
     A.createTask({ title: '本地', status: 'todo' });
     A.stopUndoCapture();
     B.createTask({ title: '远端', status: 'todo' });
@@ -98,7 +98,7 @@ describe('撤销 / 重做', () => {
   });
 
   it('勾选完成时:无截止 → 补为完成时刻;有截止 → 保持不动', () => {
-    const s = new CortexStore('u1');
+    const s = new NexusStore('u1');
     // 原本没有截止时间:完成时补为完成时刻
     const a = s.createTask({ title: '作业', status: 'todo' });
     s.setTaskStatus(a.id, 'done');
@@ -116,9 +116,9 @@ describe('撤销 / 重做', () => {
   });
 
   it('importJSON / absorbLocal 不进撤销栈', () => {
-    const local = new CortexStore('local');
+    const local = new NexusStore('local');
     local.createTask({ title: '本地任务', status: 'todo' });
-    const s = new CortexStore('u1');
+    const s = new NexusStore('u1');
     s.absorbLocal(local);
     expect(s.getData().tasks).toHaveLength(1);
     expect(s.canUndo()).toBe(false);

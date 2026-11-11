@@ -1,5 +1,5 @@
 {
-  "name": "cortex",
+  "name": "nexus",
   "private": true,
   "packageManager": "pnpm@10.12.1",
   "engines": {
@@ -12,14 +12,14 @@
     ]
   },
   "scripts": {
-    "dev": "pnpm --filter @cortex/web dev",
-    "dev:server": "pnpm --filter @cortex/server dev",
-    "build": "pnpm --filter @cortex/web build && pnpm --filter @cortex/server build && node scripts/check-js.mjs",
+    "dev": "pnpm --filter @nexus/web dev",
+    "dev:server": "pnpm --filter @nexus/server dev",
+    "build": "pnpm --filter @nexus/web build && pnpm --filter @nexus/server build && node scripts/check-js.mjs",
     "typecheck": "pnpm -r --if-present typecheck && node scripts/check-js.mjs",
     "test": "pnpm -r --if-present test",
-    "e2e": "pnpm --filter @cortex/e2e e2e",
-    "docker:build": "docker build -t cortex .",
-    "docker:run": "docker run -d --name cortex -p 30090:30090 -v $(pwd)/data:/app/data cortex",
-    "build:desktop": "pnpm --filter @cortex/desktop build"
+    "e2e": "pnpm --filter @nexus/e2e e2e",
+    "docker:build": "docker build -t nexus .",
+    "docker:run": "docker run -d --name cortex -p 30090:30090 -v $(pwd)/data:/app/data nexus",
+    "build:desktop": "pnpm --filter @nexus/desktop build"
   }
 }

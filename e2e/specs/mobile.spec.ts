@@ -47,7 +47,7 @@ test('mobile drawer covers the app frame and keeps its contents inside safe area
     expect(panel.y).toBe(0);
     expect(panel.x).toBe(0);
     expect(overlay).toEqual({ x: 0, y: 0, width: 390, height });
-    const brand = (await drawer.getByRole('link', { name: 'Cortex', exact: true }).boundingBox())!;
+    const brand = (await drawer.getByRole('link', { name: 'Nexus', exact: true }).boundingBox())!;
     const account = (await drawer.getByRole('link', { name: '设置与账号', exact: true }).boundingBox())!;
     expect(brand.y).toBeGreaterThanOrEqual(59);
     expect(account.y + account.height).toBeLessThanOrEqual(height - 34);
@@ -117,7 +117,7 @@ test('mobile login stays stable and its form remains reachable in a short viewpo
   });
   expect(Math.max(...positions) - Math.min(...positions)).toBeLessThanOrEqual(1);
   await page.getByTestId('login-scroll').evaluate((element) => { element.scrollTop = 0; });
-  await expect(page.getByRole('heading', { name: 'Cortex' })).toBeInViewport();
+  await expect(page.getByRole('heading', { name: 'Nexus' })).toBeInViewport();
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(user).toHaveValue('mobile-user');
   await expect(localMode).toBeInViewport();

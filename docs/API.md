@@ -1,7 +1,23 @@
 # Agent REST API
 
-Swagger：`http://115.190.3.4:30090/api/docs`。机器可读的 OpenAPI 3.0 文档：
-`http://115.190.3.4:30090/api/openapi.json`。Swagger 的 JS/CSS 随服务部署，不依赖外部 CDN。
+本文面向 Nexus 用户、API 客户端开发者和 Agent 调用方，说明如何认证、调用接口与处理错误。
+需要让 Agent 直接执行工作管理操作时，使用配套的 [nexus-api Skill](skills/nexus-api/SKILL.md)：
+它提供目标定位、分页查询、最小字段更新、打卡／复盘流程及重试规则。Skill 目录可独立复制给支持
+`SKILL.md` 的 Agent 加载；示例请求：「使用 nexus-api，列出 Serve 项目所有进行中的任务」。
+
+也可直接把[公开的 Agent 使用指南](http://115.190.3.4:30090/api/guide.md)交给 Agent，无需复制文件或安装 Skill。
+[SKILL.md 下载地址](http://115.190.3.4:30090/api/skill.md)与指南使用同一份源文档，随服务构建发布。
+配置好 `NEXUS_TOKEN`（兼容 `CORTEX_TOKEN`）后，只需给 Agent 这样的 Prompt：
+
+> 请阅读 http://115.190.3.4:30090/api/guide.md，按指南连接这个实例，帮我列出 Serve 项目所有进行中的任务。使用已配置的 API Token；缺少时提示我配置。
+
+指南以其 URL 的来源确定目标服务，并引导 Agent 读取同源 OpenAPI；文档可匿名访问，业务数据仍需 Token。
+
+Swagger：[在线交互文档](http://115.190.3.4:30090/api/docs)。机器可读的 OpenAPI 3.0 文档：
+[openapi.json](http://115.190.3.4:30090/api/openapi.json)。Swagger 的 JS/CSS 随服务部署，不依赖外部 CDN。
+
+API 基址为 `http://115.190.3.4:30090/api/v1`。如果使用自己的 Nexus 实例，替换来源地址，
+保留 `/api/v1`、`/api/docs` 和 `/api/openapi.json` 路径。
 
 在应用「设置 → Agent API」创建独立 Token，选择只读或读写及有效期。Token 只显示一次，
 服务端仅保存 SHA-256 摘要；可随时撤销。每个账号最多 50 个 Token。
@@ -10,12 +26,12 @@ Token 管理使用现有登录 Cookie：`GET/POST /api/tokens`、`DELETE /api/to
 Agent Token 不能给自己创建新 Token。Token 不包含在任务 JSON 备份中。
 
 ```bash
-export CORTEX_URL='http://115.190.3.4:30090'
-# 从安全存储载入 CORTEX_TOKEN，不要提交到仓库或放进 URL。
-curl "$CORTEX_URL/api/v1/projects" -H "Authorization: Bearer $CORTEX_TOKEN"
-curl "$CORTEX_URL/api/v1/tasks?status=doing&limit=100" -H "Authorization: Bearer $CORTEX_TOKEN"
-curl "$CORTEX_URL/api/v1/tasks" \
-  -H "Authorization: Bearer $CORTEX_TOKEN" -H 'Content-Type: application/json' \
+export NEXUS_URL='http://115.190.3.4:30090'
+# 从安全存储载入 NEXUS_TOKEN，不要提交到仓库或放进 URL。
+curl "$NEXUS_URL/api/v1/projects" -H "Authorization: Bearer $NEXUS_TOKEN"
+curl "$NEXUS_URL/api/v1/tasks?status=doing&limit=100" -H "Authorization: Bearer $NEXUS_TOKEN"
+curl "$NEXUS_URL/api/v1/tasks" \
+  -H "Authorization: Bearer $NEXUS_TOKEN" -H 'Content-Type: application/json' \
   -H 'Idempotency-Key: example-create-task-001' \
   -d '{"title":"整理本周计划","status":"todo","parentId":"PROJECT_ID"}'
 ```

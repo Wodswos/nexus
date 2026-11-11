@@ -1,4 +1,4 @@
-import type { Task } from '@cortex/core';
+import type { Task } from '@nexus/core';
 
 export type GanttDragMode = 'move' | 'start' | 'end';
 export type GanttRange = { start: number; end: number };

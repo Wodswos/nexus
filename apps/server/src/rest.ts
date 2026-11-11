@@ -3,8 +3,8 @@ import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Hono, Context } from 'hono';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
-import { addDays, buildChildrenMap, canReparent, dateFromDayKey, dayKeyOf, descendantsOf, isProject, logCountOn, MIND_APPEARANCE_FIELDS, periodOfReview, validDayKey, validateCortexData, validateHabitConfig, type Habit, type ReviewPeriod, type Task } from '../../../packages/core/src/index';
-import type { CortexStore } from '../../../packages/crdt/src/store';
+import { addDays, buildChildrenMap, canReparent, dateFromDayKey, dayKeyOf, descendantsOf, isProject, logCountOn, MIND_APPEARANCE_FIELDS, periodOfReview, validDayKey, validateNexusData, validateHabitConfig, type Habit, type ReviewPeriod, type Task } from '../../../packages/core/src/index';
+import type { NexusStore } from '../../../packages/crdt/src/store';
 import type { DB, ApiTokenRow } from './db';
 import type { setupSync } from './sync';
 import { RateLimit } from './security';
@@ -39,17 +39,17 @@ function checkMatch(c: Context, entity: unknown) {
   const match = c.req.header('If-Match');
   if (match && match !== '*' && match !== etag(entity)) fail('内容已在其他设备更新，请重新读取后重试', 412);
 }
-function taskById(store: CortexStore, id: string, project: boolean, includeDeleted = false) {
+function taskById(store: NexusStore, id: string, project: boolean, includeDeleted = false) {
   const task = store.getData().tasks.find(value => value.id === id && (includeDeleted || !value.deletedAt) && isProject(value) === project);
   return task ?? fail('未找到该项目或任务', 404);
 }
-function habitById(store: CortexStore, id: string, includeDeleted = false) {
+function habitById(store: NexusStore, id: string, includeDeleted = false) {
   return store.getData().habits.find(value => value.id === id && (includeDeleted || !value.deletedAt)) ?? fail('未找到该习惯', 404);
 }
-function validateTask(store: CortexStore, value: Task) {
+function validateTask(store: NexusStore, value: Task) {
   title(value.title);
   if (value.notes !== undefined && (typeof value.notes !== 'string' || value.notes.length > 100000)) fail('备注需为字符串，最多 100000 字符');
-  validateCortexData({ tasks: [Object.fromEntries(Object.entries(value).filter(([, item]) => item !== undefined))] });
+  validateNexusData({ tasks: [Object.fromEntries(Object.entries(value).filter(([, item]) => item !== undefined))] });
   if (value.startAt != null && value.dueAt != null && value.dueAt < value.startAt) fail('截止时间不能早于开始时间');
   if (value.tags.length > 100 || value.tags.some(id => !/^[A-Za-z0-9_-]{1,128}$/.test(id))) fail('标签需为有效 ID，最多 100 个');
   if (value.parentId != null) {
@@ -126,7 +126,7 @@ export function setupRestApi(app: Hono, db: DB, getSync: () => Sync, currentUser
     if (!readLimit.allow(token.user_id)) { c.header('Retry-After', '60'); fail('请求过于频繁，每个账号每分钟最多 240 次', 429); }
     return token;
   };
-  const route = (method: 'get' | 'post' | 'patch' | 'put' | 'delete', path: string, operation: (c: Context, store: CortexStore, body: Record<string, unknown>) => unknown, status: ContentfulStatusCode = 200) => {
+  const route = (method: 'get' | 'post' | 'patch' | 'put' | 'delete', path: string, operation: (c: Context, store: NexusStore, body: Record<string, unknown>) => unknown, status: ContentfulStatusCode = 200) => {
     app[method](`/api/v1${path}`, guarded(async c => {
       const write = method !== 'get';
       const token = identity(c, write);
@@ -286,6 +286,16 @@ export function setupRestApi(app: Hono, db: DB, getSync: () => Sync, currentUser
   app.all('/api/v1/*', c => c.json({ error: '接口不存在或方法不支持' }, 404));
 
   app.get('/api/openapi.json', c => c.json(openapi));
+  const bundledGuide = join(here, 'docs', 'agent-guide.md');
+  const guidePath = existsSync(bundledGuide) ? bundledGuide : join(here, '..', '..', '..', 'docs', 'skills', 'nexus-api', 'SKILL.md');
+  for (const path of ['/api/guide.md', '/api/skill.md']) app.get(path, c => {
+    if (!existsSync(guidePath)) return c.text('请先构建 Agent 使用指南资源', 503);
+    // Plain text lets a browser read the Markdown guide instead of downloading it.
+    c.header('Content-Type', path === '/api/guide.md' ? 'text/plain; charset=utf-8' : 'text/markdown; charset=utf-8');
+    if (path === '/api/skill.md') c.header('Content-Disposition', 'attachment; filename="SKILL.md"');
+    c.header('X-Content-Type-Options', 'nosniff');
+    return c.body(readFileSync(guidePath));
+  });
   const swaggerDir = existsSync(join(here, 'swagger')) ? join(here, 'swagger') : join(here, '..', 'dist', 'swagger');
   for (const file of ['swagger-ui.css', 'swagger-ui-bundle.js']) app.get(`/api/docs/${file}`, c => {
     const path = join(swaggerDir, file);
@@ -293,5 +303,5 @@ export function setupRestApi(app: Hono, db: DB, getSync: () => Sync, currentUser
     c.header('Content-Type', file.endsWith('.css') ? 'text/css; charset=utf-8' : 'application/javascript; charset=utf-8');
     return c.body(readFileSync(path));
   });
-  for (const path of ['/api/docs', '/api/docs/']) app.get(path, c => c.html(`<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Cortex API · Swagger</title><link rel="stylesheet" href="/api/docs/swagger-ui.css"></head><body><div id="swagger-ui"></div><script src="/api/docs/swagger-ui-bundle.js"></script><script>SwaggerUIBundle({url:'/api/openapi.json',dom_id:'#swagger-ui',deepLinking:true,persistAuthorization:false,validatorUrl:null,tryItOutEnabled:false});</script></body></html>`));
+  for (const path of ['/api/docs', '/api/docs/']) app.get(path, c => c.html(`<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Nexus API · Swagger</title><link rel="stylesheet" href="/api/docs/swagger-ui.css"></head><body><nav aria-label="API 文档导航" style="padding:16px 24px;font:14px system-ui;background:#fafafa;border-bottom:1px solid #ddd"><a href="/api/guide.md">Agent 使用指南</a> · <a href="/api/skill.md" download="SKILL.md">下载 SKILL.md</a> · <a href="/api/openapi.json">OpenAPI JSON</a></nav><div id="swagger-ui"></div><script src="/api/docs/swagger-ui-bundle.js"></script><script>SwaggerUIBundle({url:'/api/openapi.json',dom_id:'#swagger-ui',deepLinking:true,persistAuthorization:false,validatorUrl:null,tryItOutEnabled:false});</script></body></html>`));
 }

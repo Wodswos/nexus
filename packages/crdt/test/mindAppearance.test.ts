@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import * as Y from 'yjs';
-import { MIND_APPEARANCE_FIELDS, MIND_FONT_KEYS, RESET_MIND_APPEARANCE, validateCortexData } from '@cortex/core';
-import { CortexStore, DOC_IDS } from '../src/store';
+import { MIND_APPEARANCE_FIELDS, MIND_FONT_KEYS, RESET_MIND_APPEARANCE, validateNexusData } from '@nexus/core';
+import { NexusStore, DOC_IDS } from '../src/store';
 
-function sync(a: CortexStore, b: CortexStore) {
+function sync(a: NexusStore, b: NexusStore) {
   for (const id of DOC_IDS) {
     const left = Y.encodeStateAsUpdate(a.docs[id]), right = Y.encodeStateAsUpdate(b.docs[id]);
     Y.applyUpdate(a.docs[id], right, 'remote');
@@ -13,7 +13,7 @@ function sync(a: CortexStore, b: CortexStore) {
 
 describe('mind-map appearance', () => {
   it('changes a batch in one update, keeps task content and undoes independently from earlier edits', () => {
-    const store = new CortexStore('u');
+    const store = new NexusStore('u');
     const a = store.createTask({ title: 'A', status: 'todo', mindBackground: 'sage' });
     const b = store.createTask({ title: 'B', status: 'doing', mindFontSize: 12 });
     const deleted = store.createTask({ title: 'deleted' });
@@ -36,7 +36,7 @@ describe('mind-map appearance', () => {
   });
 
   it('merges concurrent style fields and title edits, resets styles, and round-trips both backup formats', () => {
-    const a = new CortexStore('u'), b = new CortexStore('u');
+    const a = new NexusStore('u'), b = new NexusStore('u');
     const task = a.createTask({ title: 'original', status: 'todo', mindItalic: true });
     sync(a, b);
     a.setMindAppearance([task.id], { mindBackground: '#abc123' });
@@ -47,7 +47,7 @@ describe('mind-map appearance', () => {
     expect(expected).toMatchObject({ title: 'remote title', mindBackground: '#abc123', mindFontFamily: 'serif', mindFontSize: 24, mindItalic: true });
     expect(b.getData().tasks).toEqual(a.getData().tasks);
     for (const backup of [a.exportJSON(), a.exportSnapshot()]) {
-      const restored = new CortexStore('u');
+      const restored = new NexusStore('u');
       restored.importJSON(backup);
       expect(restored.getData().tasks).toEqual(a.getData().tasks);
       restored.destroy();
@@ -61,18 +61,18 @@ describe('mind-map appearance', () => {
   });
 
   it('syncs and exports every licensed font and the expanded size range', () => {
-    const a = new CortexStore('u'), b = new CortexStore('u');
+    const a = new NexusStore('u'), b = new NexusStore('u');
     for (const mindFontFamily of MIND_FONT_KEYS) a.createTask({ title: mindFontFamily, mindFontFamily, mindFontSize: 32 });
     sync(a, b);
     expect(b.getData().tasks).toEqual(a.getData().tasks);
-    const restored = new CortexStore('u');
+    const restored = new NexusStore('u');
     restored.importJSON(a.exportJSON());
     expect(restored.getData().tasks).toEqual(a.getData().tasks);
     a.destroy(); b.destroy(); restored.destroy();
   });
 
   it('rejects unsafe or malformed styles before any mutation and accepts old data and explicit resets', () => {
-    const store = new CortexStore('u');
+    const store = new NexusStore('u');
     const task = store.createTask({ title: 'existing', status: 'todo' });
     const before = store.exportJSON();
     for (const patch of [
@@ -86,8 +86,8 @@ describe('mind-map appearance', () => {
       expect(() => store.importJSON({ tasks: [{ id: 'new', title: 'valid' }, { id: 'bad', ...patch }] })).toThrow();
       expect(store.exportJSON()).toEqual(before);
     }
-    expect(() => validateCortexData({ tasks: [{ id: 'old', title: 'legacy' }] })).not.toThrow();
-    for (const field of MIND_APPEARANCE_FIELDS) expect(() => validateCortexData({ tasks: [{ id: 'reset', [field]: null }] })).not.toThrow();
+    expect(() => validateNexusData({ tasks: [{ id: 'old', title: 'legacy' }] })).not.toThrow();
+    for (const field of MIND_APPEARANCE_FIELDS) expect(() => validateNexusData({ tasks: [{ id: 'reset', [field]: null }] })).not.toThrow();
     store.destroy();
   });
 });

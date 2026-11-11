@@ -1,13 +1,13 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { X } from 'lucide-react';
-import { cn, Dropdown, DropdownContent, DropdownItem, DropdownTrigger } from '@cortex/ui';
-import { activeTasks, addDays, startOfWeek, dayKeyOf, WEEKDAY_ZH, isStructural, calendarDaysBetween } from '@cortex/core';
-import { useCortex } from '@cortex/crdt';
+import { cn, Dropdown, DropdownContent, DropdownItem, DropdownTrigger } from '@nexus/ui';
+import { activeTasks, addDays, startOfWeek, dayKeyOf, WEEKDAY_ZH, isStructural, calendarDaysBetween } from '@nexus/core';
+import { useNexus } from '@nexus/crdt';
 import { useTaskViewData } from '../useTaskViewData';
 import { useUI } from '@/state/ui';
 import { EVENT_KIND_STYLE } from '@/shared/components';
 
-type CalendarItem = { id: string; type: 'task' | 'event'; title: string; done: boolean; color: string };
+type CalendarItem = { id: string; taskId?: string; type: 'task' | 'event'; title: string; done: boolean; color: string };
 export function MonthView({
   date,
   onDateChange,
@@ -18,8 +18,9 @@ export function MonthView({
   onCreateTask?: (dueAt: number, event: React.MouseEvent) => void;
 }) {
   const data = useTaskViewData({ ancestors: false });
-  const store = useCortex();
+  const store = useNexus();
   const selectTask = useUI((s) => s.selectTask);
+  const openTaskMenu = useUI(state => state.openTaskMenu);
   const [dropDay, setDropDay] = useState<string | null>(null);
   const [message, setMessage] = useState('');
   const [expandedDay, setExpandedDay] = useState<string | null>(null);
@@ -63,6 +64,7 @@ export function MonthView({
         if (event.start < addDays(day, 1).getTime() && event.end > day.getTime())
           append(dayKeyOf(day), {
             id: event.id,
+            taskId: event.taskId ?? undefined,
             type: 'event',
             title: event.title,
             done: !!event.completed,
@@ -76,11 +78,12 @@ export function MonthView({
         task.status === 'inbox' ||
         isStructural(task) ||
         task.dueAt == null && task.startAt == null ||
-        (task.status === 'done' && data.settings.completedDisplay === 'hidden')
+        (task.status === 'done' && data.settings.completedDisplay === 'hidden' && task.id !== data.focusedTaskId)
       )
         continue;
       append(dayKeyOf((task.dueAt ?? task.startAt)!), {
         id: task.id,
+        taskId: task.id,
         type: 'task',
         title: task.title || '未命名任务',
         done: task.status === 'done',
@@ -88,7 +91,7 @@ export function MonthView({
       });
     }
     return result;
-  }, [data.tasks, data.events, data.settings.completedDisplay, days]);
+  }, [data.tasks, data.events, data.settings.completedDisplay, data.focusedTaskId, days]);
   const move = (event: React.DragEvent, target: Date) => {
     event.preventDefault();
     setDropDay(null);
@@ -130,7 +133,7 @@ export function MonthView({
         {days.map((day) => {
           const key = dayKeyOf(day),
             today = key === dayKeyOf(new Date());
-          const entries = items.get(key) ?? [];
+          const entries = [...(items.get(key) ?? [])].sort((a, b) => Number(b.taskId === data.focusedTaskId) - Number(a.taskId === data.focusedTaskId));
           const visibleCount = entries.length > capacity.full ? capacity.overflow : capacity.full;
           return (
             <div
@@ -173,6 +176,10 @@ export function MonthView({
               {entries.slice(0, visibleCount).map((item) => (
                 <button
                   key={`${item.type}:${item.id}`}
+                  data-task-detail-trigger={item.type === 'task' || undefined}
+                  data-calendar-task={item.taskId}
+                  data-focused={!!item.taskId && item.taskId === data.focusedTaskId || undefined}
+                  onContextMenu={event => { if (item.type === 'task') { event.preventDefault(); event.stopPropagation(); openTaskMenu(item.id, event.clientX, event.clientY); } }}
                   draggable
                   onDragStart={(event) => {
                     event.dataTransfer.setData(
@@ -186,7 +193,7 @@ export function MonthView({
                     if (item.type === 'task') selectTask(item.id);
                     else onDateChange(day);
                   }}
-                  className={cn('calendar-item', item.done && 'text-muted line-through')}
+                  className={cn('calendar-item data-[focused]:ring-2 data-[focused]:ring-[var(--accent-solid)]', item.done && 'text-muted line-through')}
                   title={`${item.type === 'task' ? '到期任务' : '日程'} · ${item.title}`}
                   style={
                     item.type === 'event'
@@ -226,7 +233,7 @@ export function MonthView({
                       <button type="button" aria-label="关闭当日项目列表" onClick={() => setExpandedDay(null)} className="ml-auto rounded p-1 text-muted hover:bg-[var(--surface)] hover:text-foreground"><X size={14} /></button>
                     </div>
                     <div data-calendar-day-items className="min-h-0 overflow-y-auto overscroll-contain p-1.5">
-                      {entries.map(item => <DropdownItem key={`${item.type}:${item.id}`} textValue={item.title} aria-label={`${item.title} ${item.type === 'task' ? '任务' : '日程'}${item.done ? ' · 已完成' : ''}`} className="items-start gap-2 py-1.5" onSelect={() => {
+                      {entries.map(item => <DropdownItem key={`${item.type}:${item.id}`} data-task-detail-trigger={item.type === 'task' || undefined} onContextMenu={event => { if (item.type === 'task') { event.preventDefault(); event.stopPropagation(); setExpandedDay(null); openTaskMenu(item.id, event.clientX, event.clientY); } }} textValue={item.title} aria-label={`${item.title} ${item.type === 'task' ? '任务' : '日程'}${item.done ? ' · 已完成' : ''}`} className="items-start gap-2 py-1.5" onSelect={() => {
                         if (item.type === 'task') { openingTask.current = true; selectTask(item.id); }
                         else onDateChange(day);
                       }}>

@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { Bell, Clock, X } from 'lucide-react';
-import { addDays, dayKeyOf, habitReminderSlot, logCountOn, startOfDay } from '@cortex/core';
-import { useCortex, useCortexData } from '@cortex/crdt';
-import { nativeNotifSupported, notify } from '@cortex/platform';
+import { addDays, dayKeyOf, habitReminderSlot, logCountOn, startOfDay } from '@nexus/core';
+import { useNexus, useNexusData } from '@nexus/crdt';
+import { nativeNotifSupported, notify } from '@nexus/platform';
 import { useHabitClock } from './clock';
 import { HABIT_REMINDER_FADE_MS, HABIT_REMINDER_IDLE_MS, habitReminderKey, reminderUntil } from './reminderPlan';
 import { useNativeHabitNotifications } from './useNativeHabitNotifications';
@@ -14,8 +14,8 @@ const usesBatchReminders = () => nativeNotifSupported() || window.matchMedia(mob
 /** Hints can be dismissed without checking in or disabling future reminders.
  * Current occurrences stay quiet for the rest of the day, across navigation. */
 export function HabitReminder() {
-  const store = useCortex();
-  const data = useCortexData();
+  const store = useNexus();
+  const data = useNexusData();
   const now = useHabitClock();
   const today = dayKeyOf(now);
   const [snoozes, setSnoozes] = useState<Record<string, number>>({});
@@ -87,7 +87,7 @@ export function HabitReminder() {
     // available from the habit editor after an explicit click.
     const marker = `${key}:notified`;
     try { if (localStorage.getItem(marker)) return; } catch { return; }
-    notify(`该${habit.name}了`, `${slot.time} · 打开 Cortex，完成今天的习惯。`);
+    notify(`该${habit.name}了`, `${slot.time} · 打开 Nexus，完成今天的习惯。`);
     try { localStorage.setItem(marker, '1'); } catch { /* The in-app reminder remains available. */ }
   }, [key, habit?.name]);
   if (!habit || !key || !slot) return null;

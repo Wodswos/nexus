@@ -1,15 +1,15 @@
 import React from 'react';
 import { useNavigate } from 'react-router';
 import { Inbox, ArrowUpRight, Trash2, Plus } from 'lucide-react';
-import { Button, EmptyState, Badge } from '@cortex/ui';
-import { inboxTasks, parseCapture, isStructural, isProject } from '@cortex/core';
-import { useCortex, useCortexData } from '@cortex/crdt';
+import { Button, EmptyState, Badge } from '@nexus/ui';
+import { inboxTasks, parseCapture, isStructural, isProject } from '@nexus/core';
+import { useNexus, useNexusData } from '@nexus/crdt';
 import { useUI } from '@/state/ui';
 import { TaskCheckbox, PriorityDot, TagChip, DueBadge } from '@/shared/components';
 
 export default function InboxPage() {
-  const data = useCortexData();
-  const store = useCortex();
+  const data = useNexusData();
+  const store = useNexus();
   const ui = useUI();
   const navigate = useNavigate();
   const items = inboxTasks(data.tasks);

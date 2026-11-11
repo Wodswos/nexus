@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import { BookmarkPlus } from 'lucide-react';
-import { useCortexData } from '@cortex/crdt';
-import { addDays, dayKeyOf, normalizeTaskView, type SavedTaskView, type TaskViewKey } from '@cortex/core';
+import { useNexusData } from '@nexus/crdt';
+import { addDays, dayKeyOf, normalizeTaskView, type SavedTaskView, type TaskViewKey } from '@nexus/core';
 import { SaveViewDialog } from './SaveViewDialog';
 import { TASK_VIEWS } from '../viewOptions';
 import { isScheduledOnlyWorkspace, readTaskWindow } from '../taskWindow';
 import { readTaskFilters } from '../taskFilters';
 
 export function SaveViewButton({ view, trigger, restoreFocus }: { view: TaskViewKey; trigger?: (open: () => void) => React.ReactNode; restoreFocus?: () => void }) {
-  const data = useCortexData();
+  const data = useNexusData();
   const [initial, setInitial] = useState<SavedTaskView | null>(null);
   const open = () => {
       const params = new URLSearchParams(window.location.search);

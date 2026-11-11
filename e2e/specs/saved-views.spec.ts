@@ -1,3 +1,4 @@
+import { expectSelectValue, selectValue } from '../controls';
 import { test, expect, type BrowserContext, type Page } from '@playwright/test';
 
 test.use({ serviceWorkers: 'block' });
@@ -31,13 +32,13 @@ test('calendar replaces the timeline view and legacy route, retains monthly pagi
   await expect(page.getByTestId('calendar-month')).toBeVisible();
   await page.getByRole('button', { name: '上一个时间段', exact: true }).click();
   await expect(page.getByLabel('区间结束日期', { exact: true })).toHaveValue('2026-11-30');
-  await period(page).selectOption('today');
+  await selectValue(period(page), 'today');
   await expect(page.getByTestId('day-scroll')).toBeVisible();
-  await period(page).selectOption('week');
+  await selectValue(period(page), 'week');
   await expect(page.locator('[data-calendar-week-date]')).toHaveCount(7);
   await page.clock.setFixedTime(new Date('2026-12-03T12:00:00+08:00'));
   await shortcuts(page).getByRole('link', { name: '本月日历', exact: true }).click();
-  await expect(period(page)).toHaveValue('month');
+  await expectSelectValue(period(page), 'month');
   await expect(page.getByLabel('区间开始日期', { exact: true })).toHaveValue('2026-12-01');
   await expect(page.getByLabel('区间结束日期', { exact: true })).toHaveValue('2026-12-31');
   await page.goto('/tasks?view=calendar&scope=month');
@@ -50,7 +51,7 @@ test('saved workspaces support global matrix, weekly Gantt, editing, reset-on-op
   let dialog = page.getByRole('dialog', { name: '保存快捷视图', exact: true });
   await dialog.getByRole('button', { name: '保存快捷视图', exact: true }).click();
   await expect(tab(page, '四象限')).toHaveAttribute('data-state', 'active');
-  await expect(period(page)).toHaveValue('all');
+  await expectSelectValue(period(page), 'all');
   for (const name of ['a_action', 'b_action']) await expect(page.getByText(name, { exact: true })).toBeVisible();
   await expect(shortcuts(page).getByRole('link', { name: '全局四象限', exact: true })).toHaveAttribute('aria-current', 'page');
   await expect(page.getByRole('navigation', { name: '工作导航', exact: true }).getByRole('link', { name: '当前任务', exact: true })).not.toHaveAttribute('aria-current', 'page');
@@ -60,9 +61,9 @@ test('saved workspaces support global matrix, weekly Gantt, editing, reset-on-op
   await dialog.getByLabel('视图名称', { exact: true }).fill('本周甘特');
   await dialog.getByRole('button', { name: '保存快捷视图', exact: true }).click();
   await expect(dialog).toHaveCount(0);
-  await period(page).selectOption('month');
+  await selectValue(period(page), 'month');
   await shortcuts(page).getByRole('link', { name: '本周甘特', exact: true }).click();
-  await expect(period(page)).toHaveValue('week');
+  await expectSelectValue(period(page), 'week');
   await expect(tab(page, '甘特图')).toHaveAttribute('data-state', 'active');
   const grip = page.getByRole('button', { name: '拖动快捷视图 全局四象限 排序', exact: true });
   await grip.focus(); await grip.press('Space');
@@ -78,9 +79,9 @@ test('saved workspaces support global matrix, weekly Gantt, editing, reset-on-op
   await page.getByRole('menuitem', { name: '编辑快捷视图', exact: true }).click();
   dialog = page.getByRole('dialog', { name: '编辑快捷视图', exact: true });
   await dialog.getByLabel('视图名称', { exact: true }).fill('本月甘特');
-  await dialog.getByLabel('默认时间范围', { exact: true }).selectOption('month');
+  await selectValue(dialog.getByLabel('默认时间范围', { exact: true }), 'month');
   await dialog.getByRole('button', { name: '保存修改', exact: true }).click();
-  await expect(period(page)).toHaveValue('month');
+  await expectSelectValue(period(page), 'month');
   await expect(shortcuts(page).getByRole('link', { name: '本周甘特', exact: true })).toHaveCount(0);
   await menu(page, '本月甘特');
   await page.getByRole('menuitem', { name: '移除快捷视图', exact: true }).click();
@@ -95,11 +96,11 @@ test('a project shortcut preserves its boundary, date interval and the project i
   await page.getByRole('button', { name: '保存为快捷视图', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: '保存快捷视图', exact: true });
   await dialog.getByLabel('视图名称', { exact: true }).fill('A 导图');
-  await dialog.getByLabel('展示方式', { exact: true }).selectOption('mindmap');
+  await selectValue(dialog.getByLabel('展示方式', { exact: true }), 'mindmap');
   await dialog.getByRole('button', { name: '保存快捷视图', exact: true }).click();
   await expect(page.locator('.react-flow__node[data-id="a_action"]')).toBeVisible();
   await expect(page.locator('.react-flow__node[data-id="b_action"]')).toHaveCount(0);
-  await expect(period(page)).toHaveValue('all');
+  await expectSelectValue(period(page), 'all');
   const projects = page.getByRole('navigation', { name: '项目', exact: true });
   await expect(projects.getByRole('link', { name: 'a', exact: true })).not.toHaveAttribute('aria-current', 'page');
   await projects.getByRole('link', { name: 'b', exact: true }).click();
@@ -109,16 +110,18 @@ test('a project shortcut preserves its boundary, date interval and the project i
   await expect(tab(page, '导图')).toHaveAttribute('data-state', 'active');
 });
 
-test('native dropdowns reserve a consistent arrow gutter and saved-view configuration fits a narrow screen', async ({ page }) => {
+test('shared selection panels preserve selection and saved-view configuration fits a narrow screen', async ({ page }) => {
   await page.goto('/tasks?view=list&scope=all');
   await page.getByRole('button', { name: '更多任务筛选', exact: true }).click();
   await expect(page.getByRole('combobox', { name: '筛选任务状态', exact: true })).toBeVisible();
-  const styles = await page.locator('select').evaluateAll((items) => items.map((item) => { const css = getComputedStyle(item); return { appearance: css.appearance, padding: parseFloat(css.paddingRight), image: css.backgroundImage }; }));
-  expect(styles.length).toBeGreaterThan(1);
-  for (const style of styles) { expect(style.appearance).toBe('none'); expect(style.padding).toBeGreaterThanOrEqual(32); expect(style.image).toContain('svg'); }
+  await page.getByRole('combobox', { name: '筛选任务状态', exact: true }).click();
+  await expect(page.getByRole('option', { name: '全部状态', exact: true })).toHaveAttribute('aria-selected', 'true');
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog', { name: '更多任务筛选', exact: true })).toBeVisible();
+  await page.keyboard.press('Escape');
   await page.getByRole('button', { name: '添加快捷视图', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: '保存快捷视图', exact: true });
-  await dialog.getByLabel('默认时间范围', { exact: true }).selectOption('custom');
+  await selectValue(dialog.getByLabel('默认时间范围', { exact: true }), 'custom');
   await expect(dialog).toHaveCSS('opacity', '1');
   await page.screenshot({ path: '../.preview.local/saved-views-desktop.png' });
   await page.setViewportSize({ width: 320, height: 640 });

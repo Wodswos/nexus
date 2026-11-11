@@ -47,8 +47,8 @@ describe('account and terminal security', () => {
     expect(parseSshHost('user@host:65536')).toBeNull();
     expect(parseSshHost('user@[::1]:22')).toEqual({ target: 'user@::1', port: '22' });
     expect(shellQuote('$HOME')).toBe("'$HOME'");
-    expect(originAllowed({ host: 'cortex.example', origin: 'https://cortex.example' })).toBe(true);
-    expect(originAllowed({ host: 'cortex.example', origin: 'https://evil.example' })).toBe(false);
+    expect(originAllowed({ host: 'nexus.example', origin: 'https://nexus.example' })).toBe(true);
+    expect(originAllowed({ host: 'nexus.example', origin: 'https://evil.example' })).toBe(false);
     const limiter = new RateLimit(2, 1000);
     expect(limiter.allow('a', 0)).toBe(true); expect(limiter.allow('a', 1)).toBe(true);
     expect(limiter.allow('a', 2)).toBe(false); expect(limiter.allow('a', 1000)).toBe(true);

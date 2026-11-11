@@ -1,16 +1,16 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Inbox, Hash, AlertTriangle, Clock, Minus } from 'lucide-react';
-import { Dialog, DialogContent, Badge } from '@cortex/ui';
-import { parseCapture } from '@cortex/core';
-import { useCortex } from '@cortex/crdt';
+import { Dialog, DialogContent, Badge } from '@nexus/ui';
+import { parseCapture } from '@nexus/core';
+import { useNexus } from '@nexus/crdt';
 import { useUI } from '../state/ui';
-import { fmtHM, addDays, startOfDay } from '@cortex/core';
+import { fmtHM, addDays, startOfDay } from '@nexus/core';
 import { isComposing } from './ime';
 
 export function QuickCapture() {
   const open = useUI((s) => s.quickCaptureOpen);
   const setQuickCapture = useUI((s) => s.setQuickCapture);
-  const store = useCortex();
+  const store = useNexus();
   const [text, setText] = useState('');
   const [count, setCount] = useState(0);
   const [saving, setSaving] = useState(false);

@@ -1,3 +1,4 @@
+import { expectSelectValue, selectValue } from '../controls';
 import { test, expect, type BrowserContext, type Page, type Locator } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 
@@ -183,7 +184,7 @@ test('calendar drafts cancel without records and create only after confirmation'
 
 test.describe('task resources with mocked connection requests', () => {
 test.use({ serviceWorkers: 'block' });
-test('task resources have three stacked areas and distinguish connection failure from no sessions', async ({
+test('workspace distinguishes connection failure from no sessions and adds agent and note links on demand', async ({
   page,
 }) => {
   await seed(page, {
@@ -202,28 +203,30 @@ test('task resources have three stacked areas and distinguish connection failure
   await page.goto('/tasks');
   await page.getByText('resource task', { exact: true }).click();
   const detail = page.locator('[data-inspector]');
-  for (const label of ['tmux 关联', 'Agent 关联', 'Note 关联'])
-    await expect(detail.getByRole('region', { name: label })).toBeVisible();
-  const bounds = await detail
-    .locator('[data-task-resources] > section')
-    .evaluateAll((nodes) => nodes.map((node) => node.getBoundingClientRect().top));
-  expect(bounds[0]).toBeLessThan(bounds[1]);
-  expect(bounds[1]).toBeLessThan(bounds[2]);
+  await expect(detail.getByRole('region', { name: '任务工作区' })).toBeVisible();
+  await expect(detail.getByLabel('tmux 服务器', { exact: true })).toHaveCount(0);
+  await detail.getByRole('button', { name: '添加工作资源' }).click();
+  await page.getByRole('menuitem', { name: 'tmux 会话', exact: true }).click();
   await detail.getByLabel('tmux 服务器', { exact: true }).selectOption('bad');
   await expect(detail.getByRole('alert')).toContainText('未配置 SSH 登录凭据');
   await expect(detail.getByLabel('tmux 会话', { exact: true })).toBeDisabled();
   await expect(detail.getByLabel('tmux 会话', { exact: true }).locator('option:checked')).toHaveText(
     '连接失败',
   );
-  await detail.getByLabel('Agent 链接', { exact: true }).fill('https://claude.ai/chat/example');
-  await detail.getByRole('button', { name: '添加 Agent 链接', exact: true }).click();
-  await expect(detail.getByRole('region', { name: 'Agent 关联' }).getByRole('link')).toHaveAttribute(
+  await detail.getByRole('button', { name: '取消添加资源' }).click();
+  await detail.getByRole('button', { name: '添加工作资源' }).click();
+  await page.getByRole('menuitem', { name: 'Agent 会话', exact: true }).click();
+  await detail.getByLabel('资源链接', { exact: true }).fill('https://claude.ai/chat/example');
+  await detail.getByRole('button', { name: '添加资源', exact: true }).click();
+  await expect(detail.locator('[data-resource-type="agent"]').getByRole('link')).toHaveAttribute(
     'href',
     'https://claude.ai/chat/example',
   );
-  await detail.getByLabel('Note 链接', { exact: true }).fill('obsidian://open?vault=work&file=note');
-  await detail.getByRole('button', { name: '添加 Note 链接', exact: true }).click();
-  await expect(detail.getByRole('region', { name: 'Note 关联' }).getByRole('link')).toHaveAttribute(
+  await detail.getByRole('button', { name: '添加工作资源' }).click();
+  await page.getByRole('menuitem', { name: '笔记／文档', exact: true }).click();
+  await detail.getByLabel('资源链接', { exact: true }).fill('obsidian://open?vault=work&file=note');
+  await detail.getByRole('button', { name: '添加资源', exact: true }).click();
+  await expect(detail.locator('[data-resource-type="obsidian"]').getByRole('link')).toHaveAttribute(
     'href',
     'obsidian://open?vault=work&file=note',
   );
@@ -233,7 +236,7 @@ test('task resources have three stacked areas and distinguish connection failure
 test('week and day blank slots open cancellable task drafts, including on mobile', async ({ page }) => {
   await page.goto('/calendar');
   await ready(page);
-  await page.getByRole('combobox', { name: '任务时间范围', exact: true }).selectOption('week');
+  await selectValue(page.getByRole('combobox', { name: '任务时间范围', exact: true }), 'week');
   const slot = page.locator('[data-calendar-week-date]').first();
   const bounds = await slot.boundingBox();
   expect(bounds).not.toBeNull();
@@ -242,7 +245,7 @@ test('week and day blank slots open cancellable task drafts, including on mobile
   await expect(draft).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(draft).toHaveCount(0);
-  await page.getByRole('combobox', { name: '任务时间范围', exact: true }).selectOption('today');
+  await selectValue(page.getByRole('combobox', { name: '任务时间范围', exact: true }), 'today');
   const day = page.getByTestId('day-scroll');
   const dayBounds = await day.boundingBox();
   await page.mouse.click(dayBounds!.x + 160, dayBounds!.y + 140);
@@ -292,7 +295,7 @@ test('health + keyboard and native quick capture', async ({ page, request }) => 
   expect((await request.get('/healthz')).ok()).toBeTruthy();
   await page.goto('/');
   await ready(page);
-  await expect(page).toHaveTitle(/Cortex/);
+  await expect(page).toHaveTitle(/Nexus/);
   await capture(page, 'keyboard capture');
   await page.evaluate(() => window.dispatchEvent(new CustomEvent('cortex:quick-capture')));
   await expect(page.getByPlaceholder(/想到什么写什么/)).toBeVisible();
@@ -667,7 +670,7 @@ test('list drag appends after filtered children and supports a touch handle', as
     { ...task('filter_source', 'Drag filtered source'), parentId: null, dueAt: due, order: 1 },
   ] });
   await page.goto('/tasks');
-  await page.getByRole('combobox', { name: '任务时间范围', exact: true }).selectOption('today');
+  await selectValue(page.getByRole('combobox', { name: '任务时间范围', exact: true }), 'today');
   await expect(listRow(page, 'filter_hidden')).toHaveCount(0);
   if (browserName === 'chromium') {
     await page.setViewportSize({ width: 390, height: 844 });
@@ -688,7 +691,7 @@ test('list drag appends after filtered children and supports a touch handle', as
     await page.mouse.move(target.x + 150, target.y + target.height / 2, { steps: 10 });
     await page.mouse.up();
   }
-  await page.getByRole('combobox', { name: '任务时间范围', exact: true }).selectOption('all');
+  await selectValue(page.getByRole('combobox', { name: '任务时间范围', exact: true }), 'all');
   await expect(listRow(page, 'filter_hidden')).toBeVisible();
   const result = await exported(page);
   const source = result.data.tasks.find((item: any) => item.id === 'filter_source');
@@ -790,9 +793,9 @@ test('mindmap focuses current work and factual risks while retaining project pat
   await expect(node('focus_project')).toBeVisible();
   await expect(node('focus_doing').locator('[data-mind-muted]')).toHaveAttribute('data-mind-muted', 'true');
   await overview.getByRole('button', { name: '全部', exact: true }).click();
-  await page.getByRole('combobox', { name: '任务时间范围', exact: true }).selectOption('undated');
+  await selectValue(page.getByRole('combobox', { name: '任务时间范围', exact: true }), 'undated');
   await page.getByRole('button', { name: '更多任务筛选', exact: true }).click();
-  await page.getByRole('combobox', { name: '筛选任务优先级', exact: true }).selectOption('high');
+  await selectValue(page.getByRole('combobox', { name: '筛选任务优先级', exact: true }), 'high');
   await page.keyboard.press('Escape');
   await expect(node('focus_important')).toBeVisible();
   await expect(node('focus_overdue')).toHaveCount(0); // explicit undated range excludes dated branches
@@ -947,8 +950,8 @@ test('calendar has task titles, multi-day events, editing and date navigation', 
   await page.keyboard.press('Escape');
   await cell.getByRole('button', { name: `${key}，查看日程`, exact: true }).click();
   await expect(page.getByTestId('day-scroll')).toBeVisible();
-  await page.getByRole('combobox', { name: '任务时间范围', exact: true }).selectOption('week');
-  await expect(page.getByRole('combobox', { name: '任务时间范围', exact: true })).toHaveValue('week');
+  await selectValue(page.getByRole('combobox', { name: '任务时间范围', exact: true }), 'week');
+  await expectSelectValue(page.getByRole('combobox', { name: '任务时间范围', exact: true }), 'week');
 });
 
 test('today finds a due child under an undated project, inline capture inherits project', async ({
@@ -970,7 +973,7 @@ test('today finds a due child under an undated project, inline capture inherits 
   });
   await page.getByRole('link', { name: '当前任务', exact: true }).first().click();
   await page.getByRole('tab', { name: '列表', exact: true }).click();
-  await page.getByRole('combobox', { name: '任务时间范围', exact: true }).selectOption('today');
+  await selectValue(page.getByRole('combobox', { name: '任务时间范围', exact: true }), 'today');
   await expect(page.locator('[data-row]').getByText('action for today', { exact: true })).toBeVisible();
   await expect(page.locator('[data-row]').getByText('later action', { exact: true })).toHaveCount(0);
   await page

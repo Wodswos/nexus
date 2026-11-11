@@ -1,17 +1,17 @@
 import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router';
 import { Inbox, ChevronRight, Clock, Flame, Timer, Activity, CalendarClock } from 'lucide-react';
-import { cn, Badge, EmptyState } from '@cortex/ui';
+import { cn, Badge, EmptyState } from '@nexus/ui';
 import {
   Task, activeTasks, listGroupOf, computeFocusStats, habitsDueToday, isDoneOn, dayKeyOf,
   endOfDay, fmtHM, fmtDuration,
-} from '@cortex/core';
-import { useCortex, useCortexData } from '@cortex/crdt';
+} from '@nexus/core';
+import { useNexus, useNexusData } from '@nexus/crdt';
 import { useUI } from '@/state/ui';
 import { TaskCheckbox, DueBadge, StatTile, EVENT_KIND_STYLE } from '@/shared/components';
 
 export default function DashboardPage() {
-  const data = useCortexData();
+  const data = useNexusData();
   const ui = useUI();
   const navigate = useNavigate();
   const now = new Date();
@@ -191,7 +191,7 @@ export default function DashboardPage() {
 }
 
 function DashboardTaskRow({ task, onOpen }: { task: Task; onOpen: () => void }) {
-  const store = useCortex();
+  const store = useNexus();
   return (
     <div className="group flex items-center gap-2.5 rounded-lg px-1.5 py-1.5 transition-colors hover:bg-[var(--surface)]">
       <TaskCheckbox

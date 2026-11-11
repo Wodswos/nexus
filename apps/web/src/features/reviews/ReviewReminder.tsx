@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router';
 import { BookOpen, X } from 'lucide-react';
-import { dueReviews, reviewId } from '@cortex/core';
-import { useCortex, useCortexData } from '@cortex/crdt';
-import { notify } from '@cortex/platform';
+import { dueReviews, reviewId } from '@nexus/core';
+import { useNexus, useNexusData } from '@nexus/crdt';
+import { notify } from '@nexus/platform';
 
 export function useReviewClock() {
   const [now, setNow] = useState(Date.now);
@@ -17,8 +17,8 @@ export function useReviewClock() {
   return now;
 }
 export function ReviewReminder() {
-  const data = useCortexData();
-  const store = useCortex();
+  const data = useNexusData();
+  const store = useNexus();
   const location = useLocation();
   const now = useReviewClock();
   const [snoozes, setSnoozes] = useState<Record<string, number>>({});
@@ -35,7 +35,7 @@ export function ReviewReminder() {
     const key = `${prefix}${id}:notified`;
     try { if (localStorage.getItem(key)) return; } catch { return; }
     // Use an existing permission only; never interrupt the user with a permission dialog.
-    notify(due?.kind === 'weekly' ? '留十分钟，回顾这一周' : '留三分钟，回顾今天', '打开 Cortex 的复盘，整理进展、阻碍和下一步。');
+    notify(due?.kind === 'weekly' ? '留十分钟，回顾这一周' : '留三分钟，回顾今天', '打开 Nexus 的复盘，整理进展、阻碍和下一步。');
     try { localStorage.setItem(key, '1'); } catch { /* App reminder still works. */ }
   }, [prefix, id, location.pathname]);
   if (!due || location.pathname === '/reviews') return null;

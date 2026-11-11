@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { Accent, ACCENTS } from '@cortex/core';
+import { Accent, ACCENTS } from '@nexus/core';
 
 type ThemeMode = 'dark' | 'light' | 'system';
 

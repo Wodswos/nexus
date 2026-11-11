@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { EMPTY_DATA, addDays, dayKeyOf, type CortexData, type Task, type ScheduleEvent } from '@cortex/core';
+import { EMPTY_DATA, addDays, dayKeyOf, type NexusData, type Task, type ScheduleEvent } from '@nexus/core';
 import { readTaskFilters, selectWorkspaceTasks, workspaceCanvasWindow, workspaceTaskDefaults } from '../src/features/tasks/taskFilters';
 import { readTaskWindow } from '../src/features/tasks/taskWindow';
 
@@ -7,8 +7,8 @@ const now = new Date(2026, 10, 4, 12);
 const day = (value: string) => new Date(`${value}T12:00:00`).getTime();
 const task = (id: string, patch: Partial<Task> = {}): Task => ({ id, title: id, status: 'todo', parentId: null, ownerId: 'u', order: 0, tags: [], important: false, urgent: false, createdAt: 1, updatedAt: 1, ...patch });
 const event = (taskId: string, from: string, to: string, patch: Partial<ScheduleEvent> = {}): ScheduleEvent => ({ id: taskId, taskId, title: taskId, kind: 'focus', ownerId: 'u', start: day(from), end: day(to), createdAt: 1, updatedAt: 1, ...patch });
-const data = (tasks: Task[], events: ScheduleEvent[] = []): CortexData => ({ ...EMPTY_DATA, tasks, events, settings: { ...EMPTY_DATA.settings } });
-const choose = (values: CortexData, query: string) => selectWorkspaceTasks(values, new URLSearchParams(query), now);
+const data = (tasks: Task[], events: ScheduleEvent[] = []): NexusData => ({ ...EMPTY_DATA, tasks, events, settings: { ...EMPTY_DATA.settings } });
+const choose = (values: NexusData, query: string) => selectWorkspaceTasks(values, new URLSearchParams(query), now);
 
 describe('shared workspace filters', () => {
   it('current means doing or unfinished overdue, including historic backlog, never merely planned work', () => {
@@ -63,7 +63,7 @@ describe('shared workspace filters', () => {
 });
 
 describe('all-time temporal canvas', () => {
-  const canvas = (values: CortexData, query: string) => { const params = new URLSearchParams(query); return workspaceCanvasWindow(values, params, now, readTaskWindow(params, now, 1, true)); };
+  const canvas = (values: NexusData, query: string) => { const params = new URLSearchParams(query); return workspaceCanvasWindow(values, params, now, readTaskWindow(params, now, 1, true)); };
   it('opens old overdue work in view instead of an empty current week', () => {
     const values = data([task('old', { dueAt: day('2025-01-01') }), task('later', { dueAt: day('2026-12-01') })]);
     const gantt = canvas(values, 'view=gantt&scope=all&work=overdue');

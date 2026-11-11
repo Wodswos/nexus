@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { useCortex, useCortexData } from '@cortex/crdt';
-import { nativeNotifSupported, onNotifPermissionChange, onHabitNotificationAction, reconcileHabitNotifications } from '@cortex/platform';
+import { useNexus, useNexusData } from '@nexus/crdt';
+import { nativeNotifSupported, onNotifPermissionChange, onHabitNotificationAction, reconcileHabitNotifications } from '@nexus/platform';
 import { planHabitNotifications } from './reminderPlan';
 
 /** OS schedules survive suspension; opening the app replenishes and reconciles
  * them against the active account, latest habit edits and completed check-ins. */
 export function useNativeHabitNotifications(now: number, snoozes: Record<string, number>) {
-  const store = useCortex();
-  const data = useCortexData();
+  const store = useNexus();
+  const data = useNexusData();
   const navigate = useNavigate();
   const navigateRef = useRef(navigate);
   navigateRef.current = navigate;

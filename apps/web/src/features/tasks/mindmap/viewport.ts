@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNodesInitialized, useReactFlow, type Node, type Viewport } from '@xyflow/react';
 import type { MindNodeData } from './TaskNode';
 
@@ -30,6 +30,7 @@ export function useMapViewport(userId: string, root: string | null, nodes: Node<
   const { getViewport, setViewport } = useReactFlow();
   const measured = useNodesInitialized();
   const initialized = useRef(false);
+  const [ready, setReady] = useState(false);
   const latest = useRef(nodes); latest.current = nodes;
   const lastPosition = useRef<MapPosition | null>(null);
   const dimensions = useRef({ width: 0, height: 0 });
@@ -56,7 +57,7 @@ export function useMapViewport(userId: string, root: string | null, nodes: Node<
       const position = intersects ? saved : initialMapPosition(bounds, element.clientWidth, element.clientHeight);
       lastPosition.current = position;
       void setViewport(positionToViewport(position, element.clientWidth, element.clientHeight), { duration: 0 }).then(() => {
-        if (!cancelled) { initialized.current = true; save(); }
+        if (!cancelled) { initialized.current = true; setReady(true); save(); }
       });
     }); });
     return () => { cancelled = true; cancelAnimationFrame(frame); cancelAnimationFrame(secondFrame); };
@@ -86,7 +87,21 @@ export function useMapViewport(userId: string, root: string | null, nodes: Node<
     const element = wrapper.current;
     if (element) void setViewport(positionToViewport({ centerX: 0, centerY: 0, zoom: element.clientWidth < 600 ? 0.9 : 1 }, element.clientWidth, element.clientHeight), { duration: 180 });
   }, [wrapper, setViewport]);
+  const focusTask = useCallback((id: string) => {
+    const node = latest.current.find(node => node.id === id), element = wrapper.current;
+    if (!initialized.current || !node || !element) return false;
+    const position = {
+      centerX: node.position.x + (node.measured?.width ?? node.data.metrics.width) / 2,
+      centerY: node.position.y + (node.measured?.height ?? node.data.metrics.height) / 2,
+      zoom: Math.min(1, Math.max(0.75, getViewport().zoom)),
+    };
+    lastPosition.current = position;
+    void setViewport(positionToViewport(position, element.clientWidth, element.clientHeight), { duration: 0 }).then(save);
+    return true;
+  }, [wrapper, getViewport, setViewport, save]);
   return {
+    ready,
+    focusTask,
     onMove,
     onMoveEnd,
     rootPosition,

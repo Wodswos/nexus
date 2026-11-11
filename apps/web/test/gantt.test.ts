@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { taskRange, type Task } from '@cortex/core';
+import { taskRange, type Task } from '@nexus/core';
 import { ganttDragPatch, ganttDragRange, type GanttDragMode } from '../src/features/tasks/gantt/drag';
 
 const date = (day: number, hour = 0, minute = 0) => new Date(2026, 9, day, hour, minute).getTime();

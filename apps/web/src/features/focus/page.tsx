@@ -2,9 +2,9 @@ import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router';
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis } from 'recharts';
 import { Pause, Play, Square, CheckCheck, Maximize2, Minimize2, Coffee, Volume2, VolumeX, Flame, Target } from 'lucide-react';
-import { cn, Button, Badge, Segmented, SegmentedList, SegmentedTrigger } from '@cortex/ui';
-import { computeFocusStats, pomodoroCountToday, fmtDuration, habitsDueToday, isDoneOn, dayKeyOf } from '@cortex/core';
-import { useCortex, useCortexData } from '@cortex/crdt';
+import { cn, Button, Badge, Segmented, SegmentedList, SegmentedTrigger } from '@nexus/ui';
+import { computeFocusStats, pomodoroCountToday, fmtDuration, habitsDueToday, isDoneOn, dayKeyOf } from '@nexus/core';
+import { useNexus, useNexusData } from '@nexus/crdt';
 import { useTimer, remainingSec } from '@/focus/timer';
 import '@/focus/noise'; // 激活白噪音订阅
 
@@ -17,8 +17,8 @@ const NOISES = [
 ] as const;
 
 export default function FocusPage() {
-  const data = useCortexData();
-  const store = useCortex();
+  const data = useNexusData();
+  const store = useNexus();
   const navigate = useNavigate();
   const timer = useTimer();
   const stats = useMemo(() => computeFocusStats(data.sessions), [data.sessions]);
@@ -254,8 +254,8 @@ function ProgressRing({ progress, size, paused }: { progress: number; size: numb
 }
 
 function HabitMini() {
-  const data = useCortexData();
-  const store = useCortex();
+  const data = useNexusData();
+  const store = useNexus();
   const today = dayKeyOf(new Date());
   const due = habitsDueToday(data.habits);
   if (due.length === 0) return <div className="text-xs text-muted/60">还没有习惯,去习惯面板创建</div>;

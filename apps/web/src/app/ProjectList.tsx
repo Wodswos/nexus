@@ -17,15 +17,15 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { activeTasks, gapTooSmall, isProject, newOrder, sortSiblings, type Task } from '@cortex/core';
-import { useCortex } from '@cortex/crdt';
-import { cn, Dialog, DialogContent, Input, Button } from '@cortex/ui';
+import { activeTasks, gapTooSmall, isProject, newOrder, sortSiblings, type Task } from '@nexus/core';
+import { useNexus } from '@nexus/crdt';
+import { cn, Dialog, DialogContent, Input, Button } from '@nexus/ui';
 import { isComposing } from '@/shared/ime';
 import { useUI } from '@/state/ui';
 import { projectView, rememberProjectView, useProjectViewMemory, type TaskViewKey } from '@/features/tasks/projectViews';
 
 export function ProjectList({ projects, selectedId }: { projects: Task[]; selectedId: string | null }) {
-  const store = useCortex();
+  const store = useNexus();
   const collapseKey = `cortex:sidebar-projects-collapsed:${encodeURIComponent(store.userId)}`;
   const [collapsed, setCollapsed] = useState(() => {
     try { return localStorage.getItem(collapseKey) === 'true'; } catch { return false; }

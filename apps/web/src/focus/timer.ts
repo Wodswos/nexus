@@ -1,7 +1,7 @@
 import { create } from 'zustand';
-import { newId, type FocusMode } from '@cortex/core';
-import type { CortexStore } from '@cortex/crdt';
-import { chime, notify } from '@cortex/platform';
+import { newId, type FocusMode } from '@nexus/core';
+import type { NexusStore } from '@nexus/crdt';
+import { chime, notify } from '@nexus/platform';
 
 export type TimerStatus = 'idle' | 'running' | 'paused';
 interface FinishInfo {
@@ -50,7 +50,7 @@ function title() {
   if (typeof document === 'undefined') return;
   const state = useTimer.getState();
   const seconds = remainingSec(state);
-  document.title = state.status === 'running' ? `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')} ▶ Cortex` : 'Cortex';
+  document.title = state.status === 'running' ? `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')} ▶ Nexus` : 'Nexus';
 }
 function stopInterval() { if (interval) clearInterval(interval); interval = null; }
 function ensureInterval() {
@@ -104,7 +104,7 @@ export const useTimer = create<TimerState>((set, get) => ({
 }));
 
 /** Auth owns the engine, so finishing away from /focus or changing accounts is safe. */
-export function bindTimer(store: CortexStore): void {
+export function bindTimer(store: NexusStore): void {
   unbindTimer();
   owner = store.userId;
   const restored = { ...defaults, ...load() };

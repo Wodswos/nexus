@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dayKeyOf, type Habit, type HabitLog } from '@cortex/core';
+import { dayKeyOf, type Habit, type HabitLog } from '@nexus/core';
 import { habitReminderKey, planHabitNotifications } from '../src/features/habits/reminderPlan';
 
 const date = (day: string, time = '12:00') => new Date(`${day}T${time}:00`).getTime();

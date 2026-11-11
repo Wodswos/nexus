@@ -1,13 +1,21 @@
 import { useCallback, useLayoutEffect, useRef, useState } from 'react';
-import type { Task } from '@cortex/core';
-import { useCortex } from '@cortex/crdt';
+import type { Task } from '@nexus/core';
+import { useNexus } from '@nexus/crdt';
 
 type TextField = 'title' | 'notes';
 type Draft = Partial<Record<TextField, string>>;
+const COMMIT_EVENT = 'cortex:commit-task-text';
+
+/** Menus may navigate while an inspector still owns unblurred text. */
+export async function commitTaskTextDrafts(): Promise<void> {
+  const pending: Promise<void>[] = [];
+  window.dispatchEvent(new CustomEvent(COMMIT_EVENT, { detail: pending }));
+  await Promise.all(pending);
+}
 
 /** Only dirty fields are written; closing a panel cannot discard its text draft. */
 export function useTaskTextDraft(task: Task | null) {
-  const store = useCortex();
+  const store = useNexus();
   const pending = useRef(new Map<string, Draft>());
   const timer = useRef<ReturnType<typeof setTimeout>>();
   const composing = useRef(false);
@@ -54,15 +62,18 @@ export function useTaskTextDraft(task: Task | null) {
     composing.current = false;
     setStatus('');
     const flush = () => commit(id);
+    const requested = (event: Event) => { (event as CustomEvent<Promise<void>[]>).detail.push(commit(id)); };
     const hidden = () => {
       if (document.visibilityState === 'hidden') flush();
     };
     window.addEventListener('pagehide', flush);
+    window.addEventListener(COMMIT_EVENT, requested);
     document.addEventListener('visibilitychange', hidden);
     return () => {
       alive.current = false;
       commit(id, false);
       window.removeEventListener('pagehide', flush);
+      window.removeEventListener(COMMIT_EVENT, requested);
       document.removeEventListener('visibilitychange', hidden);
     };
   }, [id, commit]);

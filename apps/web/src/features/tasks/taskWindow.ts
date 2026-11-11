@@ -1,11 +1,11 @@
-import { addDays, calendarDaysBetween, dayKeyOf, isStructural, startOfDay, startOfWeek, taskRange, type Settings, type Task } from '@cortex/core';
+import { addDays, calendarDaysBetween, dayKeyOf, isStructural, startOfDay, startOfWeek, taskRange, type Settings, type Task } from '@nexus/core';
 
 export type WindowScope = 'all' | 'today' | 'week' | 'month' | 'custom' | 'undated';
 export type TaskWindow = { scope: WindowScope; start: number; days: number; scheduledOnly?: boolean };
 export const MAX_WINDOW_DAYS = 366;
 
 export function isScheduledOnlyWorkspace(params: URLSearchParams, settings: Pick<Settings, 'savedViews'>): boolean {
-  return !params.get('project') && !settings.savedViews.some(view => view.id === params.get('saved'));
+  return !params.get('project') && !params.get('root') && !settings.savedViews.some(view => view.id === params.get('saved'));
 }
 
 function parseDay(value: string | null): number | null {

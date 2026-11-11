@@ -32,9 +32,9 @@ pub fn run() {
             )?;
 
             // 菜单栏 tooltip
-            win.set_title("Cortex").ok();
+            win.set_title("Nexus").ok();
             Ok(())
         })
         .run(tauri::generate_context!())
-        .expect("error while running cortex");
+        .expect("error while running nexus");
 }

@@ -1,10 +1,10 @@
 import { expect, it } from 'vitest';
 import * as Y from 'yjs';
-import { CortexStore } from '../src/store';
-import { logCountOn } from '@cortex/core';
+import { NexusStore } from '../src/store';
+import { logCountOn } from '@nexus/core';
 
 it('normalizes multi-time schedules, syncs and restores them, while preserving old single-time edits and history', () => {
-  const store = new CortexStore('a'), peer = new CortexStore('a'), restored = new CortexStore('a');
+  const store = new NexusStore('a'), peer = new NexusStore('a'), restored = new NexusStore('a');
   try {
     const habit = store.createHabit({ name: '早晚阅读', reminderTimes: ['20:00', '08:00'], targetPerDay: 2 });
     expect(habit).toMatchObject({ reminderTimes: ['08:00', '20:00'], reminderAt: '08:00' });
@@ -29,7 +29,7 @@ it('normalizes multi-time schedules, syncs and restores them, while preserving o
 });
 
 it('edits schedules in place, preserves check-ins and interval anchors, and syncs/backups without account leakage', () => {
-  const store = new CortexStore('a'), peer = new CortexStore('a'), restored = new CortexStore('a'), outsider = new CortexStore('b');
+  const store = new NexusStore('a'), peer = new NexusStore('a'), restored = new NexusStore('a'), outsider = new NexusStore('b');
   try {
     const habit = store.createHabit({ name: '阅读', reminderAt: '20:00', reminderEnabled: true, cadence: { type: 'interval', everyNDays: 2 }, targetPerDay: 2 });
     store.logHabit(habit.id, '2026-11-04', 1, 2);
@@ -51,7 +51,7 @@ it('edits schedules in place, preserves check-ins and interval anchors, and sync
   } finally { store.destroy(); peer.destroy(); restored.destroy(); outsider.destroy(); }
 });
 it('validates before writes and rejects invalid imports atomically', () => {
-  const store = new CortexStore('a');
+  const store = new NexusStore('a');
   try {
     expect(() => store.createHabit({ name: 'bad', reminderAt: '99:99' })).toThrow();
     expect(store.getData().habits).toHaveLength(0);
@@ -63,7 +63,7 @@ it('validates before writes and rejects invalid imports atomically', () => {
   } finally { store.destroy(); }
 });
 it('soft deletion retains check-ins and a single undo restores the habit and its complete history', () => {
-  const store = new CortexStore('a');
+  const store = new NexusStore('a');
   try {
     const habit = store.createHabit({ name: '阅读' });
     store.logHabit(habit.id, '2026-11-04', 1);
@@ -76,7 +76,7 @@ it('soft deletion retains check-ins and a single undo restores the habit and its
   } finally { store.destroy(); }
 });
 it('syncs ordering as one undoable preference, isolates accounts and preserves it in binary and JSON backups', () => {
-  const store = new CortexStore('a'), peer = new CortexStore('a'), restored = new CortexStore('a'), other = new CortexStore('b');
+  const store = new NexusStore('a'), peer = new NexusStore('a'), restored = new NexusStore('a'), other = new NexusStore('b');
   try {
     store.stopUndoCapture(); store.updateSettings({ habitSort: 'manual', habitOrder: ['b', 'a'] }); store.stopUndoCapture();
     Y.applyUpdate(peer.docs.root, Y.encodeStateAsUpdate(store.docs.root), 'remote');

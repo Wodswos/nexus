@@ -1,4 +1,4 @@
-import type { ServerConfig } from '@cortex/core';
+import type { ServerConfig } from '@nexus/core';
 import { apiUrl } from './endpoint';
 
 let expectedUserId: string | null = null;

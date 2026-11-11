@@ -1,4 +1,4 @@
-import { isStructural, type MindFont, type Task } from '@cortex/core';
+import { isStructural, type MindFont, type Task } from '@nexus/core';
 import { titleAppearance } from './appearance';
 
 export const VIRTUAL_ROOT_ID = '__cortex_all__';

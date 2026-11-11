@@ -1,13 +1,15 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { CalendarClock, ChevronRight, Minus, Plus, Folder } from 'lucide-react';
-import { cn } from '@cortex/ui';
+import { cn } from '@nexus/ui';
 import {
   Task, activeTasks, buildChildrenMap, taskRange, startOfDay, addDays, fmtHM, WEEKDAY_ZH, weekdayOf, calendarDaysBetween, calendarPosition, timeAtCalendarPosition,
   taskViewStatus, TaskViewStatus, priorityOf, isStructural, fullyDoneIds,
-} from '@cortex/core';
-import { useCortex } from '@cortex/crdt';
+} from '@nexus/core';
+import { useNexus } from '@nexus/crdt';
 import { useTaskViewData } from '../useTaskViewData';
+import { useTaskDomFocus } from '../useTaskDomFocus';
+import { focusedTaskPath } from '../taskNavigation';
 import { useUI } from '@/state/ui';
 import { TaskCheckbox, PRIORITY_VAR } from '@/shared/components';
 import { ganttDragPatch, ganttDragRange, type GanttDragMode } from './drag';
@@ -89,7 +91,7 @@ function fmtDeltaMin(min: number): string {
 
 export function GanttView() {
   const data = useTaskViewData();
-  const store = useCortex();
+  const store = useNexus();
   const ui = useUI();
   const collapsed = useUI((s) => s.collapsed);
   const [params] = useSearchParams();
@@ -107,6 +109,8 @@ export function GanttView() {
   const [trayDrag, setTrayDrag] = useState<{ taskId: string; title: string; x: number; y: number } | null>(null);
   const suppressClick = useRef(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const regionRef = useRef<HTMLDivElement>(null);
+  useTaskDomFocus(regionRef, 'data-gantt-focus', data.tasks);
   const nameColumn = useGanttNameWidth();
   const nameWidth = nameColumn.width;
   useGanttTouchPaging(scrollRef, nameColumn.mobile, projectId, range, setRange, !!dragging || !!draft || !!trayDrag);
@@ -166,7 +170,12 @@ export function GanttView() {
   );
   const childrenMap = useMemo(() => buildChildrenMap(tasks), [tasks]);
   const byId = useMemo(() => new Map(tasks.map((t) => [t.id, t])), [tasks]);
-  const hiddenDone = useMemo(() => data.settings.completedDisplay === 'hidden' ? fullyDoneIds(tasks) : null, [tasks, data.settings.completedDisplay]);
+  const hiddenDone = useMemo(() => {
+    if (data.settings.completedDisplay !== 'hidden') return null;
+    const hidden = fullyDoneIds(tasks);
+    for (const id of focusedTaskPath(tasks, params)) hidden.delete(id);
+    return hidden;
+  }, [tasks, data.settings.completedDisplay, params]);
 
   /** 行 = 自身有日期且与窗口重叠的任务 + 其祖先链(祖先无日期则只作分组行,不画条) */
   const rows = useMemo(() => {
@@ -209,8 +218,8 @@ export function GanttView() {
   const unscheduled = useMemo(() => {
     if (!showUnscheduled) return [];
     return tasks.filter((t) =>
-      !hasDates(t) && !isStructural(t) && t.status !== 'done' && t.status !== 'archived' && data.matchingTaskIds.has(t.id),
-    ).slice(0, 12);
+      !hasDates(t) && !isStructural(t) && (t.status !== 'done' || t.id === data.focusedTaskId) && t.status !== 'archived' && data.matchingTaskIds.has(t.id),
+    ).sort((a, b) => Number(b.id === data.focusedTaskId) - Number(a.id === data.focusedTaskId)).slice(0, 12);
   }, [tasks, showUnscheduled, data.matchingTaskIds]);
 
   const days = winDays;
@@ -328,7 +337,7 @@ export function GanttView() {
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div ref={regionRef} className="flex h-full min-h-0 flex-col">
       {/* 时间轴缩放与图例；时间区间由工作区顶栏统一管理。 */}
       <div className="flex shrink-0 flex-wrap items-center gap-2 px-2 py-1 md:px-6 md:py-3">
         {/* 缩放:放大时间轴,拖动才能精确到分钟 */}
@@ -418,7 +427,7 @@ export function GanttView() {
               <React.Fragment key={r.task.id}>
                 {r.groupStart && idx > 0 && <div className="gantt-group-sep h-2 border-t border-[var(--border-strong)]/40" />}
                 <div
-                  className="group flex border-b border-[var(--border)]/40 hover:bg-[var(--surface)]/40"
+                  className={cn('group flex border-b border-[var(--border)]/40 hover:bg-[var(--surface)]/40', r.task.id === data.focusedTaskId && 'bg-[var(--selection)]')}
                   onContextMenu={(e) => {
                     e.preventDefault(); // 行/条/轨道上右击都是应用的 TaskMenu,不是浏览器原生菜单
                     ui.openTaskMenu(r.task.id, e.clientX, e.clientY);
@@ -449,6 +458,8 @@ export function GanttView() {
                       </>
                     )}
                     <button
+                      data-task-detail-trigger
+                      data-gantt-focus={!r.dated ? r.task.id : undefined}
                       onClick={() => ui.selectTask(r.task.id)}
                       className={cn(
                         'min-w-0 flex-1 truncate text-left text-xs hover:underline',
@@ -495,6 +506,8 @@ export function GanttView() {
                     {r.dated && (
                       <div
                         data-gantt-bar={r.task.id}
+                        data-gantt-focus={r.task.id}
+                        data-task-detail-trigger
                         onPointerDown={(e) => beginBarDrag(e, r, 'move')}
                         onPointerMove={onBarPointerMove}
                         onPointerUp={onBarPointerUp}
@@ -574,6 +587,8 @@ export function GanttView() {
             {unscheduled.map((t) => (
               <button
                 key={t.id}
+                data-task-detail-trigger
+                data-gantt-focus={t.id}
                 onPointerDown={(e) => onTrayPointerDown(e, t)}
                 onClick={() => ui.selectTask(t.id)}
                 onContextMenu={(e) => { e.preventDefault(); ui.openTaskMenu(t.id, e.clientX, e.clientY); }}

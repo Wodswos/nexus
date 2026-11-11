@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Check, LogIn, UserPlus, HardDrive } from 'lucide-react';
-import { Button, Input, Badge, Spinner } from '@cortex/ui';
+import { Button, Input, Badge, Spinner } from '@nexus/ui';
 import { useAuth } from '@/app/auth';
 
 export default function LoginPage() {
@@ -47,7 +47,7 @@ export default function LoginPage() {
           <div className="flex h-16 w-16 items-center justify-center rounded-2xl gradient-bg shadow-[0_8px_32px_-8px_color-mix(in_srgb,var(--accent-from)_70%,transparent)]">
             <Check className="h-8 w-8 text-white" />
           </div>
-          <h1 className="text-xl font-semibold">Cortex</h1>
+          <h1 className="text-xl font-semibold">Nexus</h1>
           <p className="text-xs text-muted">local-first · 多端同步 · 你的效能中枢</p>
         </div>
 

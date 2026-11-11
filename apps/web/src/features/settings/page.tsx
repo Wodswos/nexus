@@ -16,20 +16,20 @@ import {
   Plus,
   Terminal,
 } from 'lucide-react';
-import { Button, Input, Badge, Card, CardContent, CardHeader, CardTitle, cn } from '@cortex/ui';
-import { ACCENTS, Accent, generateICS, startOfDay, endOfDay, addDays, newId } from '@cortex/core';
-import { api, useCortex, useCortexData } from '@cortex/crdt';
+import { Button, Input, Badge, Card, CardContent, CardHeader, CardTitle, cn } from '@nexus/ui';
+import { ACCENTS, Accent, generateICS, startOfDay, endOfDay, addDays, newId } from '@nexus/core';
+import { api, useNexus, useNexusData } from '@nexus/crdt';
 import { useAuth } from '@/app/auth';
 import { useTheme } from '@/app/theme';
-import { requestNotifPermission, getNotifPermission, nativeNotifSupported, onNotifPermissionChange } from '@cortex/platform';
+import { requestNotifPermission, getNotifPermission, nativeNotifSupported, onNotifPermissionChange } from '@nexus/platform';
 import { isComposing } from '@/shared/ime';
 import { AgentApiSettings } from './AgentApiSettings';
 
 export default function SettingsPage() {
   const auth = useAuth();
   const theme = useTheme();
-  const store = useCortex();
-  const data = useCortexData();
+  const store = useNexus();
+  const data = useNexusData();
   const navigate = useNavigate();
   const fileRef = useRef<HTMLInputElement>(null);
   const [inviteCode, setInviteCode] = useState<string | null>(null);
@@ -126,7 +126,7 @@ export default function SettingsPage() {
     const blob = new Blob([JSON.stringify(store.exportSnapshot(), null, 2)], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `cortex-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `nexus-backup-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(a.href);
   };
@@ -144,7 +144,7 @@ export default function SettingsPage() {
         title: `[${e.completed ? 'x' : ' '}] ${e.title}`,
         start: new Date(e.start),
         end: new Date(e.end),
-        description: e.taskId ? 'Cortex 时间块' : undefined,
+        description: e.taskId ? 'Nexus 时间块' : undefined,
       }));
     const dueTasks = store
       .getData()
@@ -158,7 +158,7 @@ export default function SettingsPage() {
     const blob = new Blob([generateICS([...events, ...dueTasks])], { type: 'text/calendar' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = 'cortex.ics';
+    a.download = 'nexus.ics';
     a.click();
     URL.revokeObjectURL(a.href);
   };
@@ -465,7 +465,7 @@ export default function SettingsPage() {
                     <CircleCheck className="h-3.5 w-3.5 text-[var(--success)]" /> 已授权
                   </>
                 ) : (
-                  <>{notifState === 'denied' ? nativeNotifications ? '请在 iPhone「设置 → 通知 → Cortex」中允许通知。' : '通知已被禁用，请在浏览器设置中允许通知。' : notifState === 'unsupported' ? '当前环境仅支持应用内提醒。' : '尚未授权，点击按钮后可开启通知。'}</>
+                  <>{notifState === 'denied' ? nativeNotifications ? '请在 iPhone「设置 → 通知 → Nexus」中允许通知。' : '通知已被禁用，请在浏览器设置中允许通知。' : notifState === 'unsupported' ? '当前环境仅支持应用内提醒。' : '尚未授权，点击按钮后可开启通知。'}</>
                 )}
               </div>
             )}
@@ -525,7 +525,7 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        <div className="pt-2 text-center text-[10px] text-muted/50">Cortex · local-first · CRDT 同步</div>
+        <div className="pt-2 text-center text-[10px] text-muted/50">Nexus · local-first · CRDT 同步</div>
       </div>
     </div>
   );

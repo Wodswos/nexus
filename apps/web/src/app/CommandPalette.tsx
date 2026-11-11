@@ -5,8 +5,8 @@ import {
   ListTodo, Timer, Activity, Inbox, LayoutDashboard, Settings, Plus, Play,
   CalendarRange, LayoutGrid, GitBranch, Download, Search, Library, BookOpen, Trash2,
 } from 'lucide-react';
-import { useCortex, useCortexData } from '@cortex/crdt';
-import { activeTasks } from '@cortex/core';
+import { useNexus, useNexusData } from '@nexus/crdt';
+import { activeTasks } from '@nexus/core';
 import { useUI } from '../state/ui';
 import { useTimer } from '../focus/timer';
 
@@ -15,8 +15,8 @@ export function CommandPalette() {
   const setCommand = useUI((s) => s.setCommand);
   const selectTask = useUI((s) => s.selectTask);
   const setQuickCapture = useUI((s) => s.setQuickCapture);
-  const data = useCortexData();
-  const store = useCortex();
+  const data = useNexusData();
+  const store = useNexus();
   const navigate = useNavigate();
   const start = useTimer((s) => s.start);
 
@@ -104,7 +104,7 @@ export function CommandPalette() {
                 const blob = new Blob([JSON.stringify(store.exportSnapshot(), null, 2)], { type: 'application/json' });
                 const a = document.createElement('a');
                 a.href = URL.createObjectURL(blob);
-                a.download = `cortex-backup-${new Date().toISOString().slice(0, 10)}.json`;
+                a.download = `nexus-backup-${new Date().toISOString().slice(0, 10)}.json`;
                 a.click();
                 URL.revokeObjectURL(a.href);
               })}

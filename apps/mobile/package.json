@@ -1,9 +1,9 @@
 {
-  "name": "@cortex/mobile",
+  "name": "@nexus/mobile",
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "build:web": "pnpm --filter @cortex/web build --mode mobile",
+    "build:web": "pnpm --filter @nexus/web build --mode mobile",
     "sync": "pnpm build:web && rm -rf www && cp -r ../web/dist www && cap sync && node scripts/configure-ios.mjs",
     "add:ios": "cap add ios",
     "open:ios": "cap open ios",

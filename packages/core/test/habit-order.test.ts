@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { DEFAULT_SETTINGS, habitOrderAfterMove, sortedHabits, validateCortexData, type Habit } from '../src';
+import { DEFAULT_SETTINGS, habitOrderAfterMove, sortedHabits, validateNexusData, type Habit } from '../src';
 const habit = (id: string, createdAt: number, reminderAt = ''): Habit => ({ id, name: id, createdAt, reminderAt, reminderEnabled: false, cadence: { type: 'daily' }, color: '#6b80ae', icon: 'Check', ownerId: 'u' });
 it('orders timed habits first, breaks equal-time ties by manual order, and keeps legacy/new entries stable', () => {
   const values = [habit('none', 1), habit('late', 2, '21:00'), habit('morning_b', 4, '08:00'), habit('morning_a', 3, '08:00')];
@@ -18,8 +18,8 @@ it('bases drags on the visible order, excludes inactive entries and preserves un
   expect(habitOrderAfterMove(values, settings, 'deleted', 'early')).toBeNull();
 });
 it('rejects duplicate or malformed imported ordering before any writes', () => {
-  for (const settings of [{ habitSort: 'other' }, { habitOrder: ['same', 'same'] }, { habitOrder: [1] }, { habitOrder: ['bad/id'] }]) expect(() => validateCortexData({ settings })).toThrow();
-  expect(() => validateCortexData({ settings: { habitSort: 'manual', habitOrder: [] } })).not.toThrow();
+  for (const settings of [{ habitSort: 'other' }, { habitOrder: ['same', 'same'] }, { habitOrder: [1] }, { habitOrder: ['bad/id'] }]) expect(() => validateNexusData({ settings })).toThrow();
+  expect(() => validateNexusData({ settings: { habitSort: 'manual', habitOrder: [] } })).not.toThrow();
 });
 it('sorts multi-time habits by their earliest time and respects explicitly cleared legacy times', () => {
   const values = [habit('noon', 1, '12:00'), { ...habit('twice', 2, '20:00'), reminderTimes: ['20:00', '08:00'] }, { ...habit('cleared', 3, '07:00'), reminderTimes: [] }];

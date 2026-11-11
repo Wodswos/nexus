@@ -5,10 +5,13 @@ data
 backups
 .preview.local
 .git
-docs
+docs/**
 e2e
 test-results
 playwright-report
 apps/desktop
 apps/mobile
 *.md
+!docs/skills/
+!docs/skills/nexus-api/
+!docs/skills/nexus-api/SKILL.md

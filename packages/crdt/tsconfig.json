@@ -2,7 +2,7 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "paths": {
-      "@cortex/core": ["../core/src/index.ts"]
+      "@nexus/core": ["../core/src/index.ts"]
     }
   },
   "include": ["src", "test"]

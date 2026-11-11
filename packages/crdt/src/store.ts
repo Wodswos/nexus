@@ -1,7 +1,7 @@
 import * as Y from 'yjs';
 import { toBase64, fromBase64 } from 'lib0/buffer';
 import {
-  CortexData,
+  NexusData,
   DEFAULT_SETTINGS,
   EMPTY_DATA,
   Habit,
@@ -24,12 +24,12 @@ import {
   normalizeTaskForest,
   buildChildrenMap,
   canReparent,
-  validateCortexData,
+  validateNexusData,
   validateSavedViews,
   validateHabitConfig,
   habitReminderTimes,
   validateHabitOrder,
-  CortexSnapshot,
+  NexusSnapshot,
   Review,
   ReviewPeriod,
   reviewFacts,
@@ -39,14 +39,19 @@ import {
   validateMindAppearance,
   type MindAppearance,
   taskBranchIds,
-} from '@cortex/core';
+  sortedWorkspaceLinks,
+  workspaceLinkKey,
+  workspaceLinkOrder,
+  planTaskBatch,
+  type TaskBatchChange,
+} from '@nexus/core';
 
 /**
  * 数据布局(7 个扁平 Y.Doc,见 docs/DEVLOG.md「扁平 doc」决策):
  *   root     → settings(Y.Map) + tags(Y.Map)
  *   tasks    → items: Y.Map<id, Y.Map<field, value>>
  *   events / links / sessions / habits / habitLogs → 同构
- * 领域代码只碰 CortexData 普通对象;Yjs 细节封闭在本包内。
+ * 领域代码只碰 NexusData 普通对象;Yjs 细节封闭在本包内。
  */
 
 export const DOC_IDS = ['root', 'tasks', 'events', 'links', 'sessions', 'habits', 'habitLogs'] as const;
@@ -62,12 +67,12 @@ type EntityDoc<T> = {
   toEntity(ymap: Y.Map<unknown>): T | null;
 };
 
-export class CortexStore {
+export class NexusStore {
   readonly userId: string;
   readonly docs: Record<DocId, Y.Doc>;
   private listeners = new Set<() => void>();
   private scheduled = false;
-  private cache: CortexData | null = null;
+  private cache: NexusData | null = null;
   private unsubs: (() => void)[] = [];
   /** 每 doc 一个撤销管理器(root 同时盯 settings/tags);hub 维护跨 doc 的撤销顺序 */
   private undoManagers = new Map<DocId, Y.UndoManager>();
@@ -223,7 +228,7 @@ export class CortexStore {
     return () => this.listeners.delete(fn);
   };
 
-  getData = (): CortexData => {
+  getData = (): NexusData => {
     if (!this.cache) this.cache = this.derive();
     return this.cache;
   };
@@ -244,7 +249,7 @@ export class CortexStore {
     setTimeout(flush, 150);
   }
 
-  private derive(): CortexData {
+  private derive(): NexusData {
     const cached = <T>(id: DocId, derive: () => T): T => {
       if (!this.collectionCache.has(id)) this.collectionCache.set(id, derive());
       return this.collectionCache.get(id) as T;
@@ -443,6 +448,31 @@ export class CortexStore {
     this.stopUndoCapture();
   }
 
+  /** Validate first, then change only selected tasks in one independent undo unit. */
+  setTaskBatch(ids: readonly string[], change: TaskBatchChange, expected?: readonly Task[]) {
+    const tasks = this.getData().tasks;
+    if (expected) {
+      const before = new Map(expected.map(task => [task.id, task]));
+      const current = new Map(tasks.map(task => [task.id, task]));
+      const fields: (keyof Task)[] = ['kind', 'project', 'deletedAt', 'status'];
+      if (change.priority !== undefined) fields.push('priority', 'important', 'urgent');
+      if (change.startAt || change.dueAt || change.shiftDays !== undefined) fields.push('startAt', 'dueAt');
+      for (const id of new Set(ids)) {
+        const a = before.get(id), b = current.get(id);
+        if (!a || !b || fields.some(key => (a[key] ?? null) !== (b[key] ?? null)))
+          throw new Error('所选任务已在其他位置发生变化，请关闭面板后重新打开。尚未修改任何任务。');
+      }
+    }
+    const plan = planTaskBatch(tasks, ids, change);
+    if (!plan.writes.length) return plan;
+    this.stopUndoCapture();
+    this.docs.tasks.transact(() => {
+      for (const { id, patch } of plan.writes) this.updateTask(id, patch);
+    });
+    this.stopUndoCapture();
+    return plan;
+  }
+
   /** 设显式优先级(P0~P3);同时落 important/urgent,四象限与优先级永远一致 */
   setTaskPriority(id: string, priority: Priority): void {
     this.updateTask(id, { priority, ...quadrantFields(priority) });
@@ -453,6 +483,23 @@ export class CortexStore {
     const cur = this.get<Task>('tasks', id);
     if (!cur || cur.kind === kind) return;
     this.updateTask(id, { kind });
+  }
+
+  /** Convert exactly the selected items, preserving task content and project identities. */
+  setTaskKinds(ids: readonly string[], kind: 'todo' | 'node'): number {
+    if (kind !== 'todo' && kind !== 'node') throw new Error('任务类型无效');
+    const targets = [...new Set(ids)].filter(id => {
+      const task = this.get<Task>('tasks', id);
+      return task && task.deletedAt == null && task.status !== 'archived' && !isProject(task) && (task.kind ?? 'todo') !== kind;
+    });
+    if (!targets.length) return 0;
+    this.stopUndoCapture();
+    this.docs.tasks.transact(() => {
+      // Explicit false keeps ordinary top-level groups from becoming project roots.
+      for (const id of targets) this.updateTask(id, { kind, project: false });
+    });
+    this.stopUndoCapture();
+    return targets.length;
   }
 
   setTaskStatus(id: string, status: TaskStatus): void {
@@ -632,6 +679,12 @@ export class CortexStore {
     title?: string,
     extra?: { serverId?: string; session?: string },
   ): TaskLink {
+    const existing = sortedWorkspaceLinks(this.getData().links, taskId);
+    const key = workspaceLinkKey({ type, target, ...extra });
+    const duplicate = existing.find((link) => workspaceLinkKey(link) === key);
+    if (duplicate) return duplicate;
+    let order = 0;
+    for (const link of existing) order = Math.max(order, workspaceLinkOrder(link));
     const link: TaskLink = {
       id: newId(),
       taskId,
@@ -640,11 +693,43 @@ export class CortexStore {
       title,
       ownerId: this.userId,
       createdAt: now(),
+      order: order + 1024,
+      pinned: false,
       deletedAt: null,
       ...extra,
     };
     this.put('links', link as unknown as Record<string, unknown>);
     return link;
+  }
+
+  updateLink(id: string, patch: Partial<Pick<TaskLink, 'title' | 'pinned'>>): void {
+    const link = this.get<TaskLink>('links', id);
+    if (!link) return;
+    if (patch.title !== undefined && (typeof patch.title !== 'string' || patch.title.length > 200)) throw new Error('资源名称最多 200 字');
+    if (patch.pinned !== undefined && typeof patch.pinned !== 'boolean') throw new Error('置顶配置无效');
+    const changed: Record<string, unknown> = {};
+    for (const field of ['title', 'pinned'] as const) if (patch[field] !== undefined && patch[field] !== link[field]) changed[field] = patch[field];
+    if (Object.keys(changed).length) this.patchEntity('links', id, { ...changed, updatedAt: now() });
+  }
+
+  /** Move within the pinned/unpinned group, normally changing just one field on one link. */
+  moveLink(id: string, direction: -1 | 1): void {
+    const link = this.get<TaskLink>('links', id);
+    if (!link) return;
+    const group = sortedWorkspaceLinks(this.getData().links, link.taskId).filter((item) => !!item.pinned === !!link.pinned);
+    const index = group.findIndex((item) => item.id === id), targetIndex = index + direction;
+    if (index < 0 || targetIndex < 0 || targetIndex >= group.length) return;
+    group.splice(index, 1); group.splice(targetIndex, 0, link);
+    const before = group[targetIndex - 1], after = group[targetIndex + 1];
+    const order = before && after ? workspaceLinkOrder(before) / 2 + workspaceLinkOrder(after) / 2
+      : before ? workspaceLinkOrder(before) + 1024 : workspaceLinkOrder(after!) - 1024;
+    this.docs.links.transact(() => {
+      if (Number.isFinite(order) && (!before || order > workspaceLinkOrder(before)) && (!after || order < workspaceLinkOrder(after))) {
+        this.patchEntity('links', id, { order, updatedAt: now() });
+      } else {
+        for (const [position, item] of group.entries()) this.patchEntity('links', item.id, { order: position * 1024 });
+      }
+    });
   }
 
   removeLink(id: string): void {
@@ -770,11 +855,11 @@ export class CortexStore {
 
   // ---------- 导出 / 导入 / 迁移 ----------
 
-  exportJSON(): CortexData {
+  exportJSON(): NexusData {
     return this.getData();
   }
 
-  exportSnapshot(): CortexSnapshot {
+  exportSnapshot(): NexusSnapshot {
     return { format: 'cortex.export', version: 2, exportedAt: now(), data: this.exportJSON(),
       docs: Object.fromEntries(DOC_IDS.map((id) => [id, toBase64(Y.encodeStateAsUpdate(this.docs[id]))])) };
   }
@@ -793,13 +878,13 @@ export class CortexStore {
         if (encoded) updates[id as DocId] = fromBase64(encoded);
       }
       // A preview ensures a corrupt later document cannot leave earlier documents half imported.
-      const preview = new CortexStore(this.userId);
+      const preview = new NexusStore(this.userId);
       try {
         for (const id of DOC_IDS) {
           Y.applyUpdate(preview.docs[id], Y.encodeStateAsUpdate(this.docs[id]), 'preview');
           if (updates[id]) Y.applyUpdate(preview.docs[id], updates[id]!, 'preview');
         }
-        validateCortexData(preview.getData());
+        validateNexusData(preview.getData());
       } finally { preview.destroy(); for (const doc of Object.values(preview.docs)) doc.destroy(); }
       const before = this.getData();
       const beforeCount = before.tasks.length + before.events.length + before.reviews.length;
@@ -809,7 +894,7 @@ export class CortexStore {
       const after = this.getData();
       return Math.max(0, after.tasks.length + after.events.length + after.reviews.length - beforeCount);
     }
-    let data = validateCortexData(envelope.data ?? input);
+    let data = validateNexusData(envelope.data ?? input);
     if (data.settings?.habitOrder && this.docs.root.getMap('settings').has('habitOrder')) {
       const existing = this.getData().settings.habitOrder;
       const ids = new Set(existing);
@@ -826,7 +911,7 @@ export class CortexStore {
     return this.withUndoSuspended(() => this.importJSONInner(data));
   }
 
-  private importJSONInner(data: Partial<CortexData>): number {
+  private importJSONInner(data: Partial<NexusData>): number {
     let count = 0;
     const importRows = <T extends { id: string }>(id: Exclude<DocId, 'root'>, rows: T[] | undefined, defaults: () => T) => {
       for (const row of rows ?? []) {
@@ -874,7 +959,7 @@ export class CortexStore {
   }
 
   /** Claim each anonymous batch once, after loading the destination's persisted history. */
-  absorbLocal(local: CortexStore): number {
+  absorbLocal(local: NexusStore): number {
     const meta = local.docs.root.getMap('meta');
     const claimed = meta.get('claimedBy');
     if (claimed && claimed !== this.userId) return 0;

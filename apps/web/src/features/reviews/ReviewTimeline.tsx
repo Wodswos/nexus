@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { ArrowUpRight, BookOpen, Check, PencilLine, Search } from 'lucide-react';
-import { cn, Segmented, SegmentedList, SegmentedTrigger } from '@cortex/ui';
-import { addDays, dateFromDayKey, dayKeyOf, fmtDuration, type Review, type ReviewKind } from '@cortex/core';
+import { cn, Segmented, SegmentedList, SegmentedTrigger } from '@nexus/ui';
+import { addDays, dateFromDayKey, dayKeyOf, fmtDuration, type Review, type ReviewKind } from '@nexus/core';
 
 export function ReviewTimeline({ reviews }: { reviews: Review[] }) {
   const [params, setParams] = useSearchParams();

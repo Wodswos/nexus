@@ -32,7 +32,7 @@ beforeAll(async () => {
   await new Promise<void>((resolve, reject) => {
     const timeout = setTimeout(() => reject(new Error(`Server startup failed: ${diagnostics}`)), 10000);
     child.stdout!.on('data', (bytes) => {
-      const match = /Cortex server on :(\d+)/.exec(bytes.toString());
+      const match = /Nexus server on :(\d+)/.exec(bytes.toString());
       if (match) { base = `http://127.0.0.1:${match[1]}`; clearTimeout(timeout); resolve(); }
     });
     child.once('exit', () => { clearTimeout(timeout); reject(new Error(`Server exited: ${diagnostics}`)); });

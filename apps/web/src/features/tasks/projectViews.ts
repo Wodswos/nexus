@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react';
-import { useCortex } from '@cortex/crdt';
-import { TASK_VIEW_KEYS, normalizeTaskView, type TaskViewKey } from '@cortex/core';
+import { useNexus } from '@nexus/crdt';
+import { TASK_VIEW_KEYS, normalizeTaskView, type TaskViewKey } from '@nexus/core';
 
 export { TASK_VIEW_KEYS, type TaskViewKey };
 export const isTaskView = (value: unknown): value is TaskViewKey =>
@@ -54,6 +54,6 @@ if (typeof window !== 'undefined') window.addEventListener('storage', (event) =>
 
 /** Presentation preferences are local to the current account and never enter task undo history. */
 export function useProjectViewMemory(): Preferences {
-  const { userId } = useCortex();
+  const { userId } = useNexus();
   return useSyncExternalStore(subscribe, () => read(userId));
 }

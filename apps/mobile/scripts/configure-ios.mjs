@@ -5,12 +5,14 @@ import { fileURLToPath } from 'node:url';
 const plist = fileURLToPath(new URL('../ios/App/App/Info.plist', import.meta.url));
 if (existsSync(plist)) {
   const defaults = readFileSync(new URL('../../web/.env.mobile', import.meta.url), 'utf8');
-  const origin = process.env.VITE_CORTEX_API_ORIGIN ?? defaults.match(/^VITE_CORTEX_API_ORIGIN=(.+)$/m)?.[1];
+  const origin = process.env.VITE_NEXUS_API_ORIGIN ?? process.env.VITE_CORTEX_API_ORIGIN
+    ?? defaults.match(/^VITE_NEXUS_API_ORIGIN=(.+)$/m)?.[1] ?? defaults.match(/^VITE_CORTEX_API_ORIGIN=(.+)$/m)?.[1];
   const server = new URL(origin);
   if (!['http:', 'https:'].includes(server.protocol) || server.username || server.password || server.pathname !== '/' || server.search || server.hash) {
-    throw new Error('VITE_CORTEX_API_ORIGIN must be an HTTP(S) origin');
+    throw new Error('VITE_NEXUS_API_ORIGIN must be an HTTP(S) origin');
   }
   const info = JSON.parse(execFileSync('plutil', ['-convert', 'json', '-o', '-', plist], { encoding: 'utf8' }));
+  execFileSync('plutil', [info.CFBundleDisplayName === undefined ? '-insert' : '-replace', 'CFBundleDisplayName', '-string', 'Nexus', plist]);
   const ats = info.NSAppTransportSecurity ?? {};
   const previous = info.CortexHTTPExceptionHost;
   if (previous && (server.protocol !== 'http:' || previous !== server.hostname)) {

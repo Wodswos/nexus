@@ -118,7 +118,7 @@ function notificationId(key: string, used: Set<number>): number {
 }
 let latestReconcile = 0;
 let reconciliation = Promise.resolve();
-/** Replace only Cortex habit requests. Queueing prevents account-change races;
+/** Replace only Nexus habit requests. Queueing prevents account-change races;
  * successful schedule receipts prevent repeats after a delivered alert is cleared. */
 export function reconcileHabitNotifications(ownerId: string | null, plans: HabitNotificationPlan[]): Promise<void> {
   if (!nativeNotifSupported()) return Promise.resolve();

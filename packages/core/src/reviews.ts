@@ -1,4 +1,4 @@
-import type { CortexData, Review, ReviewFacts, ReviewKind, ReviewPeriod, Settings, Task } from './types';
+import type { NexusData, Review, ReviewFacts, ReviewKind, ReviewPeriod, Settings, Task } from './types';
 import { addDays, dateFromDayKey, dayKeyOf, startOfDay, startOfWeek } from './time';
 import { activeTasks, ancestorsOf, isProject, isStructural } from './tree';
 import { workProgress } from './work';
@@ -20,7 +20,7 @@ export function periodOfReview(review: Review): ReviewPeriod {
 }
 
 /** Current task facts, never inferred from updatedAt. Finalizing stores an immutable snapshot. */
-export function reviewFacts(data: CortexData, period: ReviewPeriod, now = Date.now(), bounds?: { start: number; end: number }): ReviewFacts {
+export function reviewFacts(data: NexusData, period: ReviewPeriod, now = Date.now(), bounds?: { start: number; end: number }): ReviewFacts {
   const start = bounds?.start ?? dateFromDayKey(period.start).getTime();
   const end = Math.min(bounds?.end ?? dateFromDayKey(period.end).getTime(), now);
   const byId = new Map(data.tasks.map(task => [task.id, task]));

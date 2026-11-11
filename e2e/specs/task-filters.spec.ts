@@ -1,3 +1,4 @@
+import { expectSelectValue, selectValue } from '../controls';
 import { test, expect, type Page } from '@playwright/test';
 
 test.use({ serviceWorkers: 'block' });
@@ -42,7 +43,7 @@ test('shared presets distinguish current work from week plans, clear stale const
   await expect(page.locator('[data-gantt-bar]')).toHaveCount(2);
   await expect(page.locator('[data-gantt-bar="old_overdue"]')).toBeVisible();
   await expect(page.getByLabel('区间开始日期', { exact: true })).toHaveValue('2026-10-20');
-  await expect(period(page)).toHaveValue('all');
+  await expectSelectValue(period(page), 'all');
   await tab(page, '日历').click();
   await expect(page.getByTestId('calendar-month')).toBeVisible();
   await expect(page.getByText('doing_dated', { exact: true })).toBeVisible();
@@ -50,7 +51,7 @@ test('shared presets distinguish current work from week plans, clear stale const
   await expect(page.getByText('week_plan', { exact: true })).toHaveCount(0);
   await tab(page, '列表').click();
   await expect(preset(page, '当前工作')).toHaveAttribute('aria-pressed', 'true');
-  await expect(period(page)).toHaveValue('all');
+  await expectSelectValue(period(page), 'all');
   await preset(page, '本周').click();
   await expect(page.getByLabel('区间开始日期', { exact: true })).toHaveValue('2026-11-02');
   await expect(page.getByLabel('区间结束日期', { exact: true })).toHaveValue('2026-11-08');
@@ -68,9 +69,9 @@ test('advanced conditions are intersections, persist on view changes and saved s
   await preset(page, '当前工作').click();
   const more = page.getByRole('button', { name: '更多任务筛选', exact: true });
   await more.click();
-  await page.getByRole('combobox', { name: '筛选任务状态', exact: true }).selectOption('doing');
-  await page.getByRole('combobox', { name: '筛选任务优先级', exact: true }).selectOption('high');
-  await page.getByRole('combobox', { name: '筛选任务标签', exact: true }).selectOption('tag');
+  await selectValue(page.getByRole('combobox', { name: '筛选任务状态', exact: true }), 'doing');
+  await selectValue(page.getByRole('combobox', { name: '筛选任务优先级', exact: true }), 'high');
+  await selectValue(page.getByRole('combobox', { name: '筛选任务标签', exact: true }), 'tag');
   await page.keyboard.press('Escape');
   await expect(rows(page)).toHaveCount(1);
   await expect(rows(page).getByText('doing_dated', { exact: true })).toBeVisible();
@@ -78,11 +79,11 @@ test('advanced conditions are intersections, persist on view changes and saved s
   await page.getByRole('button', { name: '保存为快捷视图', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: '保存快捷视图', exact: true });
   await dialog.getByLabel('视图名称', { exact: true }).fill('正在推进的重点');
-  await dialog.getByLabel('展示方式', { exact: true }).selectOption('gantt');
-  await expect(dialog.getByLabel('默认时间范围', { exact: true })).toHaveValue('all');
-  await expect(dialog.getByLabel('快捷视图工作范围', { exact: true })).toHaveValue('current');
-  await expect(dialog.getByLabel('快捷视图任务状态', { exact: true })).toHaveValue('doing');
-  await expect(dialog.getByLabel('快捷视图任务标签', { exact: true })).toHaveValue('tag');
+  await selectValue(dialog.getByLabel('展示方式', { exact: true }), 'gantt');
+  await expectSelectValue(dialog.getByLabel('默认时间范围', { exact: true }), 'all');
+  await expectSelectValue(dialog.getByLabel('快捷视图工作范围', { exact: true }), 'current');
+  await expectSelectValue(dialog.getByLabel('快捷视图任务状态', { exact: true }), 'doing');
+  await expectSelectValue(dialog.getByLabel('快捷视图任务标签', { exact: true }), 'tag');
   await dialog.getByRole('button', { name: '保存快捷视图', exact: true }).click();
   await expect(page.locator('[data-gantt-bar]')).toHaveCount(1);
   await preset(page, '全部').click();
@@ -102,7 +103,7 @@ test('empty results stay empty; new tasks inherit filters; mobile controls and d
   await page.getByRole('textbox', { name: '添加任务', exact: true }).press('Enter');
   await expect(rows(page).getByText('new_current', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: '更多任务筛选', exact: true }).click();
-  await page.getByRole('combobox', { name: '筛选任务优先级', exact: true }).selectOption('P0');
+  await selectValue(page.getByRole('combobox', { name: '筛选任务优先级', exact: true }), 'P0');
   await page.keyboard.press('Escape');
   for (const view of ['列表', '四象限', '甘特图', '日历']) {
     await tab(page, view).click();
@@ -125,11 +126,11 @@ test('calendar shows start-only tasks and undated work while respecting project 
   await preset(page, '本周').click();
   await tab(page, '日历').click();
   await expect(page.getByText('start_only', { exact: true })).toBeVisible();
-  await period(page).selectOption('month');
+  await selectValue(period(page), 'month');
   await expect(page.getByTestId('calendar-month')).toBeVisible();
   await expect(page.getByText('start_only', { exact: true })).toBeVisible();
-  await period(page).selectOption('undated');
-  await expect(period(page)).toHaveValue('undated');
+  await selectValue(period(page), 'undated');
+  await expectSelectValue(period(page), 'undated');
   await expect(page.getByRole('region', { name: '日历未排期任务', exact: true }).getByText('doing_undated', { exact: true })).toBeVisible();
   await expect(page.getByText('foreign', { exact: true })).toHaveCount(0);
 });

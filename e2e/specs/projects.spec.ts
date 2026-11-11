@@ -1,3 +1,4 @@
+import { expectSelectValue } from '../controls';
 import { test, expect, type Page, type BrowserContext } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 
@@ -53,6 +54,7 @@ test('project creation confirms once, preserves Chinese composition, opens an em
   await expect(page.locator('[data-row]')).toHaveCount(1);
   await expect(page.getByLabel('项目进度', { exact: true })).toHaveText('0/1');
   await page.getByRole('button', { name: '编辑项目 体验改版', exact: true }).click();
+  await page.locator('[data-inspector]').getByRole('button', { name: '更多任务设置', exact: true }).click();
   await expect(page.getByText('项目根节点', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'TODO 任务', exact: true })).toHaveCount(0);
   await page.getByRole('textbox', { name: '任务标题', exact: true }).fill('体验改版二期');
@@ -134,7 +136,7 @@ test('all five project views stay in their project, show full task branches by d
   // The root is represented by the page heading, not duplicated as a Gantt row.
   await expect(page.getByText('Scope A', { exact: true })).toHaveCount(2); // sidebar + heading
   await views(page).getByRole('tab', { name: '日历', exact: true }).click();
-  await expect(page.getByRole('combobox', { name: '任务时间范围', exact: true })).toHaveValue('week');
+  await expectSelectValue(page.getByRole('combobox', { name: '任务时间范围', exact: true }), 'week');
   await expect(page.locator('[data-calendar-week-date]').first()).toHaveAttribute('data-calendar-week-date', weekStart);
   await expect(page.getByText('A linked meeting', { exact: true })).toBeVisible();
   for (const name of ['B foreign action', 'B linked meeting', 'Unrelated personal meeting']) await expect(page.getByText(name, { exact: true })).toHaveCount(0);

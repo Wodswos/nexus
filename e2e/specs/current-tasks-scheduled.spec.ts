@@ -1,3 +1,4 @@
+import { selectValue, selectValues } from '../controls';
 import { expect, test, type Page } from '@playwright/test';
 
 test.use({ serviceWorkers: 'block', viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
@@ -15,7 +16,7 @@ test('every current task view excludes undated work while preserving dated-task 
   await page.goto('/tasks?scope=all&view=list');
   await expect(page.locator('[data-row]').getByText('scheduled', { exact: true })).toBeVisible();
   await expect(page.locator('[data-row]').getByText('group', { exact: true })).toBeVisible();
-  await expect(page.getByRole('combobox', { name: '任务时间范围', exact: true }).locator('option[value="undated"]')).toHaveCount(0);
+  expect(await selectValues(page.getByRole('combobox', { name: '任务时间范围', exact: true }))).not.toContain('undated');
   for (const title of ['backlog', 'loose_backlog']) await expect(page.locator('[data-row]').getByText(title, { exact: true })).toHaveCount(0);
   await page.getByRole('tab', { name: '导图', exact: true }).click();
   await expect(page.locator('.react-flow__node[data-id="scheduled"]')).toBeVisible();
@@ -29,7 +30,7 @@ test('every current task view excludes undated work while preserving dated-task 
   await expect(page.locator('[data-gantt-unscheduled]')).toHaveCount(0);
   await page.getByRole('tab', { name: '日历', exact: true }).click();
   await expect(page.getByTestId('calendar-month').getByText('scheduled', { exact: true })).toBeVisible();
-  await page.getByRole('combobox', { name: '任务时间范围', exact: true }).selectOption('today');
+  await selectValue(page.getByRole('combobox', { name: '任务时间范围', exact: true }), 'today');
   await expect(page.getByText('scheduled', { exact: true }).first()).toBeVisible();
   for (const title of ['backlog', 'loose_backlog']) await expect(page.getByText(title, { exact: true })).toHaveCount(0);
 });
@@ -42,7 +43,7 @@ test('project backlog remains available and legacy current undated links return 
   await page.goto('/tasks?saved=removed_view&view=list&scope=all');
   await expect(page.getByRole('heading', { name: '当前任务', exact: true })).toBeVisible();
   await expect(page.locator('[data-row]').getByText('backlog', { exact: true })).toHaveCount(0);
-  await expect(page.getByRole('combobox', { name: '任务时间范围', exact: true }).locator('option[value="undated"]')).toHaveCount(0);
+  expect(await selectValues(page.getByRole('combobox', { name: '任务时间范围', exact: true }))).not.toContain('undated');
   await page.goto('/tasks?project=project&view=list&scope=undated');
   await expect(page.locator('[data-row]').getByText('backlog', { exact: true })).toBeVisible();
   await expect(page.locator('[data-row]').getByText('scheduled', { exact: true })).toHaveCount(0);

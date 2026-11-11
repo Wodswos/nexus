@@ -8,7 +8,7 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { DB } from './db';
 import { decodeFrame, encodeFrame } from '../../../packages/crdt/src/framing';
 import { socketOriginAllowed, upgradeUrl, type WsIdentity } from './security';
-import { CortexStore } from '../../../packages/crdt/src/store';
+import { NexusStore } from '../../../packages/crdt/src/store';
 
 export const DOC_NAMES = ['root', 'tasks', 'events', 'links', 'sessions', 'habits', 'habitLogs'] as const;
 interface Room { doc: Y.Doc; conns: Set<WebSocket>; dirty: boolean }
@@ -101,8 +101,8 @@ export function setupSync(server: ServerType, db: DB, verifyTicket: (ticket: str
   return {
     /** Stage against live rooms, persist all changes atomically, then broadcast.
      * No async work is allowed between the snapshot and commit. */
-    withStore<T>(userId: string, write: boolean, operation: (store: CortexStore) => T, commit?: (result: T) => void): T {
-      const store = new CortexStore(userId);
+    withStore<T>(userId: string, write: boolean, operation: (store: NexusStore) => T, commit?: (result: T) => void): T {
+      const store = new NexusStore(userId);
       try {
         const vectors = new Map<string, Uint8Array>();
         for (const name of DOC_NAMES) {

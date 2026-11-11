@@ -1,5 +1,5 @@
 import { useEffect, useRef, type RefObject } from 'react';
-import { addDays } from '@cortex/core';
+import { addDays } from '@nexus/core';
 import type { TaskWindow } from '../taskWindow';
 import { createGanttTouchPager } from './touchPaging';
 

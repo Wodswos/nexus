@@ -46,7 +46,7 @@ test('rightward hierarchy wraps long Chinese titles; focus and selection keep th
   await page.waitForTimeout(350);
   const camera = await viewport(page), layout = await positions(page);
   await title.click();
-  await expect(page.locator('[data-inspector]')).toHaveCount(0);
+  await expect(page.locator('[data-inspector]')).toHaveCount(1);
   await page.waitForTimeout(320);
   expect(await viewport(page)).toEqual(camera);
   await page.getByRole('button', { name: '查看所选任务详情', exact: true }).click();

@@ -2,17 +2,17 @@
  * 双设备中继冒烟:同一账号两个客户端(手机+电脑场景)同时在线,
  * A 写 → 服务器广播 → B 收到;B 改 → A 收到(字段级)。
  * 前置:server 已起,且库中无用户(本测试注册首用户)。跑法:
- *   corepack pnpm --filter @cortex/server exec tsx smoke-relay.ts
+ *   corepack pnpm --filter @nexus/server exec tsx smoke-relay.ts
  */
-import { CortexStore, SyncClient } from '@cortex/crdt';
+import { NexusStore, SyncClient } from '@nexus/crdt';
 
 const BASE = process.env.SMOKE_BASE ?? 'http://localhost:39900';
 const WS_URL = BASE.replace(/^http/, 'ws') + '/api/sync';
 const USER = `relay_${Date.now() % 1e6}`;
 const PASS = 'relay12345';
 
-async function connectDevice(): Promise<{ store: CortexStore; client: SyncClient } | null> {
-  const store = new CortexStore(USER);
+async function connectDevice(): Promise<{ store: NexusStore; client: SyncClient } | null> {
+  const store = new NexusStore(USER);
   const client = new SyncClient(async () => {
     const r = await fetch(`${BASE}/api/auth/ticket?userId=${encodeURIComponent(userId)}`, { headers: { cookie } });
     if (!r.ok) return null;

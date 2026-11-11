@@ -1,6 +1,8 @@
-# Cortex
+# Nexus
 
-本地优先的任务、日程、专注与习惯管理工具。Web/PWA 使用 IndexedDB 保存数据,登录后通过 Yjs 同步。部署目标包含公网 HTTPS,账户数据与 SSH 连接凭据分别隔离。
+Nexus 是面向任务与 Agent 协作的工作管理中心,提供本地优先的任务、日程、专注与习惯管理。Web/PWA 使用 IndexedDB 保存数据,登录后通过 Yjs 同步。部署目标包含公网 HTTPS,账户数据与 SSH 连接凭据分别隔离。
+
+GitHub 仓库: [Wodswos/nexus](https://github.com/Wodswos/nexus)。项目原名 Cortex;改名保留已有账号、数据库和客户端存储,兼容说明见 [部署手册](docs/RUNBOOK.md#项目更名与兼容性)。
 
 设计见 [DESIGN.md](DESIGN.md),部署与备份见 [RUNBOOK](docs/RUNBOOK.md),修复与验证记录见 [DEVLOG](docs/DEVLOG.md)。
 
@@ -19,7 +21,7 @@ corepack pnpm dev          # :5173,代理 /api
 公网部署在 HTTPS 反向代理后,设置实际的浏览器访问来源。代理需支持 WebSocket。
 
 ```bash
-PUBLIC_ORIGIN=https://cortex.example.com docker compose up -d --build
+PUBLIC_ORIGIN=https://nexus.example.com docker compose up -d --build
 ```
 
 首次注册产生管理员,后续注册需要邀请码。应在公开服务前完成首账号初始化。仅本机或内网 HTTP 调试时显式使用 `COOKIE_SECURE=false`;公网保持默认 `true`。首次离线使用前需在线加载生产构建并完成 Service Worker 安装。
@@ -30,7 +32,7 @@ PUBLIC_ORIGIN=https://cortex.example.com docker compose up -d --build
 corepack pnpm typecheck
 corepack pnpm test         # 包含临时数据库上的真实 HTTP/WS 测试
 corepack pnpm build        # Web + server,不要求原生工具链
-corepack pnpm --filter @cortex/e2e exec playwright install chromium
+corepack pnpm --filter @nexus/e2e exec playwright install chromium
 corepack pnpm e2e --project=chromium
 ```
 

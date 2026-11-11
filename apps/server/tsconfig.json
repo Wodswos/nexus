@@ -4,7 +4,7 @@
     "lib": ["ES2022"],
     "types": ["node"],
     "paths": {
-      "@cortex/crdt": ["../../packages/crdt/src/index.ts"]
+      "@nexus/crdt": ["../../packages/crdt/src/index.ts"]
     }
   },
   "include": ["src", "test"]

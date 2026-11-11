@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Bold, Italic, RotateCcw, X } from 'lucide-react';
-import { MIND_PALETTE, MIND_FONT_KEYS, RESET_MIND_APPEARANCE, type MindAppearance, type MindColor, type Task } from '@cortex/core';
-import { cn } from '@cortex/ui';
+import { MIND_PALETTE, MIND_FONT_KEYS, RESET_MIND_APPEARANCE, type MindAppearance, type MindColor, type Task } from '@nexus/core';
+import { cn } from '@nexus/ui';
 import { mindColor, FONT_LABELS } from './appearance';
 
 const names = { neutral: '雾灰', blue: '雾蓝', sage: '鼠尾草', sand: '暖沙', rose: '灰粉', lavender: '浅紫' };

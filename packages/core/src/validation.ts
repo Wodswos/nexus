@@ -1,4 +1,4 @@
-import type { CortexData } from './types';
+import type { NexusData } from './types';
 import { reviewId, validReviewPeriod } from './reviews';
 import { MIND_APPEARANCE_FIELDS, validateMindAppearance } from './mindAppearance';
 import { validateSavedViews } from './savedViews';
@@ -12,14 +12,14 @@ const nullable = new Set<string>(['parentId', 'taskId', 'linkedTaskTemplateId', 
 const nonnegative = new Set(['estimateMin', 'plannedMin', 'actualMin', 'distractions', 'count', 'targetPerDay']);
 const enums: Record<string, readonly string[]> = {
   status: ['inbox', 'todo', 'doing', 'done', 'archived'], priority: ['P0', 'P1', 'P2', 'P3'],
-  mode: ['focus', 'short-break', 'long-break'], type: ['url', 'obsidian', 'yuque', 'agent', 'tmux'],
+  mode: ['focus', 'short-break', 'long-break'], type: ['url', 'obsidian', 'yuque', 'agent', 'tmux', 'github-pr', 'dsh'],
 };
 function record(value: unknown): value is Record<string, unknown> { return !!value && typeof value === 'object' && !Array.isArray(value); }
 const stringsOnly = (value: unknown): value is string[] => Array.isArray(value) && value.every((item) => typeof item === 'string');
 function check(condition: boolean, field: string): asserts condition { if (!condition) throw new Error(`数据格式错误: ${field}`); }
 
 /** Validate the complete input before mutating any document. Supports older optional fields. */
-export function validateCortexData(value: unknown): Partial<CortexData> {
+export function validateNexusData(value: unknown): Partial<NexusData> {
   check(record(value), 'data');
   check(collections.some((key) => key in value) || 'settings' in value, '缺少数据集合');
   for (const name of collections) {
@@ -36,7 +36,7 @@ export function validateCortexData(value: unknown): Partial<CortexData> {
         if (nonnegative.has(field)) check(typeof fieldValue === 'number' && fieldValue >= 0, `${name}.${field}`);
         if (strings.has(field)) check(typeof fieldValue === 'string', `${name}.${field}`);
         if (enums[field]) check(typeof fieldValue === 'string' && enums[field]!.includes(fieldValue), `${name}.${field}`);
-        if (['important', 'urgent', 'completed', 'project'].includes(field)) check(typeof fieldValue === 'boolean', `${name}.${field}`);
+        if (['important', 'urgent', 'completed', 'project', 'pinned'].includes(field)) check(typeof fieldValue === 'boolean', `${name}.${field}`);
         if (field === 'tags' || field === 'cancelledUnits') check(stringsOnly(fieldValue), `${name}.${field}`);
       }
       if (name === 'tasks') {
@@ -87,6 +87,7 @@ export function validateCortexData(value: unknown): Partial<CortexData> {
     if (settings.accent !== undefined) check(['cyan-violet', 'emerald', 'amber', 'rose', 'mono'].includes(String(settings.accent)), 'settings.accent');
     if (settings.completedDisplay !== undefined) check(['inline-gray', 'hidden'].includes(String(settings.completedDisplay)), 'settings.completedDisplay');
     if (settings.mindEdgeStyle !== undefined) check(['curve', 'straight', 'step'].includes(String(settings.mindEdgeStyle)), 'settings.mindEdgeStyle');
+    if (settings.mindClickOpensDetails !== undefined) check(typeof settings.mindClickOpensDetails === 'boolean', 'settings.mindClickOpensDetails');
     if (settings.weekStartsOn !== undefined) check(settings.weekStartsOn === 0 || settings.weekStartsOn === 1, 'settings.weekStartsOn');
     for (const key of ['reviewDailyEnabled', 'reviewWeeklyEnabled']) if (settings[key] !== undefined) check(typeof settings[key] === 'boolean', `settings.${key}`);
     for (const key of ['reviewDailyTime', 'reviewWeeklyTime']) if (settings[key] !== undefined) check(typeof settings[key] === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(settings[key]), `settings.${key}`);
@@ -97,5 +98,5 @@ export function validateCortexData(value: unknown): Partial<CortexData> {
       if ('autoStartBreak' in settings.pomodoro) check(typeof settings.pomodoro.autoStartBreak === 'boolean', 'settings.pomodoro.autoStartBreak');
     }
   }
-  return value as Partial<CortexData>;
+  return value as Partial<NexusData>;
 }

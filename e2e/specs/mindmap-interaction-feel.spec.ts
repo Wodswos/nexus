@@ -145,7 +145,7 @@ test('selection is immediate without measuring the whole map, moving the camera 
   expect(await page.locator('.react-flow__minimap').boundingBox()).toEqual(miniMap);
   await expect(target(100).locator('.mind-node')).toHaveCSS('box-shadow', 'none');
   await expect(target(100).locator('.mind-node')).toHaveCSS('transition-duration', '0s');
-  await expect(page.locator('[data-inspector]')).toHaveCount(0);
+  await expect(page.locator('[data-inspector]')).toHaveCount(1);
   await expect(page.locator('.react-flow__edge-path')).toHaveCount(200);
   await page.goto('/settings');
   const download = page.waitForEvent('download');

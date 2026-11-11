@@ -1,5 +1,5 @@
 {
-  "name": "@cortex/crdt",
+  "name": "@nexus/crdt",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -13,7 +13,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@cortex/core": "workspace:*",
+    "@nexus/core": "workspace:*",
     "lib0": "^0.2.99",
     "y-protocols": "^1.0.6",
     "y-indexeddb": "^9.0.12",

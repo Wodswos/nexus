@@ -67,7 +67,7 @@ operation('/api/v1/reviews/{id}/complete', 'post', '完成复盘并保存汇总�
 operation('/api/v1/reviews/{id}', 'delete', '删除复盘正文', '复盘', ref('Deletion'), { description: '复盘没有回收站，此操作删除这份复盘的正文与汇总。任务、习惯和历史备份不受影响。' });
 
 export const openapi = {
-  openapi: '3.0.3', info: { title: 'Cortex Agent API', version: '1.0.0', description: '在设置 → Agent API 中创建 Bearer Token。只读 Token 仅可 GET；读写 Token 可修改当前账号的任务、项目、习惯与复盘。Token 不授予 SSH/tmux、账号管理或其他账号权限。写入持久化后实时同步到网页。时间戳使用 UTC 毫秒；打卡日期和复盘周期使用明确的 YYYY-MM-DD。每账号 240 请求/分钟，请求体最多 64 KiB。' },
+  openapi: '3.0.3', info: { title: 'Nexus Agent API', version: '1.0.0', description: '接入流程见 [Agent 使用指南](/api/guide.md)，可直接将指南 URL 提供给 Agent。在设置 → Agent API 中创建 Bearer Token。只读 Token 仅可 GET；读写 Token 可修改当前账号的任务、项目、习惯与复盘。Token 不授予 SSH/tmux、账号管理或其他账号权限。写入持久化后实时同步到网页。时间戳使用 UTC 毫秒；打卡日期和复盘周期使用明确的 YYYY-MM-DD。每账号 240 请求/分钟，请求体最多 64 KiB。' },
   servers: [{ url: '/' }], security: [{ bearerAuth: [] }], tags: ['任务', '项目', '习惯', '复盘'].map(name => ({ name })), paths,
   components: {
     securitySchemes: { bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'ctx_…' } },

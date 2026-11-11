@@ -2,11 +2,11 @@
  * 全栈冒烟(手动/CI 用):
  *   注册 → ticket → WS 同步写入 → 服务端导出快照可还原
  * 前置:server 已起(默认 http://localhost:39900)。跑法:
- *   corepack pnpm --filter @cortex/server exec tsx smoke.ts
+ *   corepack pnpm --filter @nexus/server exec tsx smoke.ts
  */
 import assert from 'node:assert/strict';
 import * as Y from 'yjs';
-import { CortexStore, SyncClient } from '@cortex/crdt';
+import { NexusStore, SyncClient } from '@nexus/crdt';
 
 const BASE = process.env.SMOKE_BASE ?? 'http://localhost:39900';
 const WS_URL = BASE.replace(/^http/, 'ws') + '/api/sync';
@@ -45,7 +45,7 @@ async function main() {
   console.log(ticket ? '✓ ticket 签发' : '✗ ticket 失败');
 
   // 3. WS 同步写入
-  const store = new CortexStore('smoke-local');
+  const store = new NexusStore('smoke-local');
   const client = new SyncClient(
     async () => {
       const r = await j(`/api/auth/ticket?userId=${encodeURIComponent(reg.body.id)}`);

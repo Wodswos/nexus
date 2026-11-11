@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import * as Y from 'yjs';
-import { CortexStore } from '../src/store';
+import { NexusStore } from '../src/store';
 
 const matrix = { id: 'matrix', name: '全局四象限', view: 'matrix' as const, scope: 'all' as const, projectId: null };
 describe('account workspace presets', () => {
   it('syncs configuration, restores backups, merges plain JSON and preserves an intentionally empty sidebar', () => {
-    const a = new CortexStore('a'), other = new CortexStore('other'), peer = new CortexStore('a'), restored = new CortexStore('a');
+    const a = new NexusStore('a'), other = new NexusStore('other'), peer = new NexusStore('a'), restored = new NexusStore('a');
     try {
       a.updateSettings({ savedViews: [matrix] });
       Y.applyUpdate(peer.docs.root, Y.encodeStateAsUpdate(a.docs.root), 'remote');
@@ -21,7 +21,7 @@ describe('account workspace presets', () => {
     } finally { a.destroy(); other.destroy(); peer.destroy(); restored.destroy(); }
   });
   it('validates malformed imports before changing any tasks or settings', () => {
-    const store = new CortexStore('a');
+    const store = new NexusStore('a');
     try {
       expect(() => store.importJSON({ tasks: [{ id: 'unexpected', title: 'must not import' }], settings: { savedViews: [{ ...matrix, scope: 'custom', from: 'bad', to: 'bad' }] } })).toThrow();
       expect(store.getData().tasks).toHaveLength(0);

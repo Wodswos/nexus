@@ -1,4 +1,4 @@
-import { activeTasks, isStructural, priorityOf, startOfDay, taskContextIds, taskRange, tasksInProject, workSignals, WORK_FOCUS, TASK_FILTER_STATUSES, TASK_FILTER_PRIORITIES, type CortexData, type WorkFocus, type Task } from '@cortex/core';
+import { activeTasks, isStructural, priorityOf, startOfDay, taskContextIds, taskRange, tasksInProject, workSignals, WORK_FOCUS, TASK_FILTER_STATUSES, TASK_FILTER_PRIORITIES, type NexusData, type WorkFocus, type Task } from '@nexus/core';
 import { isScheduledOnlyWorkspace, readTaskWindow, taskMatchesWindow, windowEnd, type TaskWindow } from './taskWindow';
 
 export const TASK_STATUSES = TASK_FILTER_STATUSES;
@@ -27,7 +27,7 @@ export function workspaceTaskDefaults(params: URLSearchParams, now = Date.now(),
 
 /** One predicate for all task views. A tree may retain ancestors as context;
  * context-only parents must never become matching bars or calendar entries. */
-export function selectWorkspaceTasks(data: CortexData, params: URLSearchParams, now: Date) {
+export function selectWorkspaceTasks(data: NexusData, params: URLSearchParams, now: Date) {
   const projectId = params.get('project') ?? params.get('root');
   const available = activeTasks(data.tasks).filter(task => task.status !== 'inbox');
   const tasks = projectId ? tasksInProject(available, projectId) : available;
@@ -58,14 +58,19 @@ export function selectWorkspaceTasks(data: CortexData, params: URLSearchParams, 
     matchingEventTaskIds.add(task.id);
     if (!scheduledOnly || task.startAt != null || task.dueAt != null) matching.add(task.id);
   }
+  // Explicit task links reveal their target without altering saved completion preferences.
+  const focusedTaskId = params.get('focusTask');
+  if (focusedTaskId && scopeIds.has(focusedTaskId)) {
+    matching.add(focusedTaskId); matchingEventTaskIds.add(focusedTaskId);
+  }
   const narrowed = scheduledOnly || filters.focus !== 'all' || filters.status !== 'all' || filters.priority !== 'all' || !!filters.tagId || range.scope !== 'all';
   const context = narrowed ? taskContextIds(tasks, matching) : new Set(tasks.map(task => task.id));
-  return { tasks, events, matching, matchingEventTaskIds, context, narrowed, range, filters, projectId };
+  return { tasks, events, matching, matchingEventTaskIds, context, narrowed, range, filters, projectId, focusedTaskId: focusedTaskId && scopeIds.has(focusedTaskId) ? focusedTaskId : null };
 }
 
 /** All-time task selection still needs a finite canvas in Gantt/calendar. Open
  * around matching dates instead of leaving overdue work outside today's canvas. */
-export function workspaceCanvasWindow(data: CortexData, params: URLSearchParams, now: Date, fallback: TaskWindow): TaskWindow {
+export function workspaceCanvasWindow(data: NexusData, params: URLSearchParams, now: Date, fallback: TaskWindow): TaskWindow {
   if (!['all', 'undated'].includes(params.get('scope') ?? '')) return fallback;
   const selected = selectWorkspaceTasks(data, params, now);
   const dates: number[] = [];
@@ -76,13 +81,18 @@ export function workspaceCanvasWindow(data: CortexData, params: URLSearchParams,
   if (!dates.length) return fallback;
   let first = Infinity, last = -Infinity;
   for (const value of dates) { first = Math.min(first, value); last = Math.max(last, value); }
+  const target = selected.tasks.find(task => task.id === selected.focusedTaskId);
+  const targetDate = selected.focusedTaskId ? target?.dueAt ?? target?.startAt ?? selected.events.find(event => event.taskId === selected.focusedTaskId)?.start : undefined;
   if (['timeline', 'calendar'].includes(params.get('view') ?? '')) {
-    const reference = now.getTime() >= first && now.getTime() <= last ? now : new Date(Math.abs(now.getTime() - first) < Math.abs(now.getTime() - last) ? first : last);
+    const reference = targetDate != null ? new Date(targetDate) : now.getTime() >= first && now.getTime() <= last ? now : new Date(Math.abs(now.getTime() - first) < Math.abs(now.getTime() - last) ? first : last);
     const month = new Date(reference.getFullYear(), reference.getMonth(), 1);
     return { scope: 'month', start: month.getTime(), days: new Date(reference.getFullYear(), reference.getMonth() + 1, 0).getDate() };
   }
   const from = new Date(first), to = new Date(last); from.setHours(0, 0, 0, 0); to.setHours(0, 0, 0, 0);
   const days = Math.round((Date.UTC(to.getFullYear(), to.getMonth(), to.getDate()) - Date.UTC(from.getFullYear(), from.getMonth(), from.getDate())) / 86400000) + 1;
-  if (days > 366) { from.setTime(to.getTime()); from.setDate(from.getDate() - 365); }
+  if (days > 366) {
+    if (targetDate != null) return readTaskWindow(new URLSearchParams('scope=week'), new Date(targetDate), data.settings.weekStartsOn);
+    from.setTime(to.getTime()); from.setDate(from.getDate() - 365);
+  }
   return { scope: 'custom', start: from.getTime(), days: Math.min(366, Math.max(1, days)) };
 }

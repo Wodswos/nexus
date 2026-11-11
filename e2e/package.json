@@ -1,5 +1,5 @@
 {
-  "name": "@cortex/e2e",
+  "name": "@nexus/e2e",
   "version": "0.1.0",
   "private": true,
   "scripts": {

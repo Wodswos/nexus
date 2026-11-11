@@ -3,7 +3,7 @@ import { defineConfig } from '@playwright/test';
 /**
  * E2E:跑在「真栈」上 —— 先起 server(含静态 web 构建产物),Playwright 直接打它。
  * 前置:pnpm build(web + server 已构建)。
- * 跑法:pnpm --filter @cortex/e2e e2e
+ * 跑法:pnpm --filter @nexus/e2e e2e
  */
 export default defineConfig({
   testDir: './specs',

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addDays, dayKeyOf, type Task } from '@cortex/core';
+import { addDays, dayKeyOf, type Task } from '@nexus/core';
 import { readTaskWindow, taskMatchesWindow, tasksInWindow, windowDueAt } from '../src/features/tasks/taskWindow';
 import { createWheelPager } from '../src/features/tasks/gantt/wheelPaging';
 

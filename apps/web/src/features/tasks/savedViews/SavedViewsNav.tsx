@@ -1,18 +1,18 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
-import { useCortex, useCortexData } from '@cortex/crdt';
-import { savedViewHref, type SavedTaskView } from '@cortex/core';
+import { useNexus, useNexusData } from '@nexus/crdt';
+import { savedViewHref, type SavedTaskView } from '@nexus/core';
 import { DndContext, KeyboardSensor, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, useSortable, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { ChevronRight, GripVertical, MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react';
-import { cn, Dropdown, DropdownContent, DropdownItem, DropdownTrigger } from '@cortex/ui';
+import { cn, Dropdown, DropdownContent, DropdownItem, DropdownTrigger } from '@nexus/ui';
 import { SaveViewDialog } from './SaveViewDialog';
 import { TASK_VIEWS } from '../viewOptions';
 
 export function SavedViewsNav() {
-  const store = useCortex();
-  const { settings } = useCortexData();
+  const store = useNexus();
+  const { settings } = useNexusData();
   const collapseKey = `cortex:sidebar-saved-views-collapsed:${encodeURIComponent(store.userId)}`;
   const [collapsed, setCollapsed] = useState(() => {
     try { return localStorage.getItem(collapseKey) === 'true'; } catch { return false; }

@@ -3,9 +3,9 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
-import { Button, Input } from '@cortex/ui';
-import { isProject, newOrder, type Priority } from '@cortex/core';
-import { useCortex, useCortexData } from '@cortex/crdt';
+import { Button, Input } from '@nexus/ui';
+import { isProject, newOrder, type Priority } from '@nexus/core';
+import { useNexus, useNexusData } from '@nexus/crdt';
 import { isComposing } from '@/shared/ime';
 
 export type TaskDraftAnchor = { dueAt: number; x: number; y: number };
@@ -20,8 +20,8 @@ export function CalendarTaskDraft({
   onDismiss: () => void;
   onCreated: () => void;
 }) {
-  const store = useCortex();
-  const data = useCortexData();
+  const store = useNexus();
+  const data = useNexusData();
   const [params] = useSearchParams();
   const [title, setTitle] = useState('');
   const [date, setDate] = useState(() => {

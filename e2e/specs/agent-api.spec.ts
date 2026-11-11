@@ -1,4 +1,6 @@
 import { test, expect } from '@playwright/test';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 test.use({ serviceWorkers: 'block' });
 test('settings creates revocable tokens, Agent writes reach the live page, and Swagger executes authenticated reads', async ({ page, context, baseURL }, testInfo) => {
   const invite = await context.request.post('/api/invites', { headers: { Cookie: process.env.E2E_ADMIN_COOKIE! }, data: {} });
@@ -21,7 +23,8 @@ test('settings creates revocable tokens, Agent writes reach the live page, and S
   await expect(page.getByText('Agent 实时更新', { exact: true })).toBeVisible();
   const docs = await context.newPage();
   await docs.goto('/api/docs');
-  await expect(docs.getByRole('heading', { name: /Cortex Agent API/ })).toBeVisible();
+  await expect(docs.getByRole('heading', { name: /Nexus Agent API/ })).toBeVisible();
+  await expect(docs.getByRole('navigation', { name: 'API 文档导航', exact: true }).getByRole('link', { name: 'Agent 使用指南', exact: true })).toHaveAttribute('href', '/api/guide.md');
   await expect(docs.getByText(/Unable to render this definition|Failed to load API definition/)).toHaveCount(0);
   await docs.getByRole('button', { name: /^Authorize/ }).click();
   await docs.locator('.auth-container input').fill(token);
@@ -39,4 +42,29 @@ test('settings creates revocable tokens, Agent writes reach the live page, and S
   await page.getByRole('button', { name: '撤销 Token 本机 Agent', exact: true }).click();
   await expect(page.getByRole('button', { name: '撤销 Token 本机 Agent', exact: true })).toHaveCount(0);
   expect((await context.request.get(`${baseURL}/api/v1/projects`, { headers })).status()).toBe(401);
+});
+
+test('one public guide URL exposes the canonical Skill and same-origin OpenAPI without a session', async ({ page, request, baseURL }, testInfo) => {
+  const guideURL = new URL('/api/guide.md', baseURL).href;
+  const guide = await request.get(guideURL);
+  const source = readFileSync(resolve(testInfo.config.rootDir, '../../docs/skills/nexus-api/SKILL.md'), 'utf8');
+  expect(guide.status()).toBe(200);
+  expect(await guide.text()).toBe(source);
+  const spec = await request.get(new URL('/api/openapi.json', guideURL).href).then(response => response.json());
+  expect(spec.openapi).toBe('3.0.3');
+  expect(Object.keys(spec.paths)).toHaveLength(13);
+  expect((await request.get('/api/v1/tasks')).status()).toBe(401);
+  await page.goto('/api/docs');
+  const navigation = page.getByRole('navigation', { name: 'API 文档导航', exact: true });
+  await navigation.getByRole('link', { name: 'Agent 使用指南', exact: true }).click();
+  await expect(page).toHaveURL(guideURL);
+  await expect(page.locator('body')).toContainText('# Nexus API');
+  await expect(page.locator('body')).toContainText('通过一个 URL 开始');
+  await page.goto('/api/docs');
+  const waiting = page.waitForEvent('download');
+  await page.getByRole('link', { name: '下载 SKILL.md', exact: true }).click();
+  const download = await waiting;
+  expect(download.suggestedFilename()).toBe('SKILL.md');
+  expect(readFileSync((await download.path())!, 'utf8')).toBe(source);
+  await page.screenshot({ path: testInfo.outputPath('public-agent-guide-entry.png') });
 });

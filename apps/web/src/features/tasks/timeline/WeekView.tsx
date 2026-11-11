@@ -1,6 +1,6 @@
 import React, { useMemo, useEffect, useRef } from 'react';
 import { Clock } from 'lucide-react';
-import { cn } from '@cortex/ui';
+import { cn } from '@nexus/ui';
 import {
   addDays,
   startOfWeek,
@@ -11,7 +11,7 @@ import {
   weekdayOf,
   activeTasks,
   isStructural,
-} from '@cortex/core';
+} from '@nexus/core';
 import { useTaskViewData } from '../useTaskViewData';
 import { useUI } from '@/state/ui';
 import { EVENT_KIND_STYLE } from '@/shared/components';
@@ -46,13 +46,13 @@ export function WeekView({
   const dueByDay = useMemo(() => {
     const map = new Map<string, typeof data.tasks>();
     for (const t of activeTasks(data.tasks)) {
-      if (t.status === 'inbox' || t.status === 'done' && data.settings.completedDisplay === 'hidden' || t.dueAt == null && t.startAt == null || isStructural(t)) continue; // 结构节点不排期
+      if (t.status === 'inbox' || t.status === 'done' && data.settings.completedDisplay === 'hidden' && t.id !== data.focusedTaskId || t.dueAt == null && t.startAt == null || isStructural(t)) continue; // 结构节点不排期
       const arr = map.get(dayKeyOf((t.dueAt ?? t.startAt)!)) ?? [];
       arr.push(t);
       map.set(dayKeyOf((t.dueAt ?? t.startAt)!), arr);
     }
     return map;
-  }, [data.tasks, data.settings.completedDisplay]);
+  }, [data.tasks, data.settings.completedDisplay, data.focusedTaskId]);
 
   return (
     <div ref={scroll} className="h-full overflow-auto px-4 pb-6 md:px-6">
@@ -129,7 +129,10 @@ export function WeekView({
                     <div
                       key={e.id}
                       data-calendar-event
-                      className="absolute inset-x-0.5 overflow-hidden rounded border px-1 py-0.5 text-[9px] leading-tight"
+                      data-calendar-task={e.taskId ?? undefined}
+                      data-focused={!!e.taskId && e.taskId === data.focusedTaskId || undefined}
+                      onContextMenu={event => { if (e.taskId) { event.preventDefault(); event.stopPropagation(); ui.openTaskMenu(e.taskId, event.clientX, event.clientY); } }}
+                      className="absolute inset-x-0.5 overflow-hidden rounded border px-1 py-0.5 text-[9px] leading-tight data-[focused]:ring-2 data-[focused]:ring-[var(--accent-solid)]"
                       style={{
                         top: (startMin / 60) * PX_PER_HOUR,
                         height: Math.max(14, ((endMin - startMin) / 60) * PX_PER_HOUR),
@@ -152,8 +155,12 @@ export function WeekView({
                   return (
                     <button
                       key={t.id}
+                      data-calendar-task={t.id}
+                      data-task-detail-trigger
+                      data-focused={t.id === data.focusedTaskId || undefined}
                       onClick={() => ui.selectTask(t.id)}
-                      className={cn('absolute inset-x-0.5 z-[5] flex items-center gap-1 overflow-hidden rounded border border-dashed px-1 text-left', t.status === 'done' && 'text-muted opacity-60 line-through')}
+                    onContextMenu={event => { event.preventDefault(); event.stopPropagation(); ui.openTaskMenu(t.id, event.clientX, event.clientY); }}
+                      className={cn('absolute inset-x-0.5 z-[5] flex items-center gap-1 overflow-hidden rounded border border-dashed px-1 text-left data-[focused]:ring-2 data-[focused]:ring-[var(--accent-solid)]', t.status === 'done' && 'text-muted opacity-60 line-through')}
                       style={{
                         top: (m / 60) * PX_PER_HOUR - 8,
                         height: 16,

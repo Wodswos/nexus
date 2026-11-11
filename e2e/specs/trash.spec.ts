@@ -43,7 +43,8 @@ test('project deletion confirms from the sidebar, details and mind-map keyboard,
   await expect(page.getByRole('heading', { name: 'Project', exact: true })).toBeVisible();
   await page.getByRole('button', { name: '编辑项目 Project', exact: true }).click();
   const detail = page.getByRole('dialog', { name: '项目详情', exact: true });
-  await detail.getByRole('button', { name: '删除', exact: true }).click();
+  await detail.getByRole('button', { name: '更多任务设置', exact: true }).click();
+  await detail.getByRole('button', { name: '删除项目', exact: true }).click();
   await expect(deletion(page)).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(deletion(page)).toHaveCount(0);

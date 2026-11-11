@@ -1,8 +1,8 @@
 import React from 'react';
 import { useNavigate } from 'react-router';
-import { Badge } from '@cortex/ui';
-import { GALLERIES, GalleryNode, buildImportTasks, countNodes } from '@cortex/core';
-import { useCortex, useCortexData } from '@cortex/crdt';
+import { Badge } from '@nexus/ui';
+import { GALLERIES, GalleryNode, buildImportTasks, countNodes } from '@nexus/core';
+import { useNexus, useNexusData } from '@nexus/crdt';
 
 function TreeNode({ node, depth }: { node: GalleryNode; depth: number }) {
   return (
@@ -24,8 +24,8 @@ function TreeNode({ node, depth }: { node: GalleryNode; depth: number }) {
 }
 
 export default function GalleryPage() {
-  const data = useCortexData();
-  const store = useCortex();
+  const data = useNexusData();
+  const store = useNexus();
   const navigate = useNavigate();
   const g = GALLERIES[0];
 

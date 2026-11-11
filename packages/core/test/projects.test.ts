@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { activeTasks, buildChildrenMap, canReparent, isProject, isStructural, normalizeTaskForest, tasksInProject } from '../src/tree';
-import { validateCortexData } from '../src/validation';
+import { validateNexusData } from '../src/validation';
 import type { Task } from '../src/types';
 
 const task = (id: string, patch: Partial<Task> = {}): Task => ({
@@ -41,8 +41,8 @@ describe('project roots and internal groups', () => {
     expect(tasksInProject(tasks, null)).toBe(tasks);
   });
   it('validates project identity in JSON backups without requiring a field on legacy tasks', () => {
-    expect(() => validateCortexData({ tasks: [task('new', { project: true }), task('legacy', { kind: 'node' })] })).not.toThrow();
-    expect(() => validateCortexData({ tasks: [{ ...task('invalid'), project: 'true' }] })).toThrow();
+    expect(() => validateNexusData({ tasks: [task('new', { project: true }), task('legacy', { kind: 'node' })] })).not.toThrow();
+    expect(() => validateNexusData({ tasks: [{ ...task('invalid'), project: 'true' }] })).toThrow();
   });
   it('hides the contents of archived projects without changing or deleting their tasks', () => {
     const tasks = [task('a', { kind: 'node', project: true, status: 'archived' }), task('a1', { parentId: 'a' }), task('a2', { parentId: 'a1' }), task('b')];

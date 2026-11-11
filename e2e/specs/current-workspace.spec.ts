@@ -1,3 +1,4 @@
+import { expectSelectValue, selectValue, selectValues } from '../controls';
 import { test, expect, type Page } from '@playwright/test';
 
 test.use({ serviceWorkers: 'block' });
@@ -63,19 +64,19 @@ test('current workspace preserves the same custom window across its five views a
   await expect(page.locator('[data-calendar-week-date]').first()).toHaveAttribute('data-calendar-week-date', '2026-11-03');
   await expect(page.locator('[data-calendar-week-date]').last()).toHaveAttribute('data-calendar-week-date', '2026-11-05');
   await view(page, '列表').click();
-  await expect(range(page)).toHaveValue('custom');
+  await expectSelectValue(range(page), 'custom');
   await expect(dateField(page, '区间开始日期')).toHaveValue('2026-11-03');
   await expect(dateField(page, '区间结束日期')).toHaveValue('2026-11-05');
-  await expect(range(page).locator('option[value="undated"]')).toHaveCount(0);
-  await range(page).selectOption('all');
+  expect(await selectValues(range(page))).not.toContain('undated');
+  await selectValue(range(page), 'all');
   await expect(rows.getByText('outside', { exact: true })).toBeVisible();
   await expect(rows.getByText('undated', { exact: true })).toHaveCount(0);
   await view(page, '甘特图').click();
-  await expect(range(page)).toHaveValue('all');
+  await expectSelectValue(range(page), 'all');
   await view(page, '列表').click();
-  await expect(range(page)).toHaveValue('all');
+  await expectSelectValue(range(page), 'all');
   await page.setViewportSize({ width: 390, height: 844 });
-  await range(page).selectOption('custom');
+  await selectValue(range(page), 'custom');
   await expect(dateField(page, '区间结束日期')).toBeVisible();
   await page.getByRole('dialog', { name: '选择日期区间', exact: true }).getByRole('button', { name: '取消', exact: true }).click();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -96,7 +97,7 @@ test('changing the interval during a slow view switch never reverts the selected
     await view(page, '列表').click();
     await expect.poll(() => requested).toBe(true);
     await expect(page).toHaveURL(/view=list/);
-    await range(page).selectOption('today');
+    await selectValue(range(page), 'today');
     await expect(page).toHaveURL(/view=list/);
     await expect(page).toHaveURL(/scope=today/);
     await page.locator('[data-gantt-scroll]').hover();
@@ -105,7 +106,7 @@ test('changing the interval during a slow view switch never reverts the selected
     await expect(page).toHaveURL(/view=list/);
     release();
     await expect(view(page, '列表')).toHaveAttribute('data-state', 'active');
-    await expect(range(page)).toHaveValue('today');
+    await expectSelectValue(range(page), 'today');
     await expect(page.locator('[data-row]').getByText('quick_action', { exact: true })).toBeVisible();
   } finally { release(); }
 });
@@ -150,7 +151,8 @@ test('Gantt horizontal trackpad gestures page by the inclusive visible span, abs
   await swipe(100);
   await expect(dateField(page, '区间开始日期')).toHaveValue('2026-12-02');
   await expect(dateField(page, '区间结束日期')).toHaveValue('2026-12-31');
-  await range(page).selectOption('month');
+  await selectValue(range(page), 'month');
+  await expectSelectValue(range(page), 'month');
   const days = await page.evaluate(() => new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate());
   const before = await dateField(page, '区间开始日期').inputValue();
   await page.waitForTimeout(360);

@@ -56,7 +56,7 @@ export interface ScheduleEvent {
   deletedAt?: number | null;
 }
 
-export type LinkType = 'obsidian' | 'yuque' | 'url' | 'agent' | 'tmux';
+export type LinkType = 'obsidian' | 'yuque' | 'url' | 'agent' | 'tmux' | 'github-pr' | 'dsh';
 
 /** 服务器档案:归当前账号所有的 SSH 连接目标 */
 export interface ServerConfig {
@@ -75,6 +75,10 @@ export interface TaskLink {
   type: LinkType;
   target: string; // obsidian://open?vault=..&file=.. | https://... | agent run url | tmux://<serverName>/<session>
   title?: string;
+  /** Task workspace presentation. Missing fields preserve legacy links without a migration. */
+  order?: number;
+  pinned?: boolean;
+  updatedAt?: number;
   /** type=tmux:服务器档案 id(settings.servers)与 tmux session 名,二者定位一个会话 */
   serverId?: string;
   session?: string;
@@ -198,6 +202,7 @@ export interface Settings {
   completedDisplay: 'inline-gray' | 'hidden'; // 已完成任务在任务视图中:原位变灰 / 隐藏
   hiddenRoots: string[]; // 导图「全部」视图里被隐藏的根任务 id(随账号同步)
   mindEdgeStyle: 'curve' | 'straight' | 'step'; // 导图连线样式:舒缓曲线/直线/折线(随账号同步)
+  mindClickOpensDetails: boolean; // 导图普通单击打开详情；框选、多选、拖动仍只操作画布
   servers: ServerConfig[]; // 服务器档案(ssh 目标),任务关联 tmux 用
   reviewDailyEnabled: boolean;
   reviewDailyTime: string;
@@ -216,6 +221,7 @@ export const DEFAULT_SETTINGS: Settings = {
   completedDisplay: 'inline-gray',
   hiddenRoots: [],
   mindEdgeStyle: 'curve',
+  mindClickOpensDetails: true,
   servers: [],
   reviewDailyEnabled: true,
   reviewDailyTime: '21:30',
@@ -224,7 +230,7 @@ export const DEFAULT_SETTINGS: Settings = {
   reviewWeeklyTime: '20:00',
 };
 
-export interface CortexData {
+export interface NexusData {
   tasks: Task[];
   events: ScheduleEvent[];
   links: TaskLink[];
@@ -236,7 +242,7 @@ export interface CortexData {
   settings: Settings;
 }
 
-export const EMPTY_DATA: CortexData = {
+export const EMPTY_DATA: NexusData = {
   tasks: [],
   events: [],
   links: [],
@@ -249,10 +255,10 @@ export const EMPTY_DATA: CortexData = {
 };
 
 /** 全量导出快照(备份/导入) */
-export interface CortexSnapshot {
+export interface NexusSnapshot {
   format: 'cortex.export';
   version: 2;
   exportedAt: number;
-  data: CortexData;
+  data: NexusData;
   docs: Record<string, string>;
 }

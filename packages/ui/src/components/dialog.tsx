@@ -9,10 +9,10 @@ export const DialogClose = DialogPrimitive.Close;
 
 export const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & { title?: string }
->(({ className, children, title, ...props }, ref) => (
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & { title?: string; overlayClassName?: string }
+>(({ className, children, title, overlayClassName, ...props }, ref) => (
   <DialogPrimitive.Portal>
-    <DialogPrimitive.Overlay className="fixed inset-0 z-40 bg-black/55 backdrop-blur-[2px]" />
+    <DialogPrimitive.Overlay className={cn('fixed inset-0 z-40 bg-black/55 backdrop-blur-[2px]', overlayClassName)} />
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
@@ -25,7 +25,7 @@ export const DialogContent = React.forwardRef<
         <DialogPrimitive.Title className="text-base font-semibold">
           {title ?? ''}
         </DialogPrimitive.Title>
-        <DialogPrimitive.Close className="rounded-md p-1 text-muted transition-colors hover:text-foreground">
+        <DialogPrimitive.Close aria-label="关闭面板" className="rounded-md p-1 text-muted transition-colors hover:text-foreground">
           <X className="h-4 w-4" />
         </DialogPrimitive.Close>
       </div>

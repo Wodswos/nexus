@@ -9,7 +9,7 @@ const plugin = vi.hoisted(() => ({
 vi.mock('../../../packages/platform/node_modules/@capacitor/core', () => ({ Capacitor: { isNativePlatform: () => state.native, isPluginAvailable: () => true } }));
 vi.mock('../../../packages/platform/node_modules/@capacitor/local-notifications', () => ({ LocalNotifications: plugin }));
 
-let notifications: typeof import('@cortex/platform');
+let notifications: typeof import('@nexus/platform');
 const now = new Date(2026, 10, 4, 19, 59).getTime();
 const plan = (key = 'owner:read:2026-11-04:20:00', at = now + 60000) => ({ key, habitId: 'read', title: '该阅读了', body: '20:00 · 完成今天的习惯。', at });
 
@@ -34,7 +34,7 @@ beforeEach(async () => {
     state.delivered = state.delivered.filter(item => !items.some(value => value.id === item.id));
   });
   plugin.addListener.mockImplementation(async (_event: string, callback: typeof state.action) => { state.action = callback; return { remove: plugin.remove }; });
-  notifications = await import('@cortex/platform');
+  notifications = await import('@nexus/platform');
 });
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
 

@@ -26,6 +26,13 @@ select:not([multiple])[size='1'] {
   select:not([multiple]) { appearance: auto; -webkit-appearance: auto; background-image: none; }
 }
 
+select option, select optgroup { background: var(--surface-raised); color: var(--foreground); }
+/* CalendarDateField provides its own calendar affordance, while the input stays editable. */
+.calendar-date-input::-webkit-calendar-picker-indicator { display: none; }
+.calendar-date-input::-webkit-date-and-time-value { text-align: left; }
+.calendar-date-input { color-scheme: light; }
+.dark .calendar-date-input { color-scheme: dark; }
+
 /* React Flow 背景网点(SVG)不能吃指针事件:框选/点空白取消选中等
    都依赖 event.target 是 pane 本身,被背景图案截走后手势全部失效。
    同理,导图的连线不需要点击/悬停交互,描边也不许截走指针事件。 */
@@ -427,6 +434,9 @@ body::before {
   .habit-row:focus-within .habit-drag-handle { opacity: 1; }
 }
 /* Trackpad navigation uses the normal pointer. Only an active drag shows a grab. */
+/* Keep the live lasso; after release, individual node markers show the selection.
+   Removing the persistent overlay also lets nodes and gaps receive their own clicks. */
+.mindmap-flow .react-flow__nodesselection { display: none; }
 .mindmap-flow .react-flow__pane:not(.dragging),
 .mindmap-flow .react-flow__node:not(.dragging) { cursor: default; }
 .mindmap-flow .react-flow__pane.dragging,

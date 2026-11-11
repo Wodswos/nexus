@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router';
+import { useLocation, useSearchParams } from 'react-router';
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -33,7 +33,7 @@ import {
 import { SortableContext, useSortable, horizontalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import '@xyflow/react/dist/style.css';
-import { cn } from '@cortex/ui';
+import { cn } from '@nexus/ui';
 import {
   Task,
   activeTasks,
@@ -50,10 +50,11 @@ import {
   taskContextIds,
   type WorkFocus,
   type MindFont,
-} from '@cortex/core';
-import { useCortex, useCortexData } from '@cortex/crdt';
+} from '@nexus/core';
+import { useNexus, useNexusData } from '@nexus/crdt';
 import { useUI } from '@/state/ui';
 import { TaskInspector } from '@/shared/TaskInspector';
+import { TaskBatchActions } from '@/shared/TaskBatchEditor';
 import { AppearancePanel } from './AppearancePanel';
 import { MapControls } from './MapControls';
 import { MapHelp } from './MapHelp';
@@ -68,6 +69,7 @@ import { useTaskViewData } from '../useTaskViewData';
 import { useTaskWindow } from '../TaskWindowControls';
 import { windowDueAt } from '../taskWindow';
 import { readTaskFilters, selectWorkspaceTasks, workspaceTaskDefaults } from '../taskFilters';
+import { focusedTaskPath } from '../taskNavigation';
 import { useAuth } from '@/app/auth';
 
 /** 「全部」视图的虚拟真根:所有顶层根任务连到同一个点上 */
@@ -97,7 +99,6 @@ const MULTI_SELECTION_KEYS = ['Control', 'Meta', 'Shift'];
 const PAN_BUTTONS = [1, 2];
 const PRO_OPTIONS = { hideAttribution: true };
 const MINIMAP_STYLE = { width: 140, height: 90, bottom: 100, right: 12, background: 'var(--surface-solid)', border: '1px solid var(--border)', borderRadius: 6 };
-const preventContextMenu = (event: { preventDefault: () => void }) => event.preventDefault();
 
 /** 树形折线:横出 → 父子走廊中线竖干 → 横入目标,恰好三段、共用竖干、永不回折。
  *  RF 内置 step 是"两端各探 20px 再拐",走廊一窄(卡片实际宽过布局假设时)路径会
@@ -122,12 +123,14 @@ function MindMapInner({
 }) {
   const data = useTaskViewData({ window: true, context: true });
   const [filterParams] = useSearchParams();
+  const location = useLocation();
   const { range } = useTaskWindow();
-  const store = useCortex();
+  const store = useNexus();
   const { user } = useAuth();
   const virtualRootTask = useMemo(() => ({ ...VIRTUAL_ROOT_TASK, title: user?.username ?? '我的工作空间' }), [user?.username]);
   const collapsed = useUI((s) => s.collapsed);
   const openTaskMenu = useUI((s) => s.openTaskMenu);
+  const globalDetailId = useUI((s) => s.selectedTaskId);
   /** 连线形态(舒缓/直线/折线):存 settings 随账号同步,切换即重排应用到所有连线 */
   const edgeStyle = data.settings.mindEdgeStyle ?? 'curve';
   const { getIntersectingNodes } = useReactFlow();
@@ -153,6 +156,8 @@ function MindMapInner({
   const [relayoutTick, bumpRelayout] = useReducer((x: number) => x + 1, 0);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [sideOpen, setSideOpen] = useState(false);
+  const sideOpenRef = useRef(sideOpen); sideOpenRef.current = sideOpen;
+  const [detailPosition, setDetailPosition] = useState<{ x: number; y: number }>();
   const [appearanceOpen, setAppearanceOpen] = useState(false);
   const [configOpen, setConfigOpen] = useState(false);
   const [panSpeed, setPanSpeed] = usePanSpeed(store.userId);
@@ -212,10 +217,28 @@ function MindMapInner({
     const base = activeTasks(data.tasks).filter((t) => t.status !== 'inbox');
     if (!hideDone) return base;
     const gone = fullyDoneIds(data.tasks);
+    for (const id of focusedTaskPath(data.tasks, filterParams)) gone.delete(id);
     return base.filter((t) => !gone.has(t.id));
-  }, [data.tasks, hideDone]);
+  }, [data.tasks, hideDone, filterParams]);
   const childrenMap = useMemo(() => buildChildrenMap(tasks), [tasks]);
   const byId = useMemo(() => new Map(tasks.map((t) => [t.id, t])), [tasks]);
+  const openDetails = useCallback((id: string) => {
+    const task = byId.get(id);
+    if (!task) return;
+    setSelectedTask(task); setAppearanceOpen(false);
+    const mobile = window.matchMedia('(max-width: 767px)').matches;
+    if (!mobile && !sideOpenRef.current) {
+      // Keep the clicked branch available for the next selection. A fixed card
+      // on the right can otherwise cover the very task that just opened it.
+      const rect = wrapperRef.current?.querySelector<HTMLElement>(`.react-flow__node[data-id="${window.CSS.escape(id)}"]`)?.getBoundingClientRect();
+      const width = Math.min(360, window.innerWidth - 24);
+      const left = (wrapperRef.current?.getBoundingClientRect().left ?? 0) + 12;
+      setDetailPosition(rect && rect.right > window.innerWidth - width - 12 ? { x: left + width, y: 12 } : undefined);
+    }
+    setSideOpen(!mobile);
+    useUI.getState().selectTask(mobile ? id : null);
+    setNodes(previous => previous.map(node => !!node.selected === (node.id === id) ? node : { ...node, selected: node.id === id }));
+  }, [byId, setNodes]);
   const progress = useMemo(() => workProgress(tasks), [tasks]);
   const hiddenRoots = data.settings.hiddenRoots ?? EMPTY_IDS;
   const scopedTasks = useMemo(() => {
@@ -248,6 +271,14 @@ function MindMapInner({
   useEffect(() => { setNewTaskIds([]); }, [filterParams]);
   const fonts = useMindFonts(scopedTasks);
   const camera = useMapViewport(store.userId, rootTaskId, nodes, wrapperRef);
+  const located = useRef('');
+  useEffect(() => {
+    const id = data.focusedTaskId, request = `${location.key}:${id}`;
+    if (!id || !camera.ready || located.current === request || !camera.focusTask(id)) return;
+    located.current = request;
+    setNodes(previous => previous.map(node => !!node.selected === (node.id === id) ? node : { ...node, selected: node.id === id }));
+    setSelectedTask(byId.get(id) ?? null);
+  }, [data.focusedTaskId, location.key, camera.ready, camera.focusTask, nodes.length, byId, setNodes]);
 
   /** 令某节点进入行内标题编辑;seed = 起始按键字符(无则沿用现有标题)。
    *  节点已在图中 → 直接 patch;新建节点尚未入图 → 记入 pendingEdit,等布局产出后补齐。 */
@@ -381,6 +412,7 @@ function MindMapInner({
           attention: signals.overdue.has(id) || signals.unscheduled.has(id),
           editing: editingIds.current.has(id), seedChar: seedById.current[id] ?? null,
           onCommit: (title: string) => commitTitle(id, title), onRefocus: refocusWrapper,
+          onDetails: () => openDetails(id),
         },
       });
       if (item.parent) nextEdges.push({
@@ -406,7 +438,7 @@ function MindMapInner({
       });
     });
     setEdges(nextEdges);
-  }, [rootChildren, layoutRoots, layoutKids, childrenMap, edgeStyle, setNodes, setEdges, commitTitle, refocusWrapper, progress, signals, rootTaskId, fonts.revision]);
+  }, [rootChildren, layoutRoots, layoutKids, childrenMap, edgeStyle, setNodes, setEdges, commitTitle, refocusWrapper, progress, signals, rootTaskId, fonts.revision, openDetails]);
 
   useEffect(() => {
     if (!draggingId.current) applyLayout();
@@ -601,7 +633,6 @@ function MindMapInner({
     // 把键盘焦点放到导图容器上:这样 Enter/Tab 一定落在容器(非按钮/输入框),不会被守卫拦
     wrapperRef.current?.focus({ preventScroll: true });
     setSelectedTask(byId.get(id) ?? null);
-    setSideOpen(false);
   }, [byId]);
 
   // Plain mouse presses select immediately. Leave modifiers, touch scrolling and
@@ -642,20 +673,36 @@ function MindMapInner({
       setSideOpen(false);
       return;
     }
+    if (nodesRef.current.filter(item => item.selected && item.id !== VIRTUAL_ROOT_ID).length > 1) {
+      setSelectedTask(null); setSideOpen(false); return;
+    }
     handleSelect(node.id);
-  }, [handleSelect]);
+    if (data.settings.mindClickOpensDetails !== false) openDetails(node.id);
+  }, [handleSelect, data.settings.mindClickOpensDetails, openDetails]);
   const onNodeDoubleClick = useCallback((_event: React.MouseEvent, node: Node) => {
     if (node.id === VIRTUAL_ROOT_ID) return;
     handleSelect(node.id);
+    setSideOpen(false);
     beginEdit(node.id);
   }, [handleSelect, beginEdit]);
   const onNodeContextMenu = useCallback((event: React.MouseEvent, node: Node) => {
     event.preventDefault();
     if (node.id === VIRTUAL_ROOT_ID) return;
     handleSelect(node.id);
-    const batch = nodesRef.current.filter((item) => item.selected && item.id !== node.id && item.id !== VIRTUAL_ROOT_ID).map((item) => item.id);
-    openTaskMenu(node.id, event.clientX, event.clientY, batch.length ? [...batch, node.id] : undefined);
-  }, [handleSelect, openTaskMenu]);
+    setSideOpen(false);
+    const batch = nodesRef.current.filter(item => item.selected && item.id !== VIRTUAL_ROOT_ID).map(item => item.id);
+    const inSelection = batch.includes(node.id);
+    if (!inSelection) setNodes(previous => previous.map(item => ({ ...item, selected: item.id === node.id })));
+    openTaskMenu(node.id, event.clientX, event.clientY, inSelection ? batch : [node.id]);
+  }, [handleSelect, openTaskMenu, setNodes]);
+  // React Flow's multi-selection overlay sits above nodes and has its own context-menu event.
+  const onSelectionContextMenu = useCallback((event: React.MouseEvent | MouseEvent) => {
+    event.preventDefault();
+    const ids = nodesRef.current.filter(node => node.selected && node.id !== VIRTUAL_ROOT_ID).map(node => node.id);
+    if (!ids.length) return;
+    setSideOpen(false);
+    openTaskMenu(ids[0]!, event.clientX, event.clientY, ids);
+  }, [openTaskMenu]);
   const onPaneClick = useCallback(() => {
     wrapperRef.current?.focus({ preventScroll: true });
     setSelectedTask(null);
@@ -675,7 +722,7 @@ function MindMapInner({
       addChild(selectedTask.id);
     } else if (e.key === 'Enter') {
       e.preventDefault();
-      if (e.ctrlKey || e.metaKey) { setAppearanceOpen(false); setSideOpen(true); }
+      if (e.ctrlKey || e.metaKey) openDetails(selectedTask.id);
       else if (selectedTask.id === rootTaskId || isProject(selectedTask)) addChild(selectedTask.id);
       else addSibling(selectedTask.id);
     } else if (e.key.length === 1 && !e.metaKey && !e.ctrlKey && !e.altKey) {
@@ -771,11 +818,12 @@ function MindMapInner({
           onNodeClick={onNodeClick}
           onNodeDoubleClick={onNodeDoubleClick}
           onNodeContextMenu={onNodeContextMenu}
+          onSelectionContextMenu={onSelectionContextMenu}
           onNodeDragStart={onNodeDragStart}
           onNodeDrag={onNodeDrag}
           onNodeDragStop={onNodeDragStop}
           onPaneClick={onPaneClick}
-          onPaneContextMenu={preventContextMenu}
+          onPaneContextMenu={onSelectionContextMenu}
           onMove={camera.onMove}
           onMoveEnd={camera.onMoveEnd}
           minZoom={0.12}
@@ -803,9 +851,10 @@ function MindMapInner({
         </ReactFlow>
         {fonts.failed && <p role="status" className="absolute left-14 top-3 rounded bg-[var(--background)] px-3 py-2 text-xs text-muted">字体暂未加载，已使用系统字体。</p>}
         {selectedCount > 0 && !configOpen && (
-          <div className="absolute bottom-14 right-3 z-20 flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-1.5 text-xs">
-            <span>已选 {selectedCount} 项</span>
-            {selectedCount === 1 && <button aria-label="查看所选任务详情" onClick={() => { setSelectedTask(selectedNodes[0]!.data.task); setAppearanceOpen(false); setSideOpen(true); }} className="flex items-center gap-1 rounded px-1 py-1 text-muted hover:text-foreground"><Info size={13} />详情</button>}
+          <div role="toolbar" aria-label="所选任务操作" className="absolute bottom-14 right-3 z-20 flex max-w-[calc(100%-24px)] flex-wrap items-center gap-1 rounded-lg border border-[var(--border)] bg-[var(--background)] px-2 py-1.5 text-xs shadow-sm">
+            <span className="px-1">已选 {selectedCount} 项</span>
+            <TaskBatchActions ids={selectedNodes.map(node => node.id)} onOpen={() => { setAppearanceOpen(false); setSideOpen(false); }} />
+            {selectedCount === 1 && <button aria-label="查看所选任务详情" title="详情 · ⌘ / Ctrl + Enter" onClick={() => openDetails(selectedNodes[0]!.id)} className="flex items-center gap-1 rounded px-1 py-1 text-muted hover:text-foreground"><Info size={13} />详情</button>}
             <button
               aria-label="调整所选节点样式"
               aria-expanded={appearanceOpen}
@@ -839,9 +888,11 @@ function MindMapInner({
           />
         )}
         <TaskInspector
-          task={sideOpen ? selectedTask : null}
+          position={detailPosition}
+          task={sideOpen && !globalDetailId ? selectedTask : null}
+          onSelectTask={openDetails}
           onAddChild={selectedTask ? () => addChild(selectedTask.id) : () => {}}
-          onClose={() => setSideOpen(false)}
+          onClose={() => { setSideOpen(false); refocusWrapper(); }}
         />
         {!rootChildren.length && (
           <div className="pointer-events-none absolute inset-0 grid place-items-center text-sm text-muted">
@@ -879,8 +930,8 @@ function SortableRootChip({ task, active, onSelect }: { task: Task; active: bool
 }
 
 export function MindMapView({ focusToolbar }: { focusToolbar?: HTMLElement | null }) {
-  const data = useCortexData();
-  const store = useCortex();
+  const data = useNexusData();
+  const store = useNexus();
   const [params, setParams] = useSearchParams();
   const { range, now } = useTaskWindow();
   const projectId = params.get('project');

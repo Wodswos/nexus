@@ -1,15 +1,16 @@
 import React, { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useSearchParams } from 'react-router';
-import { Dropdown, DropdownContent, DropdownItem, DropdownLabel, DropdownSeparator, DropdownTrigger, Segmented, SegmentedList, SegmentedTrigger } from '@cortex/ui';
+import { Link, useLocation, useSearchParams } from 'react-router';
+import { Dropdown, DropdownContent, DropdownItem, DropdownLabel, DropdownSeparator, DropdownTrigger, Segmented, SegmentedList, SegmentedTrigger } from '@nexus/ui';
 import {
   BookmarkPlus,
   Check,
   Inbox,
   Library,
   MoreHorizontal,
+  SlidersHorizontal,
 } from 'lucide-react';
-import { useCortex, useCortexData } from '@cortex/crdt';
-import { activeTasks, isProject, normalizeTaskView, workProgress } from '@cortex/core';
+import { useNexus, useNexusData } from '@nexus/crdt';
+import { activeTasks, isProject, normalizeTaskView, workProgress } from '@nexus/core';
 import { useUI } from '@/state/ui';
 import { isTaskView, projectView, rememberProjectView, useProjectViewMemory } from './projectViews';
 import { TaskWindowControls } from './TaskWindowControls';
@@ -17,6 +18,7 @@ import { TASK_VIEWS } from './viewOptions';
 import { SaveViewButton } from './savedViews/SaveViewButton';
 import { MoreTaskFilters, TaskFilterControls } from './TaskFilterControls';
 import { isScheduledOnlyWorkspace } from './taskWindow';
+import { taskPath } from './taskNavigation';
 const ListView = lazy(() => import('./list/ListView').then((module) => ({ default: module.ListView })));
 const MatrixView = lazy(() =>
   import('./matrix/MatrixView').then((module) => ({ default: module.MatrixView })),
@@ -31,10 +33,12 @@ const GanttView = lazy(() => import('./gantt/GanttView').then((module) => ({ def
 
 export default function TasksPage() {
   const [params, setParams] = useSearchParams();
+  const location = useLocation();
+  const revealed = useRef('');
   const requested = params.get('view');
   const scope = params.get('scope');
-  const data = useCortexData();
-  const store = useCortex();
+  const data = useNexusData();
+  const store = useNexus();
   const memory = useProjectViewMemory();
   const projectId = params.get('project');
   const saved = data.settings.savedViews.find((item) => item.id === params.get('saved'));
@@ -61,6 +65,20 @@ export default function TasksPage() {
   const title = saved?.name || project?.title || '当前任务';
   const display = data.settings.completedDisplay ?? 'inline-gray';
   const ui = useUI();
+  const setCompletedDisplay = (hidden: boolean) => {
+    if (params.has('focusTask')) {
+      const next = new URLSearchParams(window.location.search); next.delete('focusTask'); setParams(next, { replace: true });
+    }
+    store.updateSettings({ completedDisplay: hidden ? 'hidden' : 'inline-gray' });
+  };
+  useEffect(() => {
+    const id = params.get('focusTask'), request = `${location.key}:${id}`;
+    if (!id || revealed.current === request) return;
+    const path = taskPath(data.tasks, id);
+    if (!path.length) return;
+    revealed.current = request;
+    useUI.setState(state => ({ collapsed: { ...state.collapsed, ...Object.fromEntries(path.map(task => [task.id, false])) } }));
+  }, [params, location.key, data.tasks]);
   const [focusToolbar, setFocusToolbar] = useState<HTMLDivElement | null>(null);
   const moreRef = useRef<HTMLButtonElement>(null);
   const savingView = useRef(false);
@@ -108,7 +126,16 @@ export default function TasksPage() {
           </SegmentedList>
         </Segmented>
 
-        <div className="ml-auto shrink-0 md:hidden">
+        {view === 'mindmap' && <Dropdown>
+          <DropdownTrigger asChild><button aria-label="任务交互设置" title="任务交互设置" className="ml-auto grid h-8 w-8 shrink-0 place-items-center rounded-md text-muted hover:bg-[var(--surface)] hover:text-foreground md:order-last md:ml-0"><SlidersHorizontal size={16} /></button></DropdownTrigger>
+          <DropdownContent align="end" collisionPadding={12}>
+            <DropdownLabel>导图交互</DropdownLabel>
+            <DropdownItem role="menuitemcheckbox" aria-checked={data.settings.mindClickOpensDetails !== false} onSelect={() => store.updateSettings({ mindClickOpensDetails: data.settings.mindClickOpensDetails === false })}><Check size={15} className={data.settings.mindClickOpensDetails !== false ? '' : 'opacity-0'} />单击任务打开详情</DropdownItem>
+            <p className="max-w-64 px-2.5 py-1.5 text-[11px] leading-relaxed text-muted">关闭后，单击仅选中；仍可用详情按钮或 ⌘ / Ctrl + Enter 打开。</p>
+          </DropdownContent>
+        </Dropdown>}
+
+        <div className={view === 'mindmap' ? 'shrink-0 md:hidden' : 'ml-auto shrink-0 md:hidden'}>
           <SaveViewButton key={store.userId} view={view} restoreFocus={() => moreRef.current?.focus()} trigger={(openSave) => (
           <Dropdown>
             <DropdownTrigger asChild><button ref={moreRef} aria-label="任务更多操作" title="任务更多操作" className="grid h-8 w-8 place-items-center rounded-md text-muted hover:bg-[var(--surface)] hover:text-foreground"><MoreHorizontal size={17} /></button></DropdownTrigger>
@@ -116,7 +143,7 @@ export default function TasksPage() {
               if (savingView.current) { event.preventDefault(); savingView.current = false; }
             }}>
               {projectProgress && projectProgress.total > 0 && <DropdownLabel>项目进度 {projectProgress.done}/{projectProgress.total}</DropdownLabel>}
-              <DropdownItem role="menuitemcheckbox" aria-checked={display === 'hidden'} onSelect={() => store.updateSettings({ completedDisplay: display === 'hidden' ? 'inline-gray' : 'hidden' })}><Check size={15} className={display === 'hidden' ? '' : 'opacity-0'} />隐藏已完成</DropdownItem>
+              <DropdownItem role="menuitemcheckbox" aria-checked={display === 'hidden'} onSelect={() => setCompletedDisplay(display !== 'hidden')}><Check size={15} className={display === 'hidden' ? '' : 'opacity-0'} />隐藏已完成</DropdownItem>
               <DropdownItem onSelect={() => { savingView.current = true; openSave(); }}><BookmarkPlus size={15} />保存为快捷视图</DropdownItem>
               {project && <DropdownItem onSelect={() => {
                 const rect = moreRef.current?.getBoundingClientRect();
@@ -142,7 +169,7 @@ export default function TasksPage() {
             <input
               type="checkbox"
               checked={display === 'hidden'}
-              onChange={(event) => store.updateSettings({ completedDisplay: event.target.checked ? 'hidden' : 'inline-gray' })}
+              onChange={(event) => setCompletedDisplay(event.target.checked)}
               className="h-3.5 w-3.5 cursor-pointer accent-[var(--accent-solid)]"
             />
             隐藏已完成

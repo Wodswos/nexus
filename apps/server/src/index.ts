@@ -200,7 +200,7 @@ if (existsSync(PUBLIC_DIR)) {
     if (c.req.path.startsWith('/api/')) return c.json({ error: 'not found' }, 404);
     if (c.req.path !== '/' && /\.[a-z0-9]+$/i.test(c.req.path)) return c.text('not found', 404);
     const index = join(PUBLIC_DIR, 'index.html');
-    return existsSync(index) ? c.html(readFileSync(index, 'utf8')) : c.text('Cortex server', 200);
+    return existsSync(index) ? c.html(readFileSync(index, 'utf8')) : c.text('Nexus server', 200);
   });
 }
 const server = createAdaptorServer(app);
@@ -217,5 +217,5 @@ for (const signal of ['SIGINT', 'SIGTERM'] as const) process.on(signal, () => {
 });
 server.listen(PORT, () => {
   const address = server.address();
-  console.log(`Cortex server on :${typeof address === 'object' && address ? address.port : PORT}`);
+  console.log(`Nexus server on :${typeof address === 'object' && address ? address.port : PORT}`);
 });

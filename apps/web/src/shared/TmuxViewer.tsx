@@ -5,9 +5,9 @@ import { FitAddon } from '@xterm/addon-fit';
 import { CanvasAddon } from '@xterm/addon-canvas';
 import '@xterm/xterm/css/xterm.css';
 import { AlertTriangle, ExternalLink, Maximize2, Minimize2, Plus, RefreshCw, SquareX, Terminal, X } from 'lucide-react';
-import { cn } from '@cortex/ui';
-import { api, apiUserId, socketUrl, useCortexData } from '@cortex/crdt';
-import type { ServerConfig } from '@cortex/core';
+import { cn } from '@nexus/ui';
+import { api, apiUserId, socketUrl, useNexusData } from '@nexus/crdt';
+import type { ServerConfig } from '@nexus/core';
 import { useUI } from '@/state/ui';
 
 /** tmux 会话直连终端(ttyd 式):xterm.js ←WS→ 服务端 ssh -tt → 远端 tmux attach。
@@ -470,7 +470,7 @@ function TmuxSession({
 export function TmuxViewer() {
   const view = useUI((s) => s.tmuxView);
   const close = useUI((s) => s.closeTmuxView);
-  const data = useCortexData();
+  const data = useNexusData();
   const server = view ? data.settings.servers.find((s) => s.id === view.serverId) : undefined;
   const [maximized, setMaximized] = useState(false);
 
@@ -513,7 +513,7 @@ export function TmuxViewer() {
 /** tmux 独立标签页:/tmux?server=<档案id>&session=<会话名>(弹窗里「新标签页打开」跳这里) */
 export function TmuxPage() {
   const [params] = useSearchParams();
-  const data = useCortexData();
+  const data = useNexusData();
   const serverId = params.get('server');
   const session = params.get('session') ?? '';
   const server = serverId ? data.settings.servers.find((s) => s.id === serverId) : undefined;

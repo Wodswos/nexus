@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { GripHorizontal, Link2, Trash2, Unlink, Check, Clock } from 'lucide-react';
-import { cn, Badge } from '@cortex/ui';
+import { cn, Badge } from '@nexus/ui';
 import {
   ScheduleEvent,
   EventKind,
@@ -12,8 +12,8 @@ import {
   pad2,
   activeTasks,
   isStructural,
-} from '@cortex/core';
-import { useCortex, useCortexData } from '@cortex/crdt';
+} from '@nexus/core';
+import { useNexus, useNexusData } from '@nexus/crdt';
 import { useTaskViewData } from '../useTaskViewData';
 import { useUI } from '@/state/ui';
 import { useTimer } from '@/focus/timer';
@@ -48,8 +48,8 @@ export function DayView({
   onCreateTask?: (dueAt: number, event: React.PointerEvent) => void;
 }) {
   const data = useTaskViewData({ ancestors: false });
-  const allData = useCortexData();
-  const store = useCortex();
+  const allData = useNexusData();
+  const store = useNexus();
   const ui = useUI();
   const navigate = useNavigate();
   const timerStart = useTimer((s) => s.start);
@@ -119,13 +119,13 @@ export function DayView({
       activeTasks(data.tasks).filter(
         (t) =>
           t.status !== 'inbox' &&
-          (t.status !== 'done' || data.settings.completedDisplay !== 'hidden') &&
+          (t.status !== 'done' || data.settings.completedDisplay !== 'hidden' || t.id === data.focusedTaskId) &&
           !isStructural(t) &&
           (t.dueAt ?? t.startAt) != null &&
           (t.dueAt ?? t.startAt)! >= dayStart &&
           (t.dueAt ?? t.startAt)! < dayEnd,
       ),
-    [data.tasks, data.settings.completedDisplay, dayStart, dayEnd],
+    [data.tasks, data.settings.completedDisplay, data.focusedTaskId, dayStart, dayEnd],
   );
 
   const localMin = (e: ScheduleEvent) => ({
@@ -348,9 +348,13 @@ export function DayView({
                 return (
                   <button
                     key={t.id}
+                    data-calendar-task={t.id}
+                    data-task-detail-trigger
+                    data-focused={t.id === data.focusedTaskId || undefined}
                     onClick={() => ui.selectTask(t.id)}
+                    onContextMenu={event => { event.preventDefault(); event.stopPropagation(); ui.openTaskMenu(t.id, event.clientX, event.clientY); }}
                     onPointerDown={(e) => e.stopPropagation()}
-                    className={cn('absolute left-1 right-1 z-[5] flex items-center gap-1 overflow-hidden rounded-lg border border-dashed px-2 text-left transition-transform hover:scale-[1.01]', t.status === 'done' && 'text-muted opacity-60 line-through')}
+                    className={cn('absolute left-1 right-1 z-[5] flex items-center gap-1 overflow-hidden rounded-lg border border-dashed px-2 text-left data-[focused]:ring-2 data-[focused]:ring-[var(--accent-solid)]', t.status === 'done' && 'text-muted opacity-60 line-through')}
                     style={{
                       top: minToPx(m) - 9,
                       height: 18,
@@ -377,8 +381,11 @@ export function DayView({
                   <div
                     key={ev.id}
                     data-testid={`event-${ev.id}`}
+                    data-calendar-task={ev.taskId ?? undefined}
+                    onContextMenu={event => { if (ev.taskId) { event.preventDefault(); event.stopPropagation(); ui.openTaskMenu(ev.taskId, event.clientX, event.clientY); } }}
+                    data-focused={ev.taskId === data.focusedTaskId || undefined}
                     className={cn(
-                      'group absolute left-1 right-1 overflow-hidden rounded-lg border px-2 py-1 backdrop-blur-sm transition-shadow',
+                      'group absolute left-1 right-1 overflow-hidden rounded-lg border px-2 py-1 backdrop-blur-sm transition-shadow data-[focused]:ring-2 data-[focused]:ring-[var(--accent-solid)]',
                       selectedEvent === ev.id && 'ring-2 ring-[var(--ring)] z-10',
                       ev.completed && 'opacity-50',
                     )}
@@ -517,6 +524,7 @@ export function DayView({
             key={t.id}
             onPointerDown={(e) => onChipPointerDown(e, t.id, t.title)}
             onClick={() => ui.selectTask(t.id)}
+                    onContextMenu={event => { event.preventDefault(); event.stopPropagation(); ui.openTaskMenu(t.id, event.clientX, event.clientY); }}
             className="touch-none rounded-lg glass px-2.5 py-2 text-left text-xs text-foreground transition-all hover:border-[var(--border-strong)] active:scale-95"
             title="拖到时间轴上安排"
           >

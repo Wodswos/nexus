@@ -1,3 +1,4 @@
+import { selectValue } from '../controls';
 import { test, expect, type Page } from '@playwright/test';
 test.use({ serviceWorkers: 'block' });
 const task = (id: string, patch = {}) => ({ id, title: id, parentId: null, status: 'todo', order: 0, ownerId: 'fixture', tags: [], important: false, urgent: false, createdAt: 1, updatedAt: 1, ...patch });
@@ -27,8 +28,10 @@ test('time and emphasis share one compact desktop row, no helper paragraph, acco
   expect(status.y).toBeGreaterThanOrEqual(settings.y); expect(status.y + status.height).toBeLessThanOrEqual(settings.y + settings.height);
   await page.screenshot({ path: testInfo.outputPath('compact-mindmap.png') });
   await page.setViewportSize({ width: 320, height: 740 });
-  await expect(time.locator('option[value="custom"]')).toHaveText('自选');
-  await time.selectOption('custom');
+  await time.click();
+  await expect(page.getByRole('option', { name: /^自选/ })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await selectValue(time, 'custom');
   const dateRange = page.getByRole('dialog', { name: '选择日期区间', exact: true });
   await expect(dateRange.getByLabel('区间开始日期', { exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

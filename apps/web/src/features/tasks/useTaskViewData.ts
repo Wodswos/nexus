@@ -1,12 +1,12 @@
 import { useMemo } from 'react';
 import { useSearchParams } from 'react-router';
-import { useCortexData } from '@cortex/crdt';
+import { useNexusData } from '@nexus/crdt';
 import { useTaskWindow } from './TaskWindowControls';
 import { selectWorkspaceTasks } from './taskFilters';
 
 /** Shared project boundary for task views; unrelated personal events stay in the global calendar. */
 export function useTaskViewData(options?: { window?: boolean; ancestors?: boolean; context?: boolean }) {
-  const data = useCortexData();
+  const data = useNexusData();
   const [params] = useSearchParams();
   const { range, now } = useTaskWindow();
   const { scope, start, days } = range;
@@ -25,6 +25,6 @@ export function useTaskViewData(options?: { window?: boolean; ancestors?: boolea
     }
     const extra = selection.filters.focus !== 'all' || selection.filters.status !== 'all' || selection.filters.priority !== 'all' || !!selection.filters.tagId;
     const events = options?.context ? selection.events : selection.events.filter(event => event.taskId ? selection.matchingEventTaskIds.has(event.taskId) : !selection.projectId && !extra);
-    return { ...data, tasks, events, matchingTaskIds: selection.matching, taskFilters: selection.filters, hasTaskFilters: selection.narrowed };
+    return { ...data, tasks, events, matchingTaskIds: selection.matching, taskFilters: selection.filters, hasTaskFilters: selection.narrowed, focusedTaskId: selection.focusedTaskId };
   }, [data, params, options?.ancestors, options?.context, scope, start, days, now]);
 }

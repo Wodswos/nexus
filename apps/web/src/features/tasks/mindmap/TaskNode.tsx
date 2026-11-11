@@ -1,9 +1,9 @@
 import React, { useEffect, useLayoutEffect, useRef, useState, memo } from 'react';
 import { Handle, Position, type Node, type NodeProps } from '@xyflow/react';
-import { ChevronDown, ChevronRight } from 'lucide-react';
-import { isStructural, priorityOf, type MindFont, type Task } from '@cortex/core';
-import { useCortex } from '@cortex/crdt';
-import { cn } from '@cortex/ui';
+import { ChevronDown, ChevronRight, Info } from 'lucide-react';
+import { isStructural, priorityOf, type MindFont, type Task } from '@nexus/core';
+import { useNexus } from '@nexus/crdt';
+import { cn } from '@nexus/ui';
 import { useUI } from '@/state/ui';
 import { TaskCheckbox } from '@/shared/components';
 import { branchColor, mindColor, titleAppearance } from './appearance';
@@ -18,12 +18,13 @@ export interface MindNodeData extends Record<string, unknown> {
   dropHint?: 'child' | 'before' | 'after';
   onCommit?: (title: string) => void;
   onRefocus?: () => void;
+  onDetails?: () => void;
 }
 const handleStyle: React.CSSProperties = { opacity: 0, width: 0, height: 0, minWidth: 0, minHeight: 0, border: 0 };
 
 export const TaskNode = memo(function TaskNode({ data, selected }: NodeProps<Node<MindNodeData>>) {
   const { task, depth, branch, side, metrics, progress, hasChildren, editing, seedChar, dropHint, onCommit, onRefocus } = data;
-  const store = useCortex();
+  const store = useNexus();
   const collapsed = useUI((state) => !!state.collapsed[task.id]);
   const toggleCollapsed = useUI((state) => state.toggleCollapsed);
   const virtual = task.id === VIRTUAL_ROOT_ID;
@@ -69,6 +70,7 @@ export const TaskNode = memo(function TaskNode({ data, selected }: NodeProps<Nod
       }}
     >
       {(['left', 'right'] as const).flatMap((position) => (['source', 'target'] as const).map((type) => <Handle key={`${type}-${position}`} id={`${type}-${position}`} type={type} position={position === 'left' ? Position.Left : Position.Right} isConnectable={false} style={{ ...handleStyle, [position]: -1 }} />))}
+      {!virtual && !editing && <button type="button" aria-label={`查看任务详情 ${task.title}`} title="查看详情 · ⌘ / Ctrl + Enter" onPointerDown={event => event.stopPropagation()} onClick={event => { event.stopPropagation(); data.onDetails?.(); }} className={cn('nodrag nopan absolute -right-2 -top-2 z-20 grid h-[22px] w-[22px] place-items-center rounded-full border border-[var(--border)] bg-[var(--background)] text-muted hover:text-foreground focus-visible:opacity-100', selected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100')}><Info size={13} /></button>}
       {hasChildren && <button
         aria-label={`${collapsed ? '展开' : '折叠'} ${task.title} 的子项`}
         title={collapsed ? '展开子级' : '收起子级'}

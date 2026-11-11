@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
-import { api, ApiError, setApiUserId, type AuthUser, attachPersistence, type PersistenceHandle, CortexStore, currentStore, setCortexStore, SyncClient, type SyncStatus, DOC_IDS } from '@cortex/crdt';
+import { api, ApiError, setApiUserId, type AuthUser, attachPersistence, type PersistenceHandle, NexusStore, currentStore, setNexusStore, SyncClient, type SyncStatus, DOC_IDS } from '@nexus/crdt';
 import { bindTimer, unbindTimer } from '@/focus/timer';
 
 const PROFILE_KEY = 'cortex-active-user';
@@ -47,7 +47,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const previous = currentStore();
       if (absorb && previous?.userId === 'local' && !persistence.current) persistence.current = await attachPersistence(previous);
       const id = nextUser?.id ?? 'local';
-      const store = previous?.userId === id ? previous : new CortexStore(id);
+      const store = previous?.userId === id ? previous : new NexusStore(id);
       const handle = store === previous && persistence.current ? persistence.current : await attachPersistence(store);
       if (!mounted.current || epoch !== authEpoch.current) { if (handle !== persistence.current) await handle.destroy(); return; }
       if (absorb && previous?.userId === 'local' && nextUser) {
@@ -60,7 +60,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (handle !== persistence.current) await persistence.current?.destroy();
       if (!mounted.current || epoch !== authEpoch.current) { if (handle !== persistence.current) await handle.destroy(); persistence.current = null; return; }
       persistence.current = handle;
-      setCortexStore(store);
+      setNexusStore(store);
       bindTimer(store);
       setUser(nextUser);
       setPhase(nextUser ? 'authed' : 'local');
@@ -154,4 +154,4 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
   return <Ctx.Provider value={{ phase, user, serverReachable, syncStatus, initialized, error, login, register, logout, refreshStatus }}>{children}</Ctx.Provider>;
 }
-export function useStore(): CortexStore { const store = currentStore(); if (!store) throw new Error('CortexStore not initialized'); return store; }
+export function useStore(): NexusStore { const store = currentStore(); if (!store) throw new Error('NexusStore not initialized'); return store; }

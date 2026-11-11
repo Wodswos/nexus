@@ -16,9 +16,9 @@ import {
   BookOpen,
   Trash2,
 } from 'lucide-react';
-import { cn } from '@cortex/ui';
-import { activeTasks, inboxTasks, isProject, savedViewHref, sortSiblings } from '@cortex/core';
-import { useCortex, useCortexData } from '@cortex/crdt';
+import { cn } from '@nexus/ui';
+import { activeTasks, inboxTasks, isProject, savedViewHref, sortSiblings } from '@nexus/core';
+import { useNexus, useNexusData } from '@nexus/crdt';
 import { useAuth } from './auth';
 import { useUI } from '../state/ui';
 import { useTimer } from '../focus/timer';
@@ -26,6 +26,7 @@ import { CommandPalette } from './CommandPalette';
 import { QuickCapture } from '../shared/QuickCapture';
 import { TaskSheet } from '../shared/TaskSheet';
 import { TaskMenu } from '../shared/TaskMenu';
+import { TaskBatchEditor } from '../shared/TaskBatchEditor';
 import { TaskDeletionDialog } from '../shared/TaskDeletionDialog';
 import { isComposing } from '../shared/ime';
 import { ProjectList } from './ProjectList';
@@ -93,8 +94,8 @@ const tools = [
 
 export function Layout() {
   const { phase, user, error } = useAuth();
-  const data = useCortexData();
-  const store = useCortex();
+  const data = useNexusData();
+  const store = useNexus();
   const location = useLocation();
   const [navigationOpen, setNavigationOpen] = useState(false);
   const frameRef = useRef<HTMLDivElement>(null);
@@ -209,7 +210,7 @@ export function Layout() {
               <span className="grid h-7 w-7 place-items-center rounded-lg bg-[var(--accent-solid)] text-white">
                 <Check size={18} strokeWidth={2} />
               </span>
-              <span className="text-[16px] font-semibold tracking-tight">Cortex</span>
+              <span className="text-[16px] font-semibold tracking-tight">Nexus</span>
             </Link>
             <button
               onClick={() => setCapture(true)}
@@ -335,6 +336,7 @@ export function Layout() {
       <CommandPalette />
       <TaskSheet />
       <TaskMenu />
+      <TaskBatchEditor />
       <TaskDeletionDialog />
       <HabitReminder key={store.userId} />
       {tmuxView && (

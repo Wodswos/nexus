@@ -3,7 +3,7 @@
  * 浏览器(短会话)在四象限实时显示。前置:空库 + server + cortex-chrome 在跑。
  */
 import { chromium } from '@playwright/test';
-import { CortexStore, SyncClient } from '../packages/crdt/src/index.ts';
+import { NexusStore, SyncClient } from '../packages/crdt/src/index.ts';
 
 const BASE = process.env.DEBUG_BASE ?? 'http://localhost:30090';
 const WS = BASE.replace(/^http/, 'ws') + '/api/sync';
@@ -19,7 +19,7 @@ const cookie = (reg.headers.get('set-cookie') ?? '').split(';')[0];
 const me = await (await fetch(`${BASE}/api/auth/me`, { headers: { cookie } })).json();
 console.log(`✓ 注册 ${username} (${me.id})`);
 
-const store = new CortexStore(me.id);
+const store = new NexusStore(me.id);
 const client = new SyncClient(async () => {
   const r = await fetch(`${BASE}/api/auth/ticket`, { headers: { cookie } });
   return ((await r.json()).ticket) ?? null;

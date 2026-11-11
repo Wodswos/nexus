@@ -53,11 +53,11 @@ function icsDate(d: Date): string {
   );
 }
 
-export function generateICS(events: ICalEvent[], calName = 'Cortex'): string {
+export function generateICS(events: ICalEvent[], calName = 'Nexus'): string {
   const lines: string[] = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//Cortex//Cortex Calendar//CN',
+    'PRODID:-//Nexus//Nexus Calendar//CN',
     'CALSCALE:GREGORIAN',
     `X-WR-CALNAME:${esc(calName)}`,
   ];
