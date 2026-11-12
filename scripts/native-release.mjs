@@ -73,7 +73,16 @@ const pnpm = (args, options) => run('pnpm', args, options);
 function requireIosLaunch(result, output) {
   if (result.launchVerified) return;
   const quoted = `'${output.replaceAll("'", "'\\''")}'`;
-  throw new Error(`iPhone installation and data verification completed. Unlock the iPhone and retry launch with:\n  pnpm release:native ios --resume ${quoted}`);
+  const guidance = {
+    locked: 'Unlock the iPhone.',
+    security: 'Check the developer profile on the iPhone in Settings > General > VPN & Device Management.',
+  }[result.launchBlocked];
+  throw new Error([
+    'iPhone installation and data verification completed. Launch verification is pending.',
+    result.launchError,
+    guidance,
+    `Retry launch with pnpm release:native ios --resume ${quoted}`,
+  ].filter(Boolean).join('\n'));
 }
 
 async function main(args) {

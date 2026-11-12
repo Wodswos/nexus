@@ -47,9 +47,16 @@ async function devicectl(run, scratch, args, timeout = 20) {
   });
   if (!commandError && report?.info?.outcome === 'success') return report.result;
 
-  const reason = report?.error?.userInfo?.NSLocalizedDescription?.string;
+  let reason;
+  let denial;
+  for (let cause = report?.error; cause; cause = cause.userInfo?.NSUnderlyingError?.error) {
+    const info = cause.userInfo;
+    reason = info?.NSLocalizedFailureReason?.string ?? info?.NSLocalizedDescription?.string ?? reason;
+    if (cause.domain === 'FBSOpenApplicationErrorDomain') denial = info?.BSErrorCodeDescription?.string;
+  }
   const error = new Error(reason || `devicectl ${args.slice(0, 3).join(' ')} failed`, { cause: commandError });
-  if (/\bLocked\b/i.test(JSON.stringify(report?.error ?? {}))) error.code = 'IOS_DEVICE_LOCKED';
+  if (denial === 'Locked') error.code = 'IOS_DEVICE_LOCKED';
+  if (denial === 'Security') error.code = 'IOS_LAUNCH_SECURITY';
   throw error;
 }
 
@@ -185,27 +192,26 @@ function compareData(before, after) {
 async function launchInstalled(call, app, manifest, path) {
   const sameVersion = app && String(app.bundleVersion) === manifest.build && app.version === manifest.version;
   if (!sameVersion) throw new Error('The installed iPhone app differs from this release. Select the correct release directory and phone.');
-  const running = await runningProcesses(call, app);
-  if (!running.length) {
-    try {
+  let process;
+  try {
+    if (!(await runningProcesses(call, app)).length) {
       await call(['process', 'launch'], [manifest.bundleId], 25);
-    } catch (error) {
-      manifest.launchVerified = false;
-      manifest.launchBlocked = error.code === 'IOS_DEVICE_LOCKED' ? 'locked' : 'launch failed';
-      await writeJson(path, manifest);
-      if (error.code !== 'IOS_DEVICE_LOCKED') throw error;
-      return manifest;
+      await delay(3000);
     }
-    await delay(3000);
-  }
-  const [process] = await runningProcesses(call, app);
-  if (!process) {
+    [process] = await runningProcesses(call, app);
+    if (!process) throw new Error('The iPhone app did not stay running after launch');
+  } catch (error) {
+    manifest.installation = 'installed';
     manifest.launchVerified = false;
-    manifest.launchBlocked = 'process exited';
+    manifest.launchBlocked = { IOS_DEVICE_LOCKED: 'locked', IOS_LAUNCH_SECURITY: 'security' }[error.code] ?? 'launch failed';
+    manifest.launchError = error.message;
+    delete manifest.processIdentifier;
+    delete manifest.verifiedAt;
     await writeJson(path, manifest);
-    throw new Error('The iPhone app did not stay running after launch');
+    return manifest;
   }
   delete manifest.launchBlocked;
+  delete manifest.launchError;
   manifest.installation = 'installed and launched';
   manifest.launchVerified = true;
   manifest.processIdentifier = process.processIdentifier;

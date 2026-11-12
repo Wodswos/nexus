@@ -107,7 +107,7 @@ Mac 构建需要 Xcode 命令行工具和 Rust。脚本按应用标识找到 `/A
 
 iOS 使用本机 `apps/mobile/ios/App/App.xcworkspace` 的签名设置，先同步网页资源，再构建、签名并覆盖安装。首次使用前在 Xcode 配置应用目标的 Team 和 Bundle Identifier，在 iPhone 上开启开发者模式并与 Mac 配对。只有一台符合条件的 iPhone 时可省略 `--device`。也可传入能唯一匹配的设备型号，或 `xcrun devicectl list devices` 显示的名称或标识。
 
-每次发布会在 `backups/native-*/` 保存源码版本、发布记录和数据备份。iPhone 如果已完成安装和数据校验，但锁屏挡住启动，解锁后可按脚本给出的路径继续验证。
+每次发布会在 `backups/native-*/` 保存源码版本、发布记录和数据备份。iPhone 安装和数据校验通过后，如果锁屏或开发者信任设置拦住启动，可以按设备提示处理后继续验证。`--resume` 会核对手机和已安装的版本，然后重试启动。
 
 ```bash
 pnpm release:native ios --resume 'backups/native-本次发布目录/ios'
