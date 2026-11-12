@@ -92,6 +92,27 @@ corepack pnpm e2e
 
 仓库中的旧 `repro-*`、`shot-*`、`e2e/flows.mjs` 等为历史手工诊断脚本,部分假定旧协议或指定测试账号,不属于回归入口;运行前检查脚本目标,仅用于独立测试实例。
 
+## 本机原生发布
+
+在 Mac 上安装工作区依赖后，从仓库根目录执行。
+
+```bash
+pnpm release:native mac
+pnpm release:native ios
+pnpm release:native all
+pnpm release:native ios --device 'iPhone 17'
+```
+
+Mac 构建需要 Xcode 命令行工具和 Rust。脚本按应用标识找到 `/Applications` 下的旧版，沿用现有签名方式和安装路径，备份旧包与本地数据后再替换和启动。首次安装使用当前产品名作为路径。
+
+iOS 使用本机 `apps/mobile/ios/App/App.xcworkspace` 的签名设置，先同步网页资源，再构建、签名并覆盖安装。首次使用前在 Xcode 配置应用目标的 Team 和 Bundle Identifier，在 iPhone 上开启开发者模式并与 Mac 配对。只有一台符合条件的 iPhone 时可省略 `--device`。也可传入能唯一匹配的设备型号，或 `xcrun devicectl list devices` 显示的名称或标识。
+
+每次发布会在 `backups/native-*/` 保存源码版本、发布记录和数据备份。iPhone 如果已完成安装和数据校验，但锁屏挡住启动，解锁后可按脚本给出的路径继续验证。
+
+```bash
+pnpm release:native ios --resume 'backups/native-本次发布目录/ios'
+```
+
 ## macOS 桌面壳
 
 在装有 Xcode Command Line Tools、Rust 与 Tauri 依赖的 Mac 上:

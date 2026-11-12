@@ -20,6 +20,7 @@
     "e2e": "pnpm --filter @nexus/e2e e2e",
     "docker:build": "docker build -t nexus .",
     "docker:run": "docker run -d --name cortex -p 30090:30090 -v $(pwd)/data:/app/data nexus",
-    "build:desktop": "pnpm --filter @nexus/desktop build"
+    "build:desktop": "pnpm --filter @nexus/desktop build",
+    "release:native": "node scripts/native-release.mjs"
   }
 }
