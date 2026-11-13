@@ -92,6 +92,27 @@ corepack pnpm e2e
 
 仓库中的旧 `repro-*`、`shot-*`、`e2e/flows.mjs` 等为历史手工诊断脚本,部分假定旧协议或指定测试账号,不属于回归入口;运行前检查脚本目标,仅用于独立测试实例。
 
+## 本机原生发布
+
+在 Mac 上安装工作区依赖后，从仓库根目录执行。
+
+```bash
+pnpm release:native mac
+pnpm release:native ios
+pnpm release:native all
+pnpm release:native ios --device 'iPhone 17'
+```
+
+Mac 构建需要 Xcode 命令行工具和 Rust。脚本按应用标识找到 `/Applications` 下的旧版，沿用现有签名方式和安装路径，备份旧包与本地数据后再替换和启动。首次安装使用当前产品名作为路径。
+
+iOS 使用本机 `apps/mobile/ios/App/App.xcworkspace` 的签名设置，先同步网页资源，再构建、签名并覆盖安装。首次使用前在 Xcode 配置应用目标的 Team 和 Bundle Identifier，在 iPhone 上开启开发者模式并与 Mac 配对。只有一台符合条件的 iPhone 时可省略 `--device`。也可传入能唯一匹配的设备型号，或 `xcrun devicectl list devices` 显示的名称或标识。
+
+每次发布会在 `backups/native-*/` 保存源码版本、发布记录和数据备份。iPhone 安装和数据校验通过后，如果锁屏或开发者信任设置拦住启动，可以按设备提示处理后继续验证。`--resume` 会核对手机和已安装的版本，然后重试启动。
+
+```bash
+pnpm release:native ios --resume 'backups/native-本次发布目录/ios'
+```
+
 ## macOS 桌面壳
 
 在装有 Xcode Command Line Tools、Rust 与 Tauri 依赖的 Mac 上:
@@ -110,6 +131,8 @@ NEXUS_DESKTOP_API_ORIGIN=https://nexus.example.com corepack pnpm build:desktop
 ```
 
 桌面包通过原生 HTTP 发送账号请求，并将会话 Cookie 保存在 WebKit 的原生存储中。同步和终端 WebSocket 使用同一个服务器地址。服务端为 `tauri://localhost` 来源的 WebSocket 校验一次性会话票据。开发模式通过 Vite 代理连接本机服务。
+
+macOS 使用 `src-tauri/Info.plist` 为当前 HTTP 部署的 IP 配置单独的 ATS 例外，供 WebKit 建立 `ws://` 连接。自建服务使用 HTTPS 时会走 `wss://`。若使用其他 HTTP 主机，需在桌面包的 `NSExceptionDomains` 中配置该主机。
 
 ## iPhone Capacitor 壳
 
