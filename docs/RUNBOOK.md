@@ -132,6 +132,8 @@ NEXUS_DESKTOP_API_ORIGIN=https://nexus.example.com corepack pnpm build:desktop
 
 桌面包通过原生 HTTP 发送账号请求，并将会话 Cookie 保存在 WebKit 的原生存储中。同步和终端 WebSocket 使用同一个服务器地址。服务端为 `tauri://localhost` 来源的 WebSocket 校验一次性会话票据。开发模式通过 Vite 代理连接本机服务。
 
+macOS 使用 `src-tauri/Info.plist` 为当前 HTTP 部署的 IP 配置单独的 ATS 例外，供 WebKit 建立 `ws://` 连接。自建服务使用 HTTPS 时会走 `wss://`。若使用其他 HTTP 主机，需在桌面包的 `NSExceptionDomains` 中配置该主机。
+
 ## iPhone Capacitor 壳
 
 默认打包本地 Web 和本地数据库,使用 `apps/web/.env.mobile` 中的
