@@ -156,7 +156,7 @@ function Overview() {
                   <article
                     aria-label={row.task.title}
                     key={row.task.id}
-                    className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4"
+                    className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-4"
                   >
                     <div className="flex items-start gap-2">
                       {taskHref(row.task.id) ? (
@@ -168,7 +168,7 @@ function Overview() {
                           <span className="min-w-0 flex-1 break-words">
                             {row.task.title}
                           </span>
-                          <span className="mt-0.5 flex shrink-0 items-center gap-1 text-[11px] font-normal text-muted">
+                          <span className="mt-0.5 flex shrink-0 items-center gap-1 text-micro font-normal text-muted">
                             打开 Task
                             <ArrowUpRight size={13} />
                           </span>
@@ -180,7 +180,7 @@ function Overview() {
                       )}
                     </div>
                     {row.projectTitle && (
-                      <p className="mt-1 text-[11px] text-muted">
+                      <p className="mt-1 text-micro text-muted">
                         {row.projectTitle}
                       </p>
                     )}
@@ -195,14 +195,14 @@ function Overview() {
                           key={agent.id}
                           to={`/work/agents/${encodeURIComponent(agent.id)}`}
                           state={{ returnTo: "/work" }}
-                          className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left hover:bg-[var(--surface-raised)]"
+                          className="flex w-full items-center gap-2 rounded-[var(--radius-md)] px-2 py-2 text-left hover:bg-[var(--surface-raised)]"
                         >
                           <Bot size={13} className="shrink-0 text-muted" />
                           <span className="min-w-0 flex-1">
                             <span className="block truncate text-xs">
                               {agent.currentRound?.objective || agent.name}
                             </span>
-                            <span className="text-[10px] text-muted">
+                            <span className="text-micro text-muted">
                               {agent.name} · {agentStateLabels[agent.state]}
                             </span>
                           </span>
@@ -214,7 +214,7 @@ function Overview() {
                 ))}
               </div>
               {!work.groups[group.key]?.length && (
-                <p className="rounded-xl border border-dashed border-[var(--border)] px-4 py-6 text-xs text-muted">
+                <p className="rounded-[var(--radius-lg)] border border-dashed border-[var(--border)] px-4 py-6 text-xs text-muted">
                   {group.description} · 暂无
                 </p>
               )}

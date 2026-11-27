@@ -202,7 +202,7 @@ export default function SettingsPage() {
             {auth.phase === 'authed' && auth.user ? (
               <>
                 {auth.user.isAdmin && (
-                  <div className="rounded-xl border border-[var(--border)] p-3">
+                  <div className="rounded-[var(--radius-lg)] border border-[var(--border)] p-3">
                     <div className="mb-2 flex items-center justify-between">
                       <span className="text-xs text-muted">邀请码(注册新账号用)</span>
                       <Button
@@ -218,14 +218,14 @@ export default function SettingsPage() {
                       </Button>
                     </div>
                     {inviteCode && (
-                      <div className="mb-2 rounded-lg glass px-3 py-2 font-mono text-sm gradient-text">
+                      <div className="mb-2 rounded-[var(--radius-md)] glass px-3 py-2 font-mono text-sm gradient-text">
                         {inviteCode}
                       </div>
                     )}
                     {invites.length > 0 && (
                       <div className="space-y-1">
                         {invites.map((inv) => (
-                          <div key={inv.code} className="flex items-center gap-2 text-[11px] text-muted">
+                          <div key={inv.code} className="flex items-center gap-2 text-micro text-muted">
                             <code className="opacity-70">{inv.code.slice(0, 8)}…</code>
                             {inv.usedBy ? (
                               <Badge variant="success">已使用</Badge>
@@ -277,7 +277,7 @@ export default function SettingsPage() {
                     onClick={() => theme.setMode(m)}
                     className={cn(
                       'inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs',
-                      theme.mode === m ? 'gradient-bg text-white' : 'glass text-muted hover:text-foreground',
+                      theme.mode === m ? 'gradient-bg text-inverse' : 'glass text-muted hover:text-foreground',
                     )}
                   >
                     {m === 'dark' ? (
@@ -285,7 +285,7 @@ export default function SettingsPage() {
                     ) : m === 'light' ? (
                       <Sun className="h-3 w-3" />
                     ) : (
-                      <span className="text-[10px]">A</span>
+                      <span className="text-micro">A</span>
                     )}
                     {m === 'dark' ? '深色' : m === 'light' ? '浅色' : '跟随系统'}
                   </button>
@@ -295,7 +295,7 @@ export default function SettingsPage() {
             <div className="flex items-center justify-between">
               <span className="text-sm">强调色</span>
               <div className="flex gap-2" role="group" aria-label="强调色">
-                {ACCENTS.map((a: Accent) => (
+                {ACCENTS.filter((a) => a === 'emerald' || a === 'mono').map((a: Accent) => (
                   <button
                     key={a}
                     onClick={() => theme.setAccent(a)}
@@ -305,7 +305,7 @@ export default function SettingsPage() {
                     }
                     aria-pressed={theme.accent === a}
                     className={cn(
-                      'grid h-8 w-8 place-items-center rounded-full border-2 border-transparent bg-[var(--accent-solid)] text-white transition-colors',
+                      'grid h-8 w-8 place-items-center rounded-full border-2 border-transparent bg-[var(--accent-solid)] text-inverse transition-colors',
                       theme.accent === a && 'outline-2 outline-offset-2 outline-[var(--accent-solid)]',
                     )}
                     title={
@@ -337,17 +337,17 @@ export default function SettingsPage() {
                 {servers.map((s) => (
                   <div
                     key={s.id}
-                    className="flex items-center gap-2 rounded-xl border border-[var(--border)] px-3 py-2"
+                    className="flex items-center gap-2 rounded-[var(--radius-lg)] border border-[var(--border)] px-3 py-2"
                   >
                     <Server className="h-3.5 w-3.5 shrink-0 text-muted" />
                     <span className="min-w-0 shrink-0 truncate text-sm">{s.name}</span>
-                    <code className="tabular min-w-0 flex-1 truncate text-[11px] text-muted">{s.host}</code>
+                    <code className="tabular min-w-0 flex-1 truncate text-micro text-muted">{s.host}</code>
                     {s.passwordSet && (
                       <Badge variant="warning" className="shrink-0 !text-[9px]">
                         密码
                       </Badge>
                     )}
-                    {s.agentProxy && <span className="shrink-0 text-[10px] text-muted" title={s.agentProxy.url}>代理</span>}
+                    {s.agentProxy && <span className="shrink-0 text-micro text-muted" title={s.agentProxy.url}>代理</span>}
                     <button
                       className="shrink-0 text-xs text-muted underline disabled:opacity-40"
                       disabled={auth.phase !== 'authed' || connectionCheck?.busy}
@@ -414,15 +414,15 @@ export default function SettingsPage() {
                 <Plus className="h-3.5 w-3.5" /> {editingServer ? '保存' : '添加'}
               </Button>
             </div>
-            <fieldset aria-label="Agent 代理" className="space-y-2 rounded-lg border border-[var(--border)] p-3">
+            <fieldset aria-label="Agent 代理" className="space-y-2 rounded-[var(--radius-md)] border border-[var(--border)] p-3">
               <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={serverProxyEnabled} onChange={event => setServerProxyEnabled(event.target.checked)} />此服务器上的 Agent 使用代理</label>
               {serverProxyEnabled && <>
                 <Input aria-label="Agent 代理地址" value={serverProxyUrl} onChange={event => setServerProxyUrl(event.target.value)} placeholder="http://127.0.0.1:7890" className="h-8 text-xs" />
                 <label className="block space-y-1 text-xs text-muted"><span>不经过代理的地址</span><Input aria-label="不经过代理的地址" value={serverNoProxy} onChange={event => setServerNoProxy(event.target.value)} className="h-8 text-xs" /></label>
               </>}
-              <p className="text-[11px] leading-5 text-muted">作用于此连接下新启动的 SSH／独立用户 Agent；已运行的进程需结束后恢复会话。127.0.0.1 指执行主机，容器／Pod 请在环境中单独配置。Nexus 回调地址自动直连。</p>
+              <p className="text-micro leading-5 text-muted">作用于此连接下新启动的 SSH／独立用户 Agent；已运行的进程需结束后恢复会话。127.0.0.1 指执行主机，容器／Pod 请在环境中单独配置。Nexus 回调地址自动直连。</p>
             </fieldset>
-            <div className="text-[10px] text-muted/60">
+            <div className="text-micro text-muted/60">
               SSH 密码在服务端加密保存,不进入任务同步或 JSON 导出。
               {auth.phase !== 'authed' && ' 请先登录以配置远程连接。'}
             </div>
@@ -512,10 +512,10 @@ export default function SettingsPage() {
               />
             </div>
             {imported && <div className="text-xs text-[var(--success)]">{imported}</div>}
-            <div className="text-[11px] text-muted/70">
+            <div className="text-micro text-muted/70">
               数据在本地(IndexedDB)+ 同步服务;导出是完整备份。同步服务不可用时本地照常工作。
             </div>
-            <div className="flex items-center justify-between rounded-xl border border-[var(--border)] px-3 py-2 text-xs">
+            <div className="flex items-center justify-between rounded-[var(--radius-lg)] border border-[var(--border)] px-3 py-2 text-xs">
               <span className="text-muted">同步状态</span>
               <Badge
                 variant={
@@ -538,7 +538,7 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        <div className="pt-2 text-center text-[10px] text-muted/50">Nexus · local-first · CRDT 同步</div>
+        <div className="pt-2 text-center text-micro text-muted/50">Nexus · local-first · CRDT 同步</div>
       </div>
     </div>
   );

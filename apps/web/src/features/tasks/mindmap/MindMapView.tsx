@@ -10,6 +10,7 @@ import {
   useEdgesState,
   useReactFlow,
   BaseEdge,
+  useStore,
   type Node,
   type Edge,
   type EdgeProps,
@@ -33,7 +34,7 @@ import {
 import { SortableContext, useSortable, horizontalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import '@xyflow/react/dist/style.css';
-import { cn } from '@nexus/ui';
+import { cn, UI_GEOMETRY } from '@nexus/ui';
 import {
   Task,
   activeTasks,
@@ -60,7 +61,6 @@ import { AppearancePanel } from './AppearancePanel';
 import { MapControls } from './MapControls';
 import { MapHelp } from './MapHelp';
 import { usePanSpeed } from './panSpeed';
-import { branchColor } from './appearance';
 import { TaskNode, type MindNodeData } from './TaskNode';
 import { layoutMindTree, mindMetrics, VIRTUAL_ROOT_ID } from './layout';
 import { useMindFonts } from './fonts';
@@ -109,8 +109,17 @@ function TreeStepEdge({ id, sourceX, sourceY, targetX, targetY, style }: EdgePro
   const path = `M ${sourceX} ${sourceY} L ${mx} ${sourceY} L ${mx} ${targetY} L ${targetX} ${targetY}`;
   return <BaseEdge id={id} path={path} style={style} />;
 }
-const EDGE_TYPES = { tree: TreeStepEdge };
-const EDGE_TYPE = { curve: 'default', straight: 'straight', step: 'tree' } as const;
+function TreeCurveEdge({ id, sourceX, sourceY, targetX, targetY, style }: EdgeProps) {
+  const mx = (sourceX + targetX) / 2;
+  return <BaseEdge id={id} path={`M ${sourceX} ${sourceY} C ${mx} ${sourceY}, ${mx} ${targetY}, ${targetX} ${targetY}`} style={style} />;
+}
+const EDGE_TYPES = { tree: TreeStepEdge, curve: TreeCurveEdge };
+const EDGE_TYPE = { curve: 'curve', straight: 'straight', step: 'tree' } as const;
+
+function CanvasGrid() {
+  const visible = useStore((state) => state.transform[2] >= 0.5);
+  return <Background gap={UI_GEOMETRY.gridGap} size={UI_GEOMETRY.gridDotSize} color="var(--canvas-grid)" style={{ opacity: visible ? 1 : 0, transition: 'opacity var(--duration-color) var(--ease-ui)' }} />;
+}
 
 /** 内容自适应、向右展开的导图；聚焦只改变强调，不改变节点位置。 */
 function MindMapInner({
@@ -137,6 +146,9 @@ function MindMapInner({
   const { getIntersectingNodes } = useReactFlow();
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<NodeData>>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const onNodeMouseEnter = useCallback((_event: React.MouseEvent, node: Node) => setHoveredId(node.id), []);
+  const onNodeMouseLeave = useCallback(() => setHoveredId(null), []);
   useMindGeometry();
   void onEdgesChange;
   const draggingId = useRef<string | null>(null);
@@ -421,7 +433,7 @@ function MindMapInner({
         id: `${item.parent}->${id}`, source: item.parent, target: id,
         sourceHandle: `source-${position.side}`, targetHandle: `target-${position.side === 'left' ? 'right' : 'left'}`,
         type: EDGE_TYPE[edgeStyle],
-        style: { stroke: branchColor(position.branch), strokeWidth: item.depth === 1 ? 2 : 1.4, opacity: muted ? 0.16 : 0.7, strokeLinecap: 'round' },
+        style: { stroke: 'var(--canvas-edge)', strokeWidth: UI_GEOMETRY.edgeWidth, opacity: muted ? 0.16 : 1, strokeLinecap: 'round' },
       });
     }
     selectOnCreateRef.current = null;
@@ -462,7 +474,7 @@ function MindMapInner({
     setEdges((previous) => {
       let changed = false;
       const next = previous.map((edge) => {
-        const opacity = muted(edge.target) ? 0.16 : 0.7;
+        const opacity = muted(edge.target) ? 0.16 : 1;
         if (edge.style?.opacity === opacity) return edge;
         changed = true;
         return { ...edge, style: { ...edge.style, opacity } };
@@ -760,6 +772,14 @@ function MindMapInner({
   // 框选/点选计数(来自唯一真源,而非 RF 残留标记)
   const selectedNodes = nodes.filter((n) => n.selected && n.id !== VIRTUAL_ROOT_ID);
   const selectedCount = selectedNodes.length;
+  const selectedKey = selectedNodes.map(node => node.id).sort().join(',');
+  const visibleEdges = useMemo(() => {
+    const active = new Set(selectedKey ? selectedKey.split(',') : []);
+    if (hoveredId) active.add(hoveredId);
+    return edges.map(edge => active.has(edge.source) || active.has(edge.target)
+      ? { ...edge, style: { ...edge.style, stroke: 'var(--accent-primary)', strokeWidth: UI_GEOMETRY.edgeActiveWidth, opacity: 1 } }
+      : edge);
+  }, [edges, selectedKey, hoveredId]);
 
   return (
     <div ref={mapRegionRef} className="flex min-h-0 flex-1 flex-col">
@@ -774,7 +794,7 @@ function MindMapInner({
       >
         <ReactFlow
           nodes={nodes}
-          edges={edges}
+          edges={visibleEdges}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onSelectionChange={onSelectionChange}
@@ -792,6 +812,8 @@ function MindMapInner({
           panOnScrollSpeed={panSpeed}
           zoomOnScroll={false}
           onNodeClick={onNodeClick}
+          onNodeMouseEnter={onNodeMouseEnter}
+          onNodeMouseLeave={onNodeMouseLeave}
           onNodeDoubleClick={onNodeDoubleClick}
           onNodeContextMenu={onNodeContextMenu}
           onSelectionContextMenu={onSelectionContextMenu}
@@ -807,7 +829,7 @@ function MindMapInner({
           proOptions={PRO_OPTIONS}
           className="mindmap-flow bg-[var(--mind-canvas)] [&_.react-flow__attribution]:hidden"
         >
-          <Background gap={24} size={1} color="var(--mind-grid)" />
+          <CanvasGrid />
           <MapControls
             onRoot={camera.rootPosition}
             edgeStyle={edgeStyle}
@@ -821,13 +843,13 @@ function MindMapInner({
             pannable
             zoomable
             className="!hidden lg:!block"
-            maskColor="rgba(112,119,131,0.12)"
+            maskColor="var(--bg-hover)" nodeColor="var(--canvas-edge)"
             style={MINIMAP_STYLE}
           />
         </ReactFlow>
         {fonts.failed && <p role="status" className="absolute left-14 top-3 rounded bg-[var(--background)] px-3 py-2 text-xs text-muted">字体暂未加载，已使用系统字体。</p>}
         {selectedCount > 0 && !configOpen && (
-          <div role="toolbar" aria-label="所选任务操作" className="absolute bottom-14 right-3 z-20 flex max-w-[calc(100%-24px)] flex-wrap items-center gap-1 rounded-lg border border-[var(--border)] bg-[var(--background)] px-2 py-1.5 text-xs shadow-sm">
+          <div role="toolbar" aria-label="所选任务操作" className="absolute bottom-14 right-3 z-20 flex max-w-[calc(100%-24px)] flex-wrap items-center gap-1 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--background)] px-2 py-1.5 text-xs shadow-sm">
             <span className="px-1">已选 {selectedCount} 项</span>
             <TaskBatchActions ids={selectedNodes.map(node => node.id)} onOpen={() => { setAppearanceOpen(false); setSideOpen(false); }} />
             {selectedCount === 1 && <button aria-label="查看所选任务详情" title="详情 · ⌘ / Ctrl + Enter" onClick={() => openDetails(selectedNodes[0]!.id)} className="flex items-center gap-1 rounded px-1 py-1 text-muted hover:text-foreground"><Info size={13} />详情</button>}
@@ -895,7 +917,7 @@ function SortableRootChip({ task, active, onSelect }: { task: Task; active: bool
       style={{ transform: CSS.Transform.toString(transform), transition }}
       className={cn(
         'hidden max-w-[120px] shrink-0 cursor-grab touch-none truncate rounded-full px-2.5 py-1 text-xs md:inline-block active:cursor-grabbing',
-        active ? 'gradient-bg text-white' : 'glass text-muted hover:text-foreground',
+        active ? 'gradient-bg text-inverse' : 'glass text-muted hover:text-foreground',
         isDragging && 'z-10 opacity-70',
       )}
       title={`${task.title || 'Untitled'}(可拖动排序)`}
@@ -978,7 +1000,7 @@ export function MindMapView({ focusToolbar }: { focusToolbar?: HTMLElement | nul
           onClick={() => setRootTaskId(null)}
           className={cn(
             'rounded-full px-2.5 py-1 text-xs',
-            rootTaskId == null ? 'gradient-bg text-white' : 'glass text-muted hover:text-foreground',
+            rootTaskId == null ? 'gradient-bg text-inverse' : 'glass text-muted hover:text-foreground',
           )}
         >
           全部
@@ -999,7 +1021,7 @@ export function MindMapView({ focusToolbar }: { focusToolbar?: HTMLElement | nul
           </SortableContext>
         </DndContext>
         {visibleRoots.length > 6 && (
-          <span className="flex items-center gap-1 text-[10px] text-muted/60">
+          <span className="flex items-center gap-1 text-micro text-muted/60">
             <Crosshair className="h-3 w-3" />
             {visibleRoots.length - 6}+
           </span>
@@ -1021,8 +1043,8 @@ export function MindMapView({ focusToolbar }: { focusToolbar?: HTMLElement | nul
             {hiddenRoots.length > 0 && `隐 ${hiddenRoots.length}`}
           </button>
           {pickerOpen && (
-            <div className="absolute left-0 top-full z-40 mt-1.5 max-h-[60vh] w-56 overflow-y-auto rounded-xl glass-raised p-1.5 shadow-xl">
-              <div className="px-2 py-1 text-[10px] text-muted">
+            <div className="absolute left-0 top-full z-40 mt-1.5 max-h-[60vh] w-56 overflow-y-auto rounded-[var(--radius-lg)] glass-raised p-1.5 shadow-xl">
+              <div className="px-2 py-1 text-micro text-muted">
                 「全部」视图显示的根任务(取消勾选 = 该根及其整棵子树不在图中显示)
               </div>
               {roots.map((t) => {
@@ -1031,12 +1053,12 @@ export function MindMapView({ focusToolbar }: { focusToolbar?: HTMLElement | nul
                   <button
                     key={t.id}
                     onClick={() => toggleRoot(t.id)}
-                    className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-muted transition-colors hover:bg-[var(--surface)] hover:text-foreground"
+                    className="flex w-full items-center gap-2 rounded-[var(--radius-md)] px-2 py-1.5 text-left text-xs text-muted transition-colors hover:bg-[var(--surface)] hover:text-foreground"
                   >
                     <span
                       className={cn(
                         'grid h-3.5 w-3.5 shrink-0 place-items-center rounded border',
-                        on ? 'gradient-bg border-transparent text-white' : 'border-[var(--border-strong)]',
+                        on ? 'gradient-bg border-transparent text-inverse' : 'border-[var(--border-strong)]',
                       )}
                     >
                       {on && <Check className="h-2.5 w-2.5" strokeWidth={3} />}

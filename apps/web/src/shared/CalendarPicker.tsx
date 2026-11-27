@@ -48,7 +48,7 @@ export function CalendarPicker({ value, onChange, min, max, range }: CalendarPic
   return (
     <div data-calendar-picker>
       <div className="mb-3 flex items-center justify-between">
-        <span aria-live="polite" className="text-[13px] font-medium">
+        <span aria-live="polite" className="text-control font-medium">
           {month.getFullYear()} 年 {month.getMonth() + 1} 月
         </span>
         <div className="flex gap-1">
@@ -57,7 +57,7 @@ export function CalendarPicker({ value, onChange, min, max, range }: CalendarPic
             aria-label="上个月"
             disabled={!!min && lastOf(-1) < min}
             onClick={() => navigate(-1)}
-            className="grid h-8 w-8 place-items-center rounded-lg text-muted hover:bg-[var(--surface)] hover:text-foreground disabled:opacity-30"
+            className="grid h-8 w-8 place-items-center rounded-[var(--radius-md)] text-muted hover:bg-[var(--surface)] hover:text-foreground disabled:opacity-30"
           >
             <ChevronLeft size={15} />
           </button>
@@ -68,7 +68,7 @@ export function CalendarPicker({ value, onChange, min, max, range }: CalendarPic
               !!max && dayKeyOf(new Date(month.getFullYear(), month.getMonth() + 1, 1)) > max
             }
             onClick={() => navigate(1)}
-            className="grid h-8 w-8 place-items-center rounded-lg text-muted hover:bg-[var(--surface)] hover:text-foreground disabled:opacity-30"
+            className="grid h-8 w-8 place-items-center rounded-[var(--radius-md)] text-muted hover:bg-[var(--surface)] hover:text-foreground disabled:opacity-30"
           >
             <ChevronRight size={15} />
           </button>
@@ -77,7 +77,7 @@ export function CalendarPicker({ value, onChange, min, max, range }: CalendarPic
       <div role="grid" aria-label="日期月历" className="space-y-1">
         <div role="row" className="grid grid-cols-7">
           {weekdays.map((day) => (
-            <span role="columnheader" key={day} className="py-1 text-center text-[11px] text-muted">
+            <span role="columnheader" key={day} className="py-1 text-center text-micro text-muted">
               {day}
             </span>
           ))}
@@ -95,7 +95,7 @@ export function CalendarPicker({ value, onChange, min, max, range }: CalendarPic
                   role="gridcell"
                   aria-selected={selected}
                   className={cn(
-                    'flex justify-center rounded-lg',
+                    'flex justify-center rounded-[var(--radius-md)]',
                     inRange && 'bg-[var(--selection)]',
                   )}
                 >
@@ -150,9 +150,9 @@ export function CalendarPicker({ value, onChange, min, max, range }: CalendarPic
                         setMonth(new Date(next.getFullYear(), next.getMonth(), 1));
                     }}
                     className={cn(
-                      'relative grid h-9 w-9 place-items-center rounded-lg text-xs tabular-nums outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[var(--ring)] disabled:opacity-25',
+                      'relative grid h-9 w-9 place-items-center rounded-[var(--radius-md)] text-xs tabular-nums outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[var(--ring)] disabled:opacity-25',
                       selected
-                        ? 'bg-[var(--accent-solid)] font-medium text-white'
+                        ? 'bg-[var(--accent-solid)] font-medium text-inverse'
                         : 'hover:bg-[var(--selection)] hover:text-[var(--accent-solid)]',
                       !selected && date.getMonth() !== month.getMonth() && 'text-muted/45',
                       !selected && key === today && 'font-semibold text-[var(--accent-solid)]',
@@ -203,7 +203,7 @@ export function CalendarDateField({
     <Popover modal open={open} onOpenChange={setOpen}>
       <div
         className={cn(
-          'flex h-9 min-w-0 items-center gap-1 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 focus-within:border-[var(--accent-solid)]',
+          'flex h-9 min-w-0 items-center gap-1 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-2.5 focus-within:border-[var(--accent-solid)]',
           className,
         )}
       >
@@ -227,7 +227,7 @@ export function CalendarDateField({
             type="button"
             aria-label={`选择${props['aria-label']}`}
             disabled={props.disabled}
-            className="grid h-7 w-6 shrink-0 place-items-center rounded-md text-muted hover:text-[var(--accent-solid)] disabled:opacity-40"
+            className="grid h-7 w-6 shrink-0 place-items-center rounded-[var(--radius-sm)] text-muted hover:text-[var(--accent-solid)] disabled:opacity-40"
           >
             <CalendarDays size={14} />
           </button>
@@ -247,7 +247,7 @@ export function CalendarDateField({
             (!!props.min && dayKeyOf(new Date()) < props.min) ||
             (!!props.max && dayKeyOf(new Date()) > props.max)
           }
-          className="mt-3 min-h-8 w-full rounded-lg border border-[var(--border)] text-xs text-muted hover:bg-[var(--surface)] disabled:opacity-40"
+          className="mt-3 min-h-8 w-full rounded-[var(--radius-md)] border border-[var(--border)] text-xs text-muted hover:bg-[var(--surface)] disabled:opacity-40"
           onClick={() => select(dayKeyOf(new Date()))}
         >
           回到今天

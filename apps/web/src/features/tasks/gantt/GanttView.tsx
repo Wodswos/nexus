@@ -348,23 +348,23 @@ export function GanttView() {
           <button
             onClick={() => setZoom(ZOOMS[Math.max(0, ZOOMS.indexOf(zoom) - 1)])}
             disabled={zoom === ZOOMS[0]}
-            className="flex h-7 w-7 items-center justify-center rounded-lg glass text-muted transition-all hover:text-foreground disabled:opacity-30"
+            className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-md)] glass text-muted transition-all hover:text-foreground disabled:opacity-30"
             title="时间轴缩小"
           >
             <Minus className="h-3.5 w-3.5" />
           </button>
-          <span className="w-8 text-center text-[10px] tabular text-muted">{zoom}×</span>
+          <span className="w-8 text-center text-micro tabular text-muted">{zoom}×</span>
           <button
             onClick={() => setZoom(ZOOMS[Math.min(ZOOMS.length - 1, ZOOMS.indexOf(zoom) + 1)])}
             disabled={zoom === ZOOMS[ZOOMS.length - 1]}
-            className="flex h-7 w-7 items-center justify-center rounded-lg glass text-muted transition-all hover:text-foreground disabled:opacity-30"
+            className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-md)] glass text-muted transition-all hover:text-foreground disabled:opacity-30"
             title="时间轴放大(拖条可按 5 分钟微调)"
           >
             <Plus className="h-3.5 w-3.5" />
           </button>
         </div>
-        <span className="ml-auto text-[10px] text-muted/70 md:hidden">左右滑动切换时间</span>
-        <span className="ml-auto hidden items-center gap-2 text-[10px] text-muted/60 lg:inline-flex">
+        <span className="ml-auto text-micro text-muted/70 md:hidden">左右滑动切换时间</span>
+        <span className="ml-auto hidden items-center gap-2 text-micro text-muted/60 lg:inline-flex">
           <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-[var(--success)]" />进行中</span>
           <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-[var(--accent-from)]" />未开始</span>
           <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-[var(--danger)]" />已逾期</span>
@@ -372,24 +372,24 @@ export function GanttView() {
           <span>条色 = 优先级</span>
           {(['P0', 'P1', 'P2', 'P3'] as const).map((p) => (
             <span key={p} className="flex items-center gap-1">
-              <span className="h-2 w-3 rounded-sm" style={{ background: PRIORITY_VAR[p] }} />
+              <span className="h-2 w-3 rounded-[var(--radius-xs)]" style={{ background: PRIORITY_VAR[p] }} />
               {p}
             </span>
           ))}
           <span className="text-muted/40">·</span>
           <span className="flex items-center gap-1">
-            <span className="h-2 w-3 rounded-sm" style={{ background: 'color-mix(in srgb, var(--success) 75%, transparent)' }} />
+            <span className="h-2 w-3 rounded-[var(--radius-xs)]" style={{ background: 'color-mix(in srgb, var(--success) 75%, transparent)' }} />
             已完成
           </span>
         </span>
       </div>
-      <p className="hidden shrink-0 px-4 pb-2 text-[11px] text-muted md:block md:px-6">双指左右滑动切换整个区间 · 放大后可用 Shift + 滚轮平移时间轴</p>
+      <p className="hidden shrink-0 px-4 pb-2 text-micro text-muted md:block md:px-6">双指左右滑动切换整个区间 · 放大后可用 Shift + 滚轮平移时间轴</p>
       <div ref={scrollRef} data-gantt-scroll style={nameColumn.mobile ? { touchAction: 'pan-y pinch-zoom' } : undefined} className="min-h-0 flex-1 overflow-auto overscroll-x-contain pb-2 md:pb-6">
         <div className="inline-block min-w-full">
           {/* 日期表头(sticky top) */}
           <div className="sticky top-0 z-20 flex bg-[var(--background)]/95 backdrop-blur">
             <div data-gantt-name-heading className="sticky left-0 z-10 flex shrink-0 items-center border-b border-r border-[var(--border)] bg-[var(--background)]/95 px-2" style={{ width: nameWidth }}>
-              <span className="text-[10px] text-muted md:hidden">任务</span>
+              <span className="text-micro text-muted md:hidden">任务</span>
               {nameColumn.mobile && <GanttNameResize width={nameWidth} onChange={nameColumn.setWidth} />}
             </div>
             <div className="flex border-b border-[var(--border)]" style={{ width: days * pxPerDay, minWidth: days * pxPerDay }}>
@@ -497,7 +497,7 @@ export function GanttView() {
                     {/* 空白拖拽预览:按下端 → 拖至另一端 */}
                     {draft?.taskId === r.task.id && (
                       <div
-                        className="pointer-events-none absolute inset-y-1 z-[6] rounded-md border border-dashed border-[var(--accent-from)] bg-[color-mix(in_srgb,var(--accent-from)_14%,transparent)]"
+                        className="pointer-events-none absolute inset-y-1 z-[6] rounded-[var(--radius-sm)] border border-dashed border-[var(--accent-from)] bg-[color-mix(in_srgb,var(--accent-from)_14%,transparent)]"
                         style={{
                           left: Math.min(draft.anchorDay, draft.curDay) * pxPerDay,
                           width: (Math.abs(draft.curDay - draft.anchorDay) + 1) * pxPerDay,
@@ -524,10 +524,10 @@ export function GanttView() {
                           ui.selectTask(r.task.id);
                         }}
                         className={cn(
-                          'absolute top-1/2 flex -translate-y-1/2 items-center overflow-hidden rounded-md text-[10px] text-white shadow-sm',
+                          'absolute top-1/2 flex -translate-y-1/2 items-center overflow-hidden rounded-[var(--radius-sm)] text-micro text-inverse shadow-sm',
                           'h-5 cursor-grab touch-none select-none active:cursor-grabbing',
-                          vs.kind === 'done' && 'text-white/80',
-                          isDragging && 'shadow-lg ring-2 ring-white/70',
+                          vs.kind === 'done' && 'text-inverse/80',
+                          isDragging && 'shadow-lg ring-2 ring-[var(--text-inverse)]/70',
                         )}
                         style={{
                           left: xOf(visibleRange.start),
@@ -537,7 +537,7 @@ export function GanttView() {
                             vs.kind === 'done'
                               ? 'color-mix(in srgb, var(--success) 75%, transparent)'
                               : pColor,
-                          color: '#fff',
+                          color: 'var(--text-inverse)',
                         }}
                         title={`${r.task.title || 'Untitled'} · ${p} · ${vs.label} · ${fmtMD(visibleRange.start)} ${fmtHM(visibleRange.start)} ~ ${fmtMD(visibleRange.end)} ${fmtHM(visibleRange.end)}${isDragging && dragging ? ` → ${dragging.mode === 'move' ? '平移' : dragging.mode === 'start' ? '开始端' : '截止端'} ${fmtDeltaMin(dragging.deltaMin)}` : ''}`}
                       >
@@ -546,19 +546,19 @@ export function GanttView() {
                         )}
                         {/* 逾期角标「!」:红底白字;完成/未开始由名称旁状态点提示,不加角标。 */}
                         {vs.kind === 'overdue' && (
-                          <span className="absolute right-0.5 top-0.5 flex h-3 w-3 items-center justify-center rounded-full bg-[var(--danger)] text-[8px] font-bold leading-none text-white ring-1 ring-white/60">!</span>
+                          <span className="absolute right-0.5 top-0.5 flex h-3 w-3 items-center justify-center rounded-full bg-[var(--danger)] text-[8px] font-bold leading-none text-inverse ring-1 ring-[var(--text-inverse)]/60">!</span>
                         )}
                         {/* 两端伸缩把手(精确到 5 分钟) */}
                         {barW >= 36 && (
                           <>
                             <div
                               onPointerDown={(e) => beginBarDrag(e, r, 'start')}
-                              className="absolute inset-y-0 left-0 w-2 cursor-ew-resize hover:bg-white/30"
+                              className="absolute inset-y-0 left-0 w-2 cursor-ew-resize hover:bg-[var(--text-inverse)]/30"
                               title="拖动调整开始时间(5 分钟粒度)"
                             />
                             <div
                               onPointerDown={(e) => beginBarDrag(e, r, 'end')}
-                              className="absolute inset-y-0 right-0 w-2 cursor-ew-resize hover:bg-white/30"
+                              className="absolute inset-y-0 right-0 w-2 cursor-ew-resize hover:bg-[var(--text-inverse)]/30"
                               title="拖动调整截止时间(5 分钟粒度)"
                             />
                           </>
@@ -581,7 +581,7 @@ export function GanttView() {
       {/* 未排期坞:无开始/截止的任务,拖到图上某一天即排期 */}
       {unscheduled.length > 0 && (
         <div data-gantt-unscheduled className="shrink-0 border-t border-[var(--border)] px-4 py-2 md:px-6">
-          <div className="mb-1 flex items-center gap-1.5 text-[10px] text-muted">
+          <div className="mb-1 flex items-center gap-1.5 text-micro text-muted">
             <CalendarClock className="h-3 w-3" />
             <span>未排期({unscheduled.length})</span>
             <span className="text-muted/60">· 拖到上面某一天 = 排那一天;再拖条两端可精确到 5 分钟</span>
@@ -595,7 +595,7 @@ export function GanttView() {
                 onPointerDown={(e) => onTrayPointerDown(e, t)}
                 onClick={() => ui.selectTask(t.id)}
                 onContextMenu={(e) => { e.preventDefault(); ui.openTaskMenu(t.id, e.clientX, e.clientY); }}
-                className="touch-none rounded-full glass px-2.5 py-1 text-[11px] text-foreground transition-all hover:border-[var(--border-strong)] active:scale-95"
+                className="touch-none rounded-full glass px-2.5 py-1 text-micro text-foreground transition-all hover:border-[var(--border-strong)] active:scale-95"
                 title="拖到甘特图上排期;点按看详情"
               >
                 <TaskTitle title={t.title} />
@@ -608,7 +608,7 @@ export function GanttView() {
       {/* 拖拽 ghost */}
       {trayDrag && (
         <div
-          className="pointer-events-none fixed z-50 rounded-lg glass-raised px-3 py-1.5 text-xs gradient-text"
+          className="pointer-events-none fixed z-50 rounded-[var(--radius-md)] glass-raised px-3 py-1.5 text-xs gradient-text"
           style={{ left: trayDrag.x + 10, top: trayDrag.y - 12 }}
         >
           {trayDrag.title || 'Untitled'}

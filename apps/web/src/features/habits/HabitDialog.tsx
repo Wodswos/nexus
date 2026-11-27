@@ -2,14 +2,15 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useNexus } from '@nexus/crdt';
 import { habitReminderTimes, MAX_HABIT_REMINDER_TIMES, validateHabitConfig, type Cadence, type Habit } from '@nexus/core';
 import { Plus, X } from 'lucide-react';
-import { Button, Dialog, DialogContent, Input, cn } from '@nexus/ui';
+import { Button, Dialog, DialogContent, Input, cn, tokenValue } from '@nexus/ui';
 import { getNotifPermission, nativeNotifSupported, onNotifPermissionChange, requestNotifPermission, type NotifPermission } from '@nexus/platform';
 import { isComposing } from '@/shared/ime';
 
-const COLORS = ['#6b80ae', '#659083', '#a78560', '#8c79a4', '#a47586', '#648f9c'];
+const COLOR_TOKENS = ['--accent-primary', '--text-secondary', '--text-muted'] as const;
 type Frequency = 'daily' | 'weekly-times' | 'weekly-days' | 'interval' | 'custom';
 export function HabitDialog({ habit, onClose }: { habit?: Habit; onClose: () => void }) {
   const store = useNexus();
+  const COLORS = COLOR_TOKENS.map(tokenValue);
   const original = habit?.cadence;
   const [name, setName] = useState(habit?.name ?? '');
   const [target, setTarget] = useState(String(habit?.targetPerDay ?? 1));
@@ -66,18 +67,18 @@ export function HabitDialog({ habit, onClose }: { habit?: Habit; onClose: () => 
     } catch (cause) { setError(cause instanceof Error ? cause.message : '保存失败，请重试'); }
     finally { setBusy(false); }
   };
-  const field = 'h-9 w-full min-w-0 rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 text-sm outline-none focus:border-[var(--accent-solid)]';
+  const field = 'h-9 w-full min-w-0 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--background)] px-3 text-sm outline-none focus:border-[var(--accent-solid)]';
   return <Dialog open onOpenChange={open => { if (!open && !busy) onClose(); }}>
     <DialogContent title={habit ? '编辑习惯' : '新习惯'} className="top-[8%] max-h-[84dvh] overflow-y-auto sm:w-[440px]">
       <form className="space-y-4" onSubmit={event => void submit(event)} onKeyDown={event => { if (event.key === 'Enter' && isComposing(event)) event.preventDefault(); }}>
         <label className="block space-y-1.5 text-sm"><span>习惯名称</span><Input autoFocus required maxLength={200} value={name} disabled={busy} onChange={event => setName(event.target.value)} placeholder="例如：阅读、散步、喝水" /></label>
-        <fieldset disabled={busy}><legend className="mb-2 text-xs text-muted">标记颜色</legend><div className="flex flex-wrap gap-2">{colors.map((value, index) => <button type="button" key={value} aria-label={`颜色 ${index + 1}`} aria-pressed={color === value} onClick={() => setColor(value)} className={cn('h-6 w-6 rounded-full border border-black/5 outline-offset-2', color === value && 'outline-2 outline-[var(--accent-solid)]')} style={{ background: value }} />)}</div></fieldset>
+        <fieldset disabled={busy}><legend className="mb-2 text-xs text-muted">标记颜色</legend><div className="flex flex-wrap gap-2">{colors.map((value, index) => <button type="button" key={value} aria-label={`颜色 ${index + 1}`} aria-pressed={color === value} onClick={() => setColor(value)} className={cn('h-6 w-6 rounded-full border border-[var(--border-hairline)] outline-offset-2', color === value && 'outline-2 outline-[var(--accent-solid)]')} style={{ background: value }} />)}</div></fieldset>
         <div className="grid grid-cols-2 gap-3">
           <label className="block min-w-0 space-y-1.5 text-sm"><span>每日目标次数</span><Input type="number" required min={1} max={10000} step={1} disabled={busy} value={target} onChange={event => setTarget(event.target.value)} /></label>
           <label className="block min-w-0 space-y-1.5 text-sm"><span>频率</span><select aria-label="习惯频率" className={field} disabled={busy} value={frequency} onChange={event => setFrequency(event.target.value as Frequency)}><option value="daily">每天</option><option value="weekly-times">每周 N 次</option><option value="weekly-days">指定周几</option><option value="interval">每 N 天</option>{original?.type === 'custom' && <option value="custom">自定义（保留现有规则）</option>}</select></label>
         </div>
         {frequency === 'weekly-times' && <label className="block space-y-1.5 text-sm"><span>每周目标次数</span><Input aria-label="每周目标次数" type="number" required min={1} max={100} step={1} disabled={busy} value={times} onChange={event => setTimes(event.target.value)} /><span className="block text-xs leading-relaxed text-muted">本周打卡累计达到目标后不再提醒；尚未完成时，在设置时间提醒。</span></label>}
-        {frequency === 'weekly-days' && <fieldset disabled={busy}><legend className="mb-2 text-sm">打卡日期</legend><div className="flex gap-1.5">{[1, 2, 3, 4, 5, 6, 7].map(day => <button type="button" key={day} aria-label={`星期${['一', '二', '三', '四', '五', '六', '日'][day - 1]}`} aria-pressed={days.includes(day)} onClick={() => setDays(previous => previous.includes(day) ? previous.filter(value => value !== day) : [...previous, day])} className={cn('h-8 min-w-0 flex-1 rounded-md text-xs', days.includes(day) ? 'bg-[var(--selection)] font-semibold text-[var(--accent-solid)]' : 'bg-[var(--surface)] text-muted')}>{['一', '二', '三', '四', '五', '六', '日'][day - 1]}</button>)}</div></fieldset>}
+        {frequency === 'weekly-days' && <fieldset disabled={busy}><legend className="mb-2 text-sm">打卡日期</legend><div className="flex gap-1.5">{[1, 2, 3, 4, 5, 6, 7].map(day => <button type="button" key={day} aria-label={`星期${['一', '二', '三', '四', '五', '六', '日'][day - 1]}`} aria-pressed={days.includes(day)} onClick={() => setDays(previous => previous.includes(day) ? previous.filter(value => value !== day) : [...previous, day])} className={cn('h-8 min-w-0 flex-1 rounded-[var(--radius-sm)] text-xs', days.includes(day) ? 'bg-[var(--selection)] font-semibold text-[var(--accent-solid)]' : 'bg-[var(--surface)] text-muted')}>{['一', '二', '三', '四', '五', '六', '日'][day - 1]}</button>)}</div></fieldset>}
         {frequency === 'interval' && <label className="block space-y-1.5 text-sm"><span>间隔天数</span><Input aria-label="间隔天数" type="number" required min={1} max={3650} step={1} disabled={busy} value={interval} onChange={event => setInterval(event.target.value)} /><span className="block text-xs text-muted">从最初创建当天起计算，编辑不会改变起算日期。</span></label>}
         <div className="space-y-3 border-t border-[var(--border)] pt-4">
           <fieldset disabled={busy} className="space-y-2">
@@ -90,7 +91,7 @@ export function HabitDialog({ habit, onClose }: { habit?: Habit; onClose: () => 
                 setReminderTimes(next);
               }} />
               {time && configuredTimes.length > 1 && Number(target) > 0 && <span className="shrink-0 text-xs tabular-nums text-muted">累计 {Math.ceil(Number(target) * (configuredTimes.indexOf(time) + 1) / configuredTimes.length)} 次</span>}
-              {(time || reminderTimes.length > 1) && <button type="button" aria-label={reminderTimes.length === 1 ? '清除时间' : `移除打卡时间 ${index + 1}`} title="移除时间" className="grid h-9 w-9 shrink-0 place-items-center rounded-md text-muted hover:bg-[var(--surface)] hover:text-foreground" onClick={() => {
+              {(time || reminderTimes.length > 1) && <button type="button" aria-label={reminderTimes.length === 1 ? '清除时间' : `移除打卡时间 ${index + 1}`} title="移除时间" className="grid h-9 w-9 shrink-0 place-items-center rounded-[var(--radius-sm)] text-muted hover:bg-[var(--surface)] hover:text-foreground" onClick={() => {
                 const next = reminderTimes.filter((_, i) => i !== index);
                 setReminderTimes(next.length ? next : ['']);
                 if (!next.some(Boolean)) setRemind(false);

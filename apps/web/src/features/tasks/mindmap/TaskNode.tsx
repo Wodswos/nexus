@@ -8,7 +8,7 @@ import { useNexus } from '@nexus/crdt';
 import { cn } from '@nexus/ui';
 import { useUI } from '@/state/ui';
 import { PriorityDot, TaskCheckbox } from '@/shared/components';
-import { branchColor, mindColor, titleAppearance } from './appearance';
+import { mindColor, titleAppearance } from './appearance';
 import { mindMetrics, VIRTUAL_ROOT_ID, type BranchSide, type MindMetrics } from './layout';
 
 export interface MindNodeData extends Record<string, unknown> {
@@ -33,7 +33,6 @@ export const TaskNode = memo(function TaskNode({ data, selected }: NodeProps<Nod
   const structural = virtual || isStructural(task);
   const done = !structural && task.status === 'done';
   const root = depth === 0;
-  const color = branchColor(branch);
   const titleStyle = titleAppearance(task, depth, data.font);
   const [draft, setDraft] = useState(task.title);
   const footer = progress.total > 0 || !!data.signalLabel;
@@ -53,20 +52,19 @@ export const TaskNode = memo(function TaskNode({ data, selected }: NodeProps<Nod
     if (input) { input.style.height = '0px'; input.style.height = `${input.scrollHeight}px`; }
   }, [draft, editing, liveMetrics.width, titleStyle.fontSize, titleStyle.fontFamily]);
   const finish = (title = draft) => { if (!finished.current) { finished.current = true; onCommit?.(title); } };
-  const background = mindColor(task.mindBackground, true) ?? (root ? 'var(--mind-root)' : depth === 1 || structural ? `color-mix(in srgb, ${color} ${depth === 1 ? '10%' : '5%'}, var(--background))` : 'var(--background)');
+  const background = mindColor(task.mindBackground, true) ?? (root ? 'var(--mind-root)' : 'var(--bg-canvas)');
   return (
     <div
       data-mind-kind={root ? 'root' : depth === 1 ? 'main' : structural ? 'group' : 'task'}
       data-mind-depth={depth}
       data-mind-side={side}
       data-mind-muted={data.muted && !selected ? 'true' : 'false'}
-      className={cn('group mind-node relative rounded-xl border', selected && 'mind-node-selected', done && 'mind-node-done')}
+      className={cn('group mind-node relative', selected && 'mind-node-selected', done && 'mind-node-done')}
       style={{
         width: liveMetrics.width, padding: `${liveMetrics.padY}px ${liveMetrics.padX}px`, background,
-        borderColor: root ? 'var(--mind-root)' : depth === 1 ? `color-mix(in srgb, ${color} 30%, var(--border))` : 'var(--border)',
+        borderColor: root ? 'var(--mind-root)' : 'var(--border-default)',
         color: root && !task.mindBackground ? 'var(--mind-root-text)' : 'var(--foreground)',
         opacity: data.muted && !selected ? 0.3 : done ? 0.65 : 1,
-        boxShadow: root ? '0 4px 14px rgb(0 0 0 / 0.06)' : undefined,
         outline: dropHint ? `2px ${dropHint === 'child' ? 'dashed' : 'solid'} var(--accent-solid)` : undefined,
         outlineOffset: dropHint ? 5 : undefined,
       }}
@@ -80,7 +78,7 @@ export const TaskNode = memo(function TaskNode({ data, selected }: NodeProps<Nod
         onClick={(event) => { event.stopPropagation(); toggleCollapsed(task.id); }}
         className={cn('nodrag nopan absolute -bottom-2 z-10 grid h-5 w-5 place-items-center rounded-full border border-[var(--border-strong)] bg-[var(--background)] text-muted shadow-sm hover:text-foreground focus-visible:opacity-100', side === 'left' && !root ? '-left-2' : '-right-2', !collapsed && 'opacity-0 group-hover:opacity-100')}
       >{collapsed ? <ChevronRight size={12} /> : <ChevronDown size={12} />}</button>}
-      {dropHint && <span className="pointer-events-none absolute -top-7 left-0 z-20 whitespace-nowrap rounded-md bg-[var(--accent-solid)] px-2 py-1 text-[10px] text-white">{virtual ? '升为根任务' : dropHint === 'child' ? '挂到它下面' : dropHint === 'before' ? '插到它前面' : '插到它后面'}</span>}
+      {dropHint && <span className="pointer-events-none absolute -top-7 left-0 z-20 whitespace-nowrap rounded-[var(--radius-sm)] bg-[var(--accent-solid)] px-2 py-1 text-micro text-inverse">{virtual ? '升为根任务' : dropHint === 'child' ? '挂到它下面' : dropHint === 'before' ? '插到它前面' : '插到它后面'}</span>}
       {!structural && <PriorityDot task={task} className="absolute right-2 top-2" />}
       <div className="flex items-start gap-2">
         {!structural && <span className="nodrag nopan mt-0.5 shrink-0" onPointerDown={(event) => event.stopPropagation()} onClick={(event) => event.stopPropagation()}><TaskCheckbox done={task.status === 'done'} onChange={() => store.toggleTaskDone(task.id)} className="!h-4 !w-4" /></span>}
@@ -97,9 +95,12 @@ export const TaskNode = memo(function TaskNode({ data, selected }: NodeProps<Nod
           }}
         /> : <span data-mind-title className={cn('min-w-0 flex-1 whitespace-pre-wrap [overflow-wrap:anywhere]', done && 'line-through')} style={titleStyle}><TaskTitle title={task.title} /></span>}
       </div>
-      {footer && <div className={cn('mt-1.5 flex min-h-[15px] items-center gap-2 text-[10px] leading-[15px]', !structural && 'pl-6')} style={{ color: root && !task.mindBackground ? 'var(--mind-root-muted)' : 'var(--muted-foreground)' }}>
+      {footer && <div className={cn('mt-1.5 flex min-h-3.5 items-center gap-2 text-micro leading-[var(--leading-micro)]', !structural && 'pl-6')} style={{ color: root && !task.mindBackground ? 'var(--mind-root-muted)' : 'var(--text-muted)' }}>
         {progress.total > 0 && <span className="shrink-0 tabular-nums">{progress.done}/{progress.total} 完成</span>}
         {data.signalLabel && <span className="min-w-0 truncate" style={{ color: data.attention ? 'var(--mind-warning)' : undefined }}>{data.signalLabel}</span>}
+      </div>}
+      {root && progress.total > 0 && <div className="mind-node-progress" role="progressbar" aria-label="节点完成进度" aria-valuemin={0} aria-valuemax={progress.total} aria-valuenow={progress.done}>
+        <span style={{ width: `${100 * progress.done / progress.total}%` }} />
       </div>}
     </div>
   );

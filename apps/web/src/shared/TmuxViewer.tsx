@@ -1,3 +1,4 @@
+import { terminalTheme } from '@nexus/ui';
 import React, { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { Terminal as XTerm } from '@xterm/xterm';
@@ -89,12 +90,7 @@ function TmuxSession({
       convertEol: false,
       // 右键 = 选中光标处单词(contextmenu 处理器随后复制它;无选区时右键不弹原生菜单)
       rightClickSelectsWord: true,
-      theme: {
-        background: '#0b0b12',
-        foreground: '#d4d4d8',
-        cursor: '#22d3ee',
-        selectionBackground: '#ffffff33',
-      },
+      theme: terminalTheme(),
     });
     const fit = new FitAddon();
     term.loadAddon(fit);
@@ -343,7 +339,7 @@ function TmuxSession({
         {status === 'open' ? '已连接' : status === 'connecting' ? '连接中…' : '已断开'}
       </span>
       {status === 'open' && windows && windows.length > 0 && (
-        <span className="text-[10px] text-muted/60" title={windows.map((w) => `${w.index}:${w.name}${w.active ? '(当前)' : ''}`).join(' · ')}>
+        <span className="text-micro text-muted/60" title={windows.map((w) => `${w.index}:${w.name}${w.active ? '(当前)' : ''}`).join(' · ')}>
           {windows.length} 窗口
         </span>
       )}
@@ -359,18 +355,18 @@ function TmuxSession({
           {session}
           <span className="text-muted">@{server.name}</span>
         </span>
-        <span className="hidden truncate text-[10px] text-muted/50 md:inline">{server.host}</span>
+        <span className="hidden truncate text-micro text-muted/50 md:inline">{server.host}</span>
         <div className="ml-auto flex items-center gap-1.5">
           {statusView}
           <span className="mx-1 h-4 w-px bg-[var(--border)]" />
           <button
             onClick={() => void newWindow()}
             disabled={winBusy === 'new' || status !== 'open'}
-            className="flex items-center gap-1 rounded-lg px-1.5 py-1 text-muted transition-colors hover:text-foreground disabled:opacity-40"
+            className="flex items-center gap-1 rounded-[var(--radius-md)] px-1.5 py-1 text-muted transition-colors hover:text-foreground disabled:opacity-40"
             title="新建 tmux 窗口(当前会话内,新窗口立即成为当前窗口)"
           >
             <Plus className="h-3.5 w-3.5" />
-            <span className="hidden text-[11px] md:inline">新窗口</span>
+            <span className="hidden text-micro md:inline">新窗口</span>
           </button>
           <button
             onClick={() => {
@@ -378,17 +374,17 @@ function TmuxSession({
               if (!confirmKill) void refreshWindows();
             }}
             disabled={status !== 'open'}
-            className="flex items-center gap-1 rounded-lg px-1.5 py-1 text-muted transition-colors hover:text-[var(--danger)] disabled:opacity-40"
+            className="flex items-center gap-1 rounded-[var(--radius-md)] px-1.5 py-1 text-muted transition-colors hover:text-[var(--danger)] disabled:opacity-40"
             title="关闭当前 tmux 窗口(窗口内进程会被终止)"
           >
             <SquareX className="h-3.5 w-3.5" />
-            <span className="hidden text-[11px] md:inline">关窗口</span>
+            <span className="hidden text-micro md:inline">关窗口</span>
           </button>
           {!standalone && (
             <>
               <button
                 onClick={onToggleMaximize}
-                className="rounded-lg p-1.5 text-muted transition-colors hover:text-foreground"
+                className="rounded-[var(--radius-md)] p-1.5 text-muted transition-colors hover:text-foreground"
                 title={maximized ? '还原窗口' : '最大化'}
               >
                 {maximized ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
@@ -398,7 +394,7 @@ function TmuxSession({
                   window.open(`/tmux?server=${encodeURIComponent(server.id)}&session=${encodeURIComponent(session)}`, '_blank');
                   onClose();
                 }}
-                className="rounded-lg p-1.5 text-muted transition-colors hover:text-foreground"
+                className="rounded-[var(--radius-md)] p-1.5 text-muted transition-colors hover:text-foreground"
                 title="在新标签页打开(当前弹窗关闭,独立页里继续)"
               >
                 <ExternalLink className="h-3.5 w-3.5" />
@@ -407,19 +403,19 @@ function TmuxSession({
           )}
           <button
             onClick={() => setReconnectTick((t) => t + 1)}
-            className="rounded-lg p-1.5 text-muted transition-colors hover:text-foreground"
+            className="rounded-[var(--radius-md)] p-1.5 text-muted transition-colors hover:text-foreground"
             title="重新连接"
           >
             <RefreshCw className="h-3.5 w-3.5" />
           </button>
-          <button onClick={onClose} className="rounded-lg p-1.5 text-muted transition-colors hover:text-foreground" title={standalone ? '关闭标签页' : '关闭(detach,不影响远端会话)'}>
+          <button onClick={onClose} className="rounded-[var(--radius-md)] p-1.5 text-muted transition-colors hover:text-foreground" title={standalone ? '关闭标签页' : '关闭(detach,不影响远端会话)'}>
             <X className="h-4 w-4" />
           </button>
         </div>
       </div>
 
       {/* 终端主体 */}
-      <div ref={boxRef} className="min-h-0 flex-1 bg-[#0b0b12] px-2 py-1.5" />
+      <div ref={boxRef} className="min-h-0 flex-1 bg-[var(--terminal-bg)] px-2 py-1.5" />
 
       {/* 关闭窗口的两步确认(强杀进程,不可恢复,必须显式点确认) */}
       {confirmKill && (
@@ -432,13 +428,13 @@ function TmuxSession({
             窗口内运行的进程会被立即终止,不可恢复。
             {windows?.length === 1 ? '这是会话的最后一个窗口,关闭后整个会话也随之结束。' : ''}
           </span>
-          <button onClick={() => setConfirmKill(false)} className="rounded-lg px-2.5 py-1 text-muted transition-colors hover:text-foreground">
+          <button onClick={() => setConfirmKill(false)} className="rounded-[var(--radius-md)] px-2.5 py-1 text-muted transition-colors hover:text-foreground">
             取消
           </button>
           <button
             onClick={() => void killActiveWindow()}
             disabled={winBusy === 'kill' || !activeWindow}
-            className="rounded-lg bg-[var(--danger)] px-2.5 py-1 font-medium text-white transition-opacity hover:opacity-85 disabled:opacity-40"
+            className="rounded-[var(--radius-md)] bg-[var(--danger)] px-2.5 py-1 font-medium text-inverse transition-opacity hover:opacity-85 disabled:opacity-40"
           >
             {winBusy === 'kill' ? '关闭中…' : '确认关闭'}
           </button>
@@ -447,7 +443,7 @@ function TmuxSession({
 
       {/* 断开原因 / 提示 */}
       {!confirmKill && (
-        <div className="flex shrink-0 items-center gap-2 border-t border-[var(--border)] px-4 py-1.5 text-[11px] text-muted">
+        <div className="flex shrink-0 items-center gap-2 border-t border-[var(--border)] px-4 py-1.5 text-micro text-muted">
           {flash ? (
             <span className="min-w-0 flex-1 truncate text-[var(--accent-from)]">{flash}</span>
           ) : reason ? (
@@ -478,10 +474,10 @@ export function TmuxViewer() {
   if (!server) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8">
-        <div className="absolute inset-0 bg-black/70" />
-        <div className="relative flex w-full max-w-md flex-col items-center gap-3 rounded-2xl glass-raised p-6">
+        <div className="absolute inset-0 bg-[var(--bg-overlay)]" />
+        <div className="relative flex w-full max-w-md flex-col items-center gap-3 rounded-[var(--radius-lg)] glass-raised p-6">
           <span className="text-sm text-[var(--danger)]">服务器档案不存在(可能在设置里被删除)</span>
-          <button onClick={close} className="rounded-lg px-3 py-1.5 text-xs text-muted hover:text-foreground">
+          <button onClick={close} className="rounded-[var(--radius-md)] px-3 py-1.5 text-xs text-muted hover:text-foreground">
             关闭
           </button>
         </div>
@@ -490,11 +486,11 @@ export function TmuxViewer() {
   }
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8">
-      <div className="absolute inset-0 bg-black/70" onClick={close} />
+      <div className="absolute inset-0 bg-[var(--bg-overlay)]" onClick={close} />
       <div
         className={cn(
           'relative flex w-full flex-col overflow-hidden glass-raised animate-fade-up',
-          maximized ? 'absolute inset-0 h-full w-full max-w-none rounded-none p-0' : 'h-[85vh] max-w-5xl rounded-2xl',
+          maximized ? 'absolute inset-0 h-full w-full max-w-none rounded-none p-0' : 'h-[85vh] max-w-5xl rounded-[var(--radius-lg)]',
         )}
       >
         <TmuxSession
@@ -520,13 +516,13 @@ export function TmuxPage() {
 
   if (!server || !session) {
     return (
-      <div className="fixed inset-0 flex items-center justify-center bg-[#0b0b12] p-6 text-sm text-muted">
+      <div className="fixed inset-0 flex items-center justify-center bg-[var(--terminal-bg)] p-6 text-sm text-muted">
         缺少 server / session 参数 —— 请从任务的 tmux 关联或终端弹窗进入。
       </div>
     );
   }
   return (
-    <div className="fixed inset-0 flex flex-col overflow-hidden bg-[#0b0b12]">
+    <div className="fixed inset-0 flex flex-col overflow-hidden bg-[var(--terminal-bg)]">
       <TmuxSession
         key={`${server.id}/${session}`}
         server={server}

@@ -91,7 +91,7 @@ export function TaskAdvancedSettings({
               setTagInput('');
             }}
             placeholder="+ 标签"
-            className="w-24 rounded-md border border-dashed border-[var(--border)] bg-transparent px-2 py-1 outline-none"
+            className="w-24 rounded-[var(--radius-sm)] border border-dashed border-[var(--border)] bg-transparent px-2 py-1 outline-none"
           />
         </div>
       </div>
@@ -140,7 +140,7 @@ export function TaskAdvancedSettings({
           </button>
         )}
       </div>
-      <p className="text-[10px] text-muted">
+      <p className="text-micro text-muted">
         创建于 {new Date(task.createdAt).toLocaleString('zh-CN')}
       </p>
       {error && (

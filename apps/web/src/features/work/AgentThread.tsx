@@ -301,7 +301,7 @@ const Item = memo(function Item({
         text
       )}
       {item.kind === "report" && (
-        <section className="mt-3 space-y-2 rounded-lg border border-[var(--border)] p-3 text-xs">
+        <section className="mt-3 space-y-2 rounded-[var(--radius-md)] border border-[var(--border)] p-3 text-xs">
           <p className="text-muted">本轮报告</p>
           {typeof data.verification === "string" && (
             <p>验证：{data.verification}</p>
@@ -791,7 +791,7 @@ export function AgentThread({ id }: { id: string }) {
                 className="flex min-w-0 items-center gap-2 hover:underline"
               >
                 <span className="truncate">{task!.title}</span>
-                <span className="shrink-0 text-[11px] font-normal text-muted">
+                <span className="shrink-0 text-micro font-normal text-muted">
                   打开 Task ↗
                 </span>
               </Link>
@@ -799,7 +799,7 @@ export function AgentThread({ id }: { id: string }) {
               task?.title || agent.name
             )}
           </h1>
-          <p className="truncate text-[11px] text-muted">
+          <p className="truncate text-micro text-muted">
             {agent.name}
             {agent.mode === "tmux" ? " · 终端接入" : ""}
           </p>
@@ -1070,7 +1070,7 @@ export function AgentThread({ id }: { id: string }) {
               </div>
             )}
             {queueOpen && queued.length > 0 && (
-              <div className="mb-2 max-h-36 overflow-auto rounded-lg border border-[var(--border)]">
+              <div className="mb-2 max-h-36 overflow-auto rounded-[var(--radius-md)] border border-[var(--border)]">
                 {queued.map((item) => (
                   <div key={item.id} className="flex gap-2 p-2 text-xs">
                     <span className="min-w-0 flex-1 truncate">{item.text}</span>

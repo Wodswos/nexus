@@ -149,14 +149,14 @@ export function TaskWindowControls({ temporal = false }: { temporal?: boolean })
       {dated && (
         <>
           {temporal && (selectedScope === 'all' || selectedScope === 'undated') && (
-            <span className="hidden text-[11px] text-muted md:inline">画布</span>
+            <span className="hidden text-micro text-muted md:inline">画布</span>
           )}
           <div className="flex min-w-0 flex-1 items-center gap-0.5 md:w-[330px] md:max-w-full md:flex-none md:gap-1">
             <button
               aria-label="上一个时间段"
               title={`向前 ${range.days} 天`}
               onClick={() => shift(-1)}
-              className="grid h-8 w-7 shrink-0 place-items-center rounded-md text-muted hover:bg-[var(--surface)] hover:text-foreground"
+              className="grid h-8 w-7 shrink-0 place-items-center rounded-[var(--radius-sm)] text-muted hover:bg-[var(--surface)] hover:text-foreground"
             >
               <ChevronLeft size={15} />
             </button>
@@ -165,7 +165,7 @@ export function TaskWindowControls({ temporal = false }: { temporal?: boolean })
                 aria-label={`编辑日期区间：${dayKeyOf(range.start)} 至 ${dayKeyOf(end)}`}
                 title={`${dayKeyOf(range.start)} 至 ${dayKeyOf(end)}`}
                 onClick={(event) => editRange(event.currentTarget)}
-                className="flex h-8 min-w-0 flex-1 items-center justify-center gap-1 rounded-md px-1 text-[11px] tabular-nums text-foreground hover:bg-[var(--surface)]"
+                className="flex h-8 min-w-0 flex-1 items-center justify-center gap-1 rounded-[var(--radius-sm)] px-1 text-micro tabular-nums text-foreground hover:bg-[var(--surface)]"
               >
                 {!crossYear && <CalendarDays className="h-3 w-3 shrink-0" />}
                 <span className="truncate">
@@ -203,7 +203,7 @@ export function TaskWindowControls({ temporal = false }: { temporal?: boolean })
               aria-label="下一个时间段"
               title={`向后 ${range.days} 天`}
               onClick={() => shift(1)}
-              className="grid h-8 w-7 shrink-0 place-items-center rounded-md text-muted hover:bg-[var(--surface)] hover:text-foreground"
+              className="grid h-8 w-7 shrink-0 place-items-center rounded-[var(--radius-sm)] text-muted hover:bg-[var(--surface)] hover:text-foreground"
             >
               <ChevronRight size={15} />
             </button>
@@ -235,7 +235,7 @@ export function TaskWindowControls({ temporal = false }: { temporal?: boolean })
             >
               <div className="grid grid-cols-2 gap-2">
                 <label
-                  className={`block min-w-0 space-y-1 rounded-xl border p-2.5 text-xs ${rangePart === 'from' ? 'border-[var(--accent-solid)] bg-[var(--selection)]' : 'border-[var(--border)]'}`}
+                  className={`block min-w-0 space-y-1 rounded-[var(--radius-lg)] border p-2.5 text-xs ${rangePart === 'from' ? 'border-[var(--accent-solid)] bg-[var(--selection)]' : 'border-[var(--border)]'}`}
                 >
                   <span className="text-muted">开始日期</span>
                   <input
@@ -254,7 +254,7 @@ export function TaskWindowControls({ temporal = false }: { temporal?: boolean })
                   />
                 </label>
                 <label
-                  className={`block min-w-0 space-y-1 rounded-xl border p-2.5 text-xs ${rangePart === 'to' ? 'border-[var(--accent-solid)] bg-[var(--selection)]' : 'border-[var(--border)]'}`}
+                  className={`block min-w-0 space-y-1 rounded-[var(--radius-lg)] border p-2.5 text-xs ${rangePart === 'to' ? 'border-[var(--accent-solid)] bg-[var(--selection)]' : 'border-[var(--border)]'}`}
                 >
                   <span className="text-muted">结束日期</span>
                   <input
@@ -294,7 +294,7 @@ export function TaskWindowControls({ temporal = false }: { temporal?: boolean })
                 }}
               />
               <div className="flex items-center justify-between gap-2 border-t border-[var(--border)] pt-3">
-                <span className="text-[11px] text-muted">
+                <span className="text-micro text-muted">
                   {draft.from && draft.to && draft.to >= draft.from
                     ? `共 ${calendarDaysBetween(new Date(`${draft.from}T00:00:00`), new Date(`${draft.to}T00:00:00`)) + 1} 天`
                     : '选择起止日期'}

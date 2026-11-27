@@ -458,7 +458,7 @@ export function ListView() {
       <div className="relative flex min-w-0 flex-1 flex-col">
         <form
           onSubmit={submitTask}
-          className="mx-5 mt-4 mb-3 flex shrink-0 items-center gap-3 rounded-lg border border-[var(--border-strong)] bg-[var(--background)] px-4 transition-colors focus-within:border-[var(--accent-solid)] lg:mx-7"
+          className="mx-5 mt-4 mb-3 flex shrink-0 items-center gap-3 rounded-[var(--radius-md)] border border-[var(--border-strong)] bg-[var(--background)] px-4 transition-colors focus-within:border-[var(--accent-solid)] lg:mx-7"
         >
           <Plus size={18} className="shrink-0 text-[var(--accent-solid)]" />
           <input
@@ -480,7 +480,7 @@ export function ListView() {
             className="h-12 min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted"
           />
         </form>
-        <div className="flex shrink-0 items-center gap-2 px-5 pb-2 text-[11px] text-muted lg:px-7">
+        <div className="flex shrink-0 items-center gap-2 px-5 pb-2 text-micro text-muted lg:px-7">
           <span>
             {visibleTasks.filter((task) => !isStructural(task) && task.status !== 'done').length} 项待办
           </span>
@@ -518,14 +518,14 @@ export function ListView() {
                   (() => {
                     const dt = data.tasks.find((t) => t.id === activeDragId);
                     return dt ? (
-                      <div data-task-drag-preview className="pointer-events-none max-w-xs rounded-lg border border-[var(--border-strong)] bg-[var(--surface-solid)] px-3 py-2 text-sm text-foreground shadow-lg">
+                      <div data-task-drag-preview className="pointer-events-none max-w-xs rounded-[var(--radius-md)] border border-[var(--border-strong)] bg-[var(--surface-solid)] px-3 py-2 text-sm text-foreground shadow-lg">
                         <div className="truncate font-medium"><TaskTitle title={dt.title} /></div>
-                        <div role="status" aria-label="任务拖动提示" className="mt-1 text-[11px] text-muted">
+                        <div role="status" aria-label="任务拖动提示" className="mt-1 text-micro text-muted">
                           {drop?.groupedRoot ? '移出至顶层（按日期分组）'
                             : drop ? `${drop.placement === 'inside' ? '挂为子任务 →' : drop.placement === 'before' ? '插到前面 →' : '插到后面 →'} ${byId.get(drop.anchorId)?.title || 'Untitled'}`
                             : dropMessage || '行中部关联 · 同组边缘排序 · 向左移出层级'}
                         </div>
-                        {draggedIds.size > 1 && <div className="mt-1 text-[10px] text-muted">包含 {draggedIds.size - 1} 项子任务</div>}
+                        {draggedIds.size > 1 && <div className="mt-1 text-micro text-muted">包含 {draggedIds.size - 1} 项子任务</div>}
                       </div>
                     ) : null;
                   })()}
@@ -533,10 +533,10 @@ export function ListView() {
               {rowsByGroup.map((g) => (
                 <section key={g.key} className="mb-2">
                   <div className="mb-1 flex items-center gap-2 py-1">
-                    <h2 className="text-[11px] font-medium text-muted">
+                    <h2 className="text-micro font-medium text-muted">
                       {g.key === 'anytime' ? '任务' : g.label}
                     </h2>
-                    <span className="text-[10px] text-muted/60">{g.tasks.length}</span>
+                    <span className="text-micro text-muted/60">{g.tasks.length}</span>
                     {g.key === 'overdue' && (
                       <Badge variant="danger" className="!px-1.5 !py-0">
                         !
@@ -595,7 +595,7 @@ export function ListView() {
 
       {/* 多选浮动操作条 */}
       {selectedIds.length > 1 && (
-        <div role="toolbar" aria-label="所选任务操作" className="fixed bottom-6 left-1/2 z-40 flex max-w-[calc(100vw-24px)] -translate-x-1/2 flex-wrap items-center justify-center gap-1 rounded-2xl glass-raised px-3 py-2 text-xs shadow-xl">
+        <div role="toolbar" aria-label="所选任务操作" className="fixed bottom-6 left-1/2 z-40 flex max-w-[calc(100vw-24px)] -translate-x-1/2 flex-wrap items-center justify-center gap-1 rounded-[var(--radius-lg)] glass-raised px-3 py-2 text-xs shadow-xl">
           <span className="px-1 text-muted">已选 {selectedIds.length} 项</span>
           {pickAttach ? (
             <>
@@ -626,7 +626,7 @@ export function ListView() {
                     if (task && !isStructural(task)) store.setTaskStatus(id, 'done');
                   })
                 }
-                className="rounded-full gradient-bg px-3 py-1 text-white"
+                className="rounded-full gradient-bg px-3 py-1 text-inverse"
               >
                 完成
               </button>
@@ -882,7 +882,7 @@ function TaskRow({
               titleRef.current?.focus(); // 完成后把焦点还给标题按钮,再回车即新建子任务
             } else if (e.key === 'Escape') setEditing(false);
           }}
-          className="min-w-0 flex-1 bg-transparent text-[13px] outline-none"
+          className="min-w-0 flex-1 bg-transparent text-control outline-none"
         />
       ) : (
         <TaskTitleButton taskTitle={task.title}
@@ -892,7 +892,7 @@ function TaskRow({
           onKeyDown={onKey}
           tabIndex={0}
           className={cn(
-            'min-w-0 flex-1 touch-pan-y truncate text-left text-[13px] outline-none',
+            'min-w-0 flex-1 touch-pan-y truncate text-left text-control outline-none',
             node && 'font-medium',
             !node && task.status === 'done' && 'line-through',
             task.title === '' && 'text-muted/50',
@@ -906,7 +906,7 @@ function TaskRow({
         <TagChip key={tag.id} tag={tag} />
       ))}
       {progress && progress.total > 0 && <SubtreeProgress {...progress} />}
-      {!node && taskViewStatus(task).kind === 'running' && <span className="shrink-0 text-[11px] text-muted">进行中</span>}
+      {!node && taskViewStatus(task).kind === 'running' && <span className="shrink-0 text-micro text-muted">进行中</span>}
       {!node && <DueBadge task={task} />}
       {task.estimateMin != null && task.estimateMin > 0 && (
         <Badge className="hidden md:inline-flex">{task.estimateMin}m</Badge>
@@ -918,7 +918,7 @@ function TaskRow({
             timerStart({ mode: 'focus', taskId: task.id });
             navigate('/focus');
           }}
-          className="hidden h-6 w-6 shrink-0 items-center justify-center rounded-lg text-muted/0 transition-colors group-hover:text-[var(--accent-from)] hover:bg-[var(--surface)] md:flex"
+          className="hidden h-6 w-6 shrink-0 items-center justify-center rounded-[var(--radius-md)] text-muted/0 transition-colors group-hover:text-[var(--accent-from)] hover:bg-[var(--surface)] md:flex"
           title="开始专注"
         >
           <Play className="h-3.5 w-3.5" />
@@ -932,7 +932,7 @@ function TaskRow({
           const r = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
           openMenu(r.right - 24, r.bottom + 4);
         }}
-        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-muted/50 transition-colors hover:text-foreground hover:bg-[var(--surface)]"
+        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[var(--radius-md)] text-muted/50 transition-colors hover:text-foreground hover:bg-[var(--surface)]"
         aria-label="任务菜单"
       >
         <MoreHorizontal className="h-4 w-4" />

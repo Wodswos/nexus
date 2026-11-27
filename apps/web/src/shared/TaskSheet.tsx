@@ -65,7 +65,7 @@ export function TaskSheet() {
         className={
           mobile
             ? 'flex h-[86dvh] max-h-[92dvh] flex-col overflow-hidden'
-            : '!right-3 !top-3 flex h-[min(760px,calc(100dvh-112px))] !w-[min(360px,calc(100vw-24px))] flex-col overflow-hidden !rounded-lg shadow-lg'
+            : '!right-3 !top-3 flex h-[min(760px,calc(100dvh-112px))] !w-[min(360px,calc(100vw-24px))] flex-col overflow-hidden !rounded-[var(--radius-md)] shadow-lg'
         }
         style={
           mobile

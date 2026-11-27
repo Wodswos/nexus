@@ -41,7 +41,7 @@ export function ReviewReminder() {
   if (!due || location.pathname === '/reviews') return null;
   return (
     <aside aria-label="复盘提醒" className="flex shrink-0 items-center gap-1 text-xs">
-      <Link aria-label="开始复盘" title={`${due.start} · ${due.kind === 'weekly' ? '周报' : '日报'}待复盘`} to={`/reviews?kind=${due.kind}&date=${due.start}`} className="flex items-center gap-1.5 rounded-md bg-[var(--surface)] px-2 py-1.5 font-medium text-[var(--accent-solid)]"><BookOpen size={13} />写{due.kind === 'weekly' ? '周报' : '日报'}</Link>
+      <Link aria-label="开始复盘" title={`${due.start} · ${due.kind === 'weekly' ? '周报' : '日报'}待复盘`} to={`/reviews?kind=${due.kind}&date=${due.start}`} className="flex items-center gap-1.5 rounded-[var(--radius-sm)] bg-[var(--surface)] px-2 py-1.5 font-medium text-[var(--accent-solid)]"><BookOpen size={13} />写{due.kind === 'weekly' ? '周报' : '日报'}</Link>
       <button aria-label="一小时后再提醒复盘" title="一小时后再提醒" className="grid h-6 w-6 shrink-0 place-items-center rounded text-muted hover:bg-[var(--surface)]" onClick={() => {
         const key = prefix + reviewId(due), until = now + 3600000;
         setSnoozes(previous => ({ ...previous, [key]: until }));

@@ -84,11 +84,11 @@ export function WeekView({
               <button
                 onClick={() => onDateChange(d)}
                 className={cn(
-                  'sticky top-0 z-20 mb-1 flex w-full flex-col items-center rounded-md bg-[var(--background)] py-1.5 transition-colors',
-                  isToday ? 'gradient-bg text-white' : 'text-muted hover:text-foreground',
+                  'sticky top-0 z-20 mb-1 flex w-full flex-col items-center rounded-[var(--radius-sm)] bg-[var(--background)] py-1.5 transition-colors',
+                  isToday ? 'gradient-bg text-inverse' : 'text-muted hover:text-foreground',
                 )}
               >
-                <span className="text-[10px]">周{WEEKDAY_ZH[weekdayOf(d) - 1]}</span>
+                <span className="text-micro">周{WEEKDAY_ZH[weekdayOf(d) - 1]}</span>
                 <span className="text-sm font-semibold tabular">{d.getDate()}</span>
               </button>
               <div
@@ -107,7 +107,7 @@ export function WeekView({
                   );
                   onCreateTask?.(dayStart + minutes * 60000, event);
                 }}
-                className="relative rounded-lg border border-[var(--border)] bg-[var(--surface)]"
+                className="relative rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)]"
                 style={{ height: (dayMinutes / 60) * PX_PER_HOUR }}
               >
                 {Array.from({ length: 24 }, (_, h) => (

@@ -6,8 +6,8 @@ import { api, apiUrl, currentStore, useNexus, useNexusData } from '@nexus/crdt';
 import { WorkspaceConfiguration } from './WorkspaceConfiguration';
 import { agentWorkspaceApi, type WorkspaceProfileView, type WorkspaceAgentView } from './agentWorkspaceApi';
 
-const fieldClass = 'w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs outline-none focus:border-[var(--accent-solid)]';
-const sectionClass = 'space-y-3 rounded-xl border border-[var(--border)] p-4';
+const fieldClass = 'w-full rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs outline-none focus:border-[var(--accent-solid)]';
+const sectionClass = 'space-y-3 rounded-[var(--radius-lg)] border border-[var(--border)] p-4';
 
 export function WorkspaceAgentCreate({ taskId, workspaceId, config: inheritedConfig, environment: inheritedEnvironment, intent = 'agent', initialProfileId, beforeAction, onCreated, onClose }: {
   taskId: string; workspaceId?: string | null; config: WorkspaceConfig; environment?: WorkspaceEnvironment;
@@ -196,7 +196,7 @@ export function WorkspaceAgentCreate({ taskId, workspaceId, config: inheritedCon
                   { value: '', label: '选择已有 Workspace', disabled: true },
                   ...environmentOptions.map(({ value, sourceId }) => ({ value: value.id, label: value.name || value.session || value.id, description: `${choices.source(sourceId ?? value.taskId)} · ${value.state === 'ready' ? '可用' : '准备中'}` })),
                 ]} className="w-full" /> : <p className="py-2 text-xs text-muted">暂无可用 Workspace</p>}
-                {choices.environments.some(item => !item.sourceId) && <label className="flex items-center gap-2 text-[11px] text-muted"><input type="checkbox" checked={showOthers} onChange={event => setShowOthers(event.target.checked)} />显示其他节点的 Workspace</label>}
+                {choices.environments.some(item => !item.sourceId) && <label className="flex items-center gap-2 text-micro text-muted"><input type="checkbox" checked={showOthers} onChange={event => setShowOthers(event.target.checked)} />显示其他节点的 Workspace</label>}
               </SegmentedContent>
               <SegmentedContent value="new" className="space-y-3">
               <div className="flex items-center justify-between gap-2 text-xs"><span>Workspace 模板</span><button type="button" disabled={busy} onClick={() => setNewTemplate(true)} className="text-muted hover:text-foreground">+ 创建模板</button></div>
@@ -222,8 +222,8 @@ export function WorkspaceAgentCreate({ taskId, workspaceId, config: inheritedCon
                 </div>
                 <p className="text-xs leading-5 text-muted">{worktree ? '检出 Workspace 仓库的代码并创建独立分支，共享 Git 历史；适合开发和提交 PR。' : isolated ? '只创建此 Agent 的空目录，不复制仓库、不创建分支；适合资料整理、实验或从零开始。' : '直接使用指定目录中的现有内容；多个 Agent 使用同一路径时会共享文件修改。'}</p>
                 {worktree||isolated ? <>
-                  <label className="block space-y-1.5 text-xs"><span>{isolated?"目录名称":"Worktree 名称"}</span><div className="flex gap-2"><input aria-label={isolated ? "目录名称" : "Worktree 名称"} value={worktreeName} onChange={event => setWorktreeName(event.target.value)} required pattern="[a-zA-Z0-9][a-zA-Z0-9_-]{0,79}" maxLength={80} disabled={busy} className={`${fieldClass} min-w-0 flex-1 font-mono`} /><button type="button" aria-label="重新生成 工作目录名称" disabled={busy} onClick={() => setWorktreeName(unique('task'))} className="rounded-md px-2 text-muted hover:bg-[var(--surface)]"><RefreshCw size={14} /></button></div></label>
-                  <p className="break-all text-[11px] leading-5 text-muted">路径：{directoryPreview ?? (configError ? '请选择可用 Workspace 或模板' : preview?.key === previewInput && preview.error ? preview.error : '正在读取完整路径…')}<br />{worktree&&<>分支：nexus-agent/{worktreeName}</>}</p>
+                  <label className="block space-y-1.5 text-xs"><span>{isolated?"目录名称":"Worktree 名称"}</span><div className="flex gap-2"><input aria-label={isolated ? "目录名称" : "Worktree 名称"} value={worktreeName} onChange={event => setWorktreeName(event.target.value)} required pattern="[a-zA-Z0-9][a-zA-Z0-9_-]{0,79}" maxLength={80} disabled={busy} className={`${fieldClass} min-w-0 flex-1 font-mono`} /><button type="button" aria-label="重新生成 工作目录名称" disabled={busy} onClick={() => setWorktreeName(unique('task'))} className="rounded-[var(--radius-sm)] px-2 text-muted hover:bg-[var(--surface)]"><RefreshCw size={14} /></button></div></label>
+                  <p className="break-all text-micro leading-5 text-muted">路径：{directoryPreview ?? (configError ? '请选择可用 Workspace 或模板' : preview?.key === previewInput && preview.error ? preview.error : '正在读取完整路径…')}<br />{worktree&&<>分支：nexus-agent/{worktreeName}</>}</p>
                 </> : <label className="block space-y-1.5 text-xs"><span>自定义工作目录</span><input aria-label="Agent 工作目录" value={directory} onChange={event => setDirectory(event.target.value)} placeholder="默认沿用 Workspace 工作目录" disabled={busy} className={`${fieldClass} font-mono`} /></label>}
               </>}
             </fieldset>
@@ -236,7 +236,7 @@ export function WorkspaceAgentCreate({ taskId, workspaceId, config: inheritedCon
               {usePane ? <SelectField aria-label="关联 Agent pane" value={paneId} onValueChange={setPaneId} disabled={busy} options={[{ value: '', label: '选择正在运行 Agent 的 pane' }, ...panes.map(pane => ({ value: pane.id, label: `${pane.session} / ${pane.window} / ${pane.id} · ${pane.command}` }))]} className="w-full" /> : <label className="block space-y-1.5 text-xs"><span>{mode === 'acp' ? 'Agent 启动命令（ACP）' : 'Agent 启动命令'}</span><input aria-label={mode === 'acp' ? 'Agent 启动命令（ACP）' : 'Agent 启动命令'} value={command} onChange={event => setCommand(event.target.value)} required maxLength={4096} disabled={busy} className={`${fieldClass} font-mono`} placeholder={mode === 'acp' ? '目标环境中支持 ACP 的命令' : '目标环境中已安装的 Agent CLI'} /></label>}
               <div className="grid gap-3 sm:grid-cols-2"><SelectField aria-label="Provider 配置" value={providerId} onValueChange={setProviderId} options={[{value:'',label:'使用执行用户的产品配置'},...providers.filter(p=>p.harness===mode).map(p=>({value:p.id,label:p.name}))]}/><input aria-label="模型" placeholder="模型（产品默认）" value={model} onChange={e=>setModel(e.target.value)} className={fieldClass}/></div>
               <details><summary className="text-xs text-muted">高级设置</summary><label className="mt-3 flex items-center gap-2 text-xs"><input type="checkbox" checked={createTerminal} onChange={e=>setCreateTerminal(e.target.checked)}/>同时创建人工终端</label></details>
-              {existingEnvironment?.state === 'ready' && <button type="button" disabled={busy || checking || (!usePane && !command.trim())} onClick={() => void check()} className="text-[11px] text-muted underline underline-offset-2">{checking ? '正在检测…' : '检测实际连接能力'}</button>}
+              {existingEnvironment?.state === 'ready' && <button type="button" disabled={busy || checking || (!usePane && !command.trim())} onClick={() => void check()} className="text-micro text-muted underline underline-offset-2">{checking ? '正在检测…' : '检测实际连接能力'}</button>}
               {checkMessage && <p role="status" className="text-xs text-muted">{checkMessage}</p>}
             </section>
             <section className={sectionClass}>
@@ -246,7 +246,7 @@ export function WorkspaceAgentCreate({ taskId, workspaceId, config: inheritedCon
           {error && <p role="alert" className="text-xs leading-5 text-[var(--danger)]">{error}</p>}
         </div>
         <footer className="flex shrink-0 items-center justify-between gap-3 border-t border-[var(--border)] px-5 py-3">
-          <span role="status" className="flex items-center gap-1.5 text-[11px] text-muted">{busy && <><LoaderCircle size={12} className="animate-spin" />{stage}…</>}</span>
+          <span role="status" className="flex items-center gap-1.5 text-micro text-muted">{busy && <><LoaderCircle size={12} className="animate-spin" />{stage}…</>}</span>
           <div className="flex gap-2"><Button type="button" size="sm" variant="ghost" onClick={onClose} disabled={busy}>取消</Button><Button type="submit" size="sm" variant="primary" disabled={busy || !valid}>{!createAgent ? '创建 Workspace' : usePane ? '连接并发送指令' : existingEnvironment ? '创建并启动' : '创建 Workspace 与 Agent'}</Button></div>
         </footer>
       </form>

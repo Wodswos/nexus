@@ -45,18 +45,18 @@ export default function LoginPage() {
     <div data-testid="login-scroll" className="relative z-10 flex h-full flex-col overflow-y-auto px-4 py-6">
       <div className="mx-auto my-auto w-full max-w-sm shrink-0">
         <div className="mb-8 flex flex-col items-center gap-3">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl gradient-bg shadow-[0_8px_32px_-8px_color-mix(in_srgb,var(--accent-from)_70%,transparent)]">
-            <Check className="h-8 w-8 text-white" />
+          <div className="flex h-16 w-16 items-center justify-center rounded-[var(--radius-lg)] gradient-bg shadow-md">
+            <Check className="h-8 w-8 text-inverse" />
           </div>
           <h1 className="text-xl font-semibold">Nexus</h1>
           <p className="text-xs text-muted">local-first · 多端同步 · 你的效能中枢</p>
         </div>
 
-        <div className="glass-raised rounded-2xl p-5">
+        <div className="glass-raised rounded-[var(--radius-lg)] p-5">
           {(params.has('add') || auth.user) && <h2 className="mb-3 text-sm font-semibold">添加账号</h2>}
           {auth.accounts.length > 0 && <Link to="/settings#accounts" className="mb-4 block text-xs text-muted underline underline-offset-4">切换到已登录账号</Link>}
           {firstUser && (
-            <div className="mb-3 rounded-xl border border-[var(--accent-from)]/30 bg-[color-mix(in_srgb,var(--accent-from)_8%,transparent)] px-3 py-2 text-xs text-muted">
+            <div className="mb-3 rounded-[var(--radius-lg)] border border-[var(--accent-from)]/30 bg-[color-mix(in_srgb,var(--accent-from)_8%,transparent)] px-3 py-2 text-xs text-muted">
               首次部署:创建的第一个账号是管理员,之后注册需要邀请码
             </div>
           )}
@@ -64,13 +64,13 @@ export default function LoginPage() {
             <button
               onClick={() => setMode('login')}
               disabled={firstUser}
-              className={`flex-1 rounded-xl px-3 py-2 text-sm transition-all ${mode === 'login' ? 'gradient-bg text-white' : 'glass text-muted disabled:opacity-40'}`}
+              className={`flex-1 rounded-[var(--radius-lg)] px-3 py-2 text-sm transition-all ${mode === 'login' ? 'gradient-bg text-inverse' : 'glass text-muted disabled:opacity-40'}`}
             >
               登录
             </button>
             <button
               onClick={() => setMode('register')}
-              className={`flex-1 rounded-xl px-3 py-2 text-sm transition-all ${mode === 'register' ? 'gradient-bg text-white' : 'glass text-muted'}`}
+              className={`flex-1 rounded-[var(--radius-lg)] px-3 py-2 text-sm transition-all ${mode === 'register' ? 'gradient-bg text-inverse' : 'glass text-muted'}`}
             >
               注册
             </button>
@@ -96,7 +96,7 @@ export default function LoginPage() {
             </Button>
           </div>
 
-          <div className="mt-4 flex items-center justify-between text-[11px] text-muted">
+          <div className="mt-4 flex items-center justify-between text-micro text-muted">
             {auth.serverReachable ? <Badge variant="success">服务器在线</Badge> : <Badge variant="danger">服务器不可达</Badge>}
             <button className="inline-flex items-center gap-1 hover:text-foreground" onClick={() => navigate('/')}>
               <HardDrive className="h-3 w-3" /> {auth.user ? `返回 ${auth.user.username}` : '先用本地模式'}
@@ -104,7 +104,7 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <div className="mt-4 text-center text-[10px] text-muted/50">
+        <div className="mt-4 text-center text-micro text-muted/50">
           数据本地优先;登录后多端 CRDT 同步 · 服务器不可达也能完整使用
         </div>
       </div>

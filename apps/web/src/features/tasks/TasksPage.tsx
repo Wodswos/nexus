@@ -92,14 +92,14 @@ export default function TasksPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <div data-task-toolbar className="flex min-h-12 shrink-0 items-center gap-1 border-b border-[var(--border)] px-3 py-1.5 md:min-h-16 md:flex-wrap md:gap-3 md:px-5 md:py-3 lg:px-7">
-        <div className="flex min-w-0 shrink items-center gap-2 md:w-40 md:shrink-0">
-          <h1 title={title} aria-label={title} className="min-w-0 flex-1 truncate text-sm font-semibold tracking-tight md:text-lg">
+      <div data-task-toolbar className="task-toolbar flex min-h-12 shrink-0 items-center gap-1 px-3 py-1.5">
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <h1 title={title} aria-label={title} className="task-toolbar-title min-w-0 flex-1 truncate">
             {project && !saved ? <button className="block w-full truncate text-left" aria-label={`编辑项目 ${title}`} onClick={() => ui.selectTask(project.id)}>{title}</button> : title}
           </h1>
         </div>
         <Segmented
-          className="flex shrink-0"
+          className="flex shrink-0 md:order-2"
           value={view}
           onValueChange={(v) => {
             const next = new URLSearchParams(window.location.search);
@@ -110,16 +110,16 @@ export default function TasksPage() {
             setParams(next, { replace: true });
           }}
         >
-          <SegmentedList aria-label="任务视图" className="gap-0 md:gap-0.5">
+          <SegmentedList aria-label="任务视图" className="gap-0">
             {TASK_VIEWS.map(({ key, label, icon: Icon }) => (
               <SegmentedTrigger
                 key={key}
                 value={key}
                 aria-label={label}
                 title={label}
-                className="inline-flex h-8 w-8 items-center justify-center gap-1.5 p-0 text-xs md:w-auto md:px-3 md:text-xs"
+                className="inline-flex h-7 w-7 items-center justify-center gap-1.5 p-0 md:w-auto md:px-2"
               >
-                <Icon className="h-3.5 w-3.5 shrink-0" />
+                <Icon className="h-4 w-4 shrink-0" />
                 <span className="hidden md:inline">{label}</span>
               </SegmentedTrigger>
             ))}
@@ -127,18 +127,18 @@ export default function TasksPage() {
         </Segmented>
 
         {view === 'mindmap' && <Dropdown>
-          <DropdownTrigger asChild><button aria-label="任务交互设置" title="任务交互设置" className="ml-auto grid h-8 w-8 shrink-0 place-items-center rounded-md text-muted hover:bg-[var(--surface)] hover:text-foreground md:order-last md:ml-0"><SlidersHorizontal size={16} /></button></DropdownTrigger>
+          <DropdownTrigger asChild><button aria-label="任务交互设置" title="任务交互设置" className="ml-auto grid h-8 w-8 shrink-0 place-items-center rounded-[var(--radius-sm)] text-muted hover:bg-[var(--surface)] hover:text-foreground md:order-last md:ml-0"><SlidersHorizontal size={16} /></button></DropdownTrigger>
           <DropdownContent align="end" collisionPadding={12}>
             <DropdownLabel>导图交互</DropdownLabel>
             <DropdownItem role="menuitemcheckbox" aria-checked={data.settings.mindClickOpensDetails !== false} onSelect={() => store.updateSettings({ mindClickOpensDetails: data.settings.mindClickOpensDetails === false })}><Check size={15} className={data.settings.mindClickOpensDetails !== false ? '' : 'opacity-0'} />单击任务打开详情</DropdownItem>
-            <p className="max-w-64 px-2.5 py-1.5 text-[11px] leading-relaxed text-muted">关闭后，单击仅选中；仍可用详情按钮或 ⌘ / Ctrl + Enter 打开。</p>
+            <p className="max-w-64 px-2.5 py-1.5 text-micro leading-relaxed text-muted">关闭后，单击仅选中；仍可用详情按钮或 ⌘ / Ctrl + Enter 打开。</p>
           </DropdownContent>
         </Dropdown>}
 
-        <div className={view === 'mindmap' ? 'shrink-0 md:hidden' : 'ml-auto shrink-0 md:hidden'}>
+        <div className={view === 'mindmap' ? 'shrink-0 md:order-3 xl:hidden' : 'ml-auto shrink-0 md:order-3 xl:hidden'}>
           <SaveViewButton key={store.userId} view={view} restoreFocus={() => moreRef.current?.focus()} trigger={(openSave) => (
           <Dropdown>
-            <DropdownTrigger asChild><button ref={moreRef} aria-label="任务更多操作" title="任务更多操作" className="grid h-8 w-8 place-items-center rounded-md text-muted hover:bg-[var(--surface)] hover:text-foreground"><MoreHorizontal size={17} /></button></DropdownTrigger>
+            <DropdownTrigger asChild><button ref={moreRef} aria-label="任务更多操作" title="任务更多操作" className="grid h-8 w-8 place-items-center rounded-[var(--radius-sm)] text-muted hover:bg-[var(--surface)] hover:text-foreground"><MoreHorizontal size={17} /></button></DropdownTrigger>
             <DropdownContent align="end" collisionPadding={12} aria-label="任务更多操作" onCloseAutoFocus={(event) => {
               if (savingView.current) { event.preventDefault(); savingView.current = false; }
             }}>
@@ -158,14 +158,14 @@ export default function TasksPage() {
         </div>
 
         {/* 右上角:已完成任务展现 + Gallery 入口 */}
-        <div className="ml-auto hidden items-center gap-2 md:flex">
+        <div className="hidden shrink-0 items-center gap-2 xl:flex">
           <SaveViewButton key={store.userId} view={view} />
           {projectProgress && projectProgress.total > 0 && <span aria-label="项目进度" className="text-xs tabular-nums text-muted">{projectProgress.done}/{projectProgress.total}</span>}
           {project && <button aria-label="项目菜单" title="项目菜单" className="text-muted hover:text-foreground" onClick={(event) => {
             const rect = event.currentTarget.getBoundingClientRect();
             ui.openTaskMenu(project.id, rect.left, rect.bottom + 4);
           }}><MoreHorizontal size={16} /></button>}
-          <label className="inline-flex h-8 cursor-pointer select-none items-center gap-2 rounded-md px-2 text-xs text-muted hover:text-foreground">
+          <label className="inline-flex h-8 cursor-pointer select-none items-center gap-2 rounded-[var(--radius-sm)] px-2 text-xs text-muted hover:text-foreground">
             <input
               type="checkbox"
               checked={display === 'hidden'}
@@ -176,21 +176,21 @@ export default function TasksPage() {
           </label>
           <Link
             to="/gallery"
-            className="flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs text-muted transition-colors hover:text-foreground"
+            className="flex items-center gap-1.5 rounded-[var(--radius-sm)] px-2.5 py-1 text-xs text-muted transition-colors hover:text-foreground"
             title="Gallery 精选路线图"
           >
             <Library className="h-3.5 w-3.5" /> 模板
           </Link>
         </div>
       </div>
-      <div ref={setFocusToolbar} aria-label="任务筛选与强调" className="flex shrink-0 flex-wrap items-center gap-x-2 gap-y-1 border-b border-[var(--border)] px-3 py-1 md:gap-x-3 md:gap-y-2 md:px-5 md:py-2 lg:px-7">
-        <div className="flex min-w-0 flex-1 items-center gap-1 md:contents">
-          <div className="min-w-0 overflow-x-auto md:overflow-visible"><TaskFilterControls /></div>
-          <div className="md:order-2"><MoreTaskFilters /></div>
-          {['list', 'gantt'].includes(view) && <div className="md:order-3"><TaskSortControl /></div>}
+      <div ref={setFocusToolbar} aria-label="任务筛选与强调" className="task-filters flex shrink-0 flex-wrap items-center gap-x-2 gap-y-1 border-b border-[var(--border-hairline)] px-3 py-1">
+        <div className="flex min-w-0 flex-1 items-center gap-1">
+          <div className="min-w-0 overflow-x-auto no-scrollbar"><TaskFilterControls /></div>
+          <div className="shrink-0 md:order-2"><MoreTaskFilters /></div>
+          {['list', 'gantt'].includes(view) && <div className="shrink-0 md:order-3"><TaskSortControl /></div>}
         </div>
-        <div className="order-first min-w-0 w-full md:order-1 md:flex md:w-auto md:max-w-full md:flex-wrap md:items-center md:gap-2">
-          <span className="hidden shrink-0 text-[11px] text-muted md:inline">时间</span>
+        <div className="order-first min-w-0 w-full md:order-1 md:flex md:w-auto md:max-w-full md:items-center md:gap-2">
+          <span className="hidden shrink-0 text-micro text-muted md:inline">时间</span>
           <TaskWindowControls temporal={['gantt', 'timeline'].includes(view)} />
         </div>
       </div>

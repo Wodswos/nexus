@@ -40,7 +40,7 @@ export function AgentSuggestions({
       className="mb-2 flex flex-wrap items-center gap-1.5"
       aria-label="下一步消息建议"
     >
-      <span className="mr-1 text-[11px] text-muted">
+      <span className="mr-1 text-micro text-muted">
         {suggestions.length ? "Agent 建议" : "快捷消息"}
       </span>
       {(suggestions.length ? suggestions : common).map((value, index) => (
@@ -48,7 +48,7 @@ export function AgentSuggestions({
           type="button"
           key={index}
           title={value.text}
-          className="rounded-md border border-[var(--border)] px-2 py-1 text-xs text-muted hover:bg-[var(--surface)] hover:text-foreground"
+          className="rounded-[var(--radius-sm)] border border-[var(--border)] px-2 py-1 text-xs text-muted hover:bg-[var(--surface)] hover:text-foreground"
           onClick={() => onInsert(value.text)}
         >
           {value.label}

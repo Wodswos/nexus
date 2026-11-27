@@ -1,5 +1,6 @@
 import { taskTitleText, isStructural, type MindFont, type Task } from '@nexus/core';
 import { titleAppearance } from './appearance';
+import { UI_GEOMETRY } from '@nexus/ui';
 
 export const VIRTUAL_ROOT_ID = '__cortex_all__';
 export type BranchSide = 'left' | 'right';
@@ -13,8 +14,8 @@ export function mindMetrics(task: Task, depth: number, footer: boolean, inherite
   if (context === undefined && typeof document !== 'undefined') context = document.createElement('canvas').getContext('2d');
   if (context) context.font = `${style.fontStyle} ${style.fontWeight} ${size}px ${style.fontFamily}`;
   const measure = (text: string) => context?.measureText(text).width ?? [...text].reduce((sum, char) => sum + (char.charCodeAt(0) > 255 ? size : size * 0.6), 0);
-  const padX = depth === 0 ? 22 : depth === 1 ? 16 : 14;
-  const padY = depth === 0 ? 14 : depth === 1 ? 11 : 8;
+  const padX = depth === 0 ? UI_GEOMETRY.rootInsetX : UI_GEOMETRY.nodeInsetX;
+  const padY = depth === 0 ? UI_GEOMETRY.rootInsetY : UI_GEOMETRY.nodeInsetY;
   const checkbox = !isStructural(task) && task.id !== VIRTUAL_ROOT_ID ? 24 : 0;
   const text = (rawTitle ? task.title : taskTitleText(task.title)) || '未命名';
   const widest = Math.max(...text.split('\n').map(measure));
@@ -29,8 +30,8 @@ export function mindMetrics(task: Task, depth: number, footer: boolean, inherite
     }
   }
   return {
-    width: titleWidth + checkbox + padX * 2 + 2,
-    height: Math.ceil(lines * size * 1.5 + padY * 2 + 2 + (footer ? 21 : 0)),
+    width: Math.max(depth === 0 ? 160 : 0, titleWidth + checkbox + padX * 2 + 2),
+    height: Math.ceil(lines * size * Number(style.lineHeight) + padY * 2 + 2 + (footer ? 20 : 0) + (footer && depth === 0 ? 8 : 0)),
     padX, padY,
     signature: JSON.stringify([text, depth, footer, style.fontSize, style.fontFamily, style.fontWeight, style.fontStyle]),
   };

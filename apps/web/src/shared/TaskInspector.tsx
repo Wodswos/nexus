@@ -124,7 +124,7 @@ export const TaskInspector = forwardRef<TaskInspectorHandle, Props>(function Tas
       className={cn(
         docked || embedded
           ? 'flex h-full min-h-0 w-full flex-col'
-          : 'fixed z-30 flex max-h-[min(760px,calc(100dvh-112px))] w-[min(360px,calc(100vw-24px))] flex-col rounded-lg border border-[var(--border)] bg-[var(--background)] shadow-lg',
+          : 'fixed z-30 flex max-h-[min(760px,calc(100dvh-112px))] w-[min(360px,calc(100vw-24px))] flex-col rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--background)] shadow-lg',
       )}
     >
       <header className="flex h-12 shrink-0 items-center justify-between border-b border-[var(--border)] px-5">
@@ -134,7 +134,7 @@ export const TaskInspector = forwardRef<TaskInspectorHandle, Props>(function Tas
         <span
           role="status"
           aria-label="任务保存状态"
-          className="ml-auto mr-3 text-[10px] text-muted"
+          className="ml-auto mr-3 text-micro text-muted"
         >
           {draft.status}
         </span>
@@ -143,7 +143,7 @@ export const TaskInspector = forwardRef<TaskInspectorHandle, Props>(function Tas
           aria-label="打开 Workspace 配置"
           aria-haspopup="dialog"
           onClick={configureWorkspace}
-          className="mr-2 flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1.5 text-xs text-muted hover:bg-[var(--surface)] hover:text-foreground"
+          className="mr-2 flex shrink-0 items-center gap-1.5 rounded-[var(--radius-sm)] px-2 py-1.5 text-xs text-muted hover:bg-[var(--surface)] hover:text-foreground"
         >
           <Settings2 size={14} />
           Workspace
@@ -160,7 +160,7 @@ export const TaskInspector = forwardRef<TaskInspectorHandle, Props>(function Tas
       <TaskWorkspaceShortcuts taskId={task.id} />
       <div ref={body} data-sheet-scroll className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
         {parents.length > 0 && (
-          <div className="mb-4 flex flex-wrap items-center gap-1 text-[11px] text-muted">
+          <div className="mb-4 flex flex-wrap items-center gap-1 text-micro text-muted">
             {parents.map((parent) => (
               <React.Fragment key={parent.id}>
                 <button
@@ -188,7 +188,7 @@ export const TaskInspector = forwardRef<TaskInspectorHandle, Props>(function Tas
           <input
             aria-label="任务标题"
             className={cn(
-              'w-full min-w-0 bg-transparent text-[15px] font-medium leading-6 outline-none',
+              'w-full min-w-0 bg-transparent text-sm font-medium leading-6 outline-none',
               !node && task.status === 'done' && 'text-muted line-through',
             )}
             value={draft.value('title')}
@@ -207,7 +207,7 @@ export const TaskInspector = forwardRef<TaskInspectorHandle, Props>(function Tas
         {!node && (
           <div aria-label="任务日期与优先级" role="group" className="mb-4 grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,.85fr)] items-start gap-2 text-xs">
             <div className="min-w-0 space-y-1.5">
-              <span className="block text-[11px] text-muted">
+              <span className="block text-micro text-muted">
                 开始日期
               </span>
               <DateTimeField
@@ -222,7 +222,7 @@ export const TaskInspector = forwardRef<TaskInspectorHandle, Props>(function Tas
               />
             </div>
             <div className="min-w-0 space-y-1.5">
-              <span className="block text-[11px] text-muted">
+              <span className="block text-micro text-muted">
                 截止日期
               </span>
               <DateTimeField
@@ -235,7 +235,7 @@ export const TaskInspector = forwardRef<TaskInspectorHandle, Props>(function Tas
               />
             </div>
             <div className="min-w-0 space-y-1.5">
-              <span className="block text-[11px] text-muted">
+              <span className="block text-micro text-muted">
                 优先级
               </span>
               <SelectField

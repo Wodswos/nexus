@@ -44,7 +44,7 @@ export function TaskViewLinks({
       aria-label="任务定位"
       className="flex shrink-0 flex-wrap items-center gap-0.5 border-b border-[var(--border)] px-3 py-1.5"
     >
-      <span title="在另一个视图中打开" className="mr-1 text-[11px] text-muted">View in</span>
+      <span title="在另一个视图中打开" className="mr-1 text-micro text-muted">View in</span>
       {links.map(({ view, label, text, href }) => {
         if (!href) return null;
         return (
@@ -54,7 +54,7 @@ export function TaskViewLinks({
             aria-label={label}
             title={label}
             aria-disabled={busy != null}
-            className="inline-flex h-7 items-center rounded-md px-1.5 text-xs text-muted hover:bg-[var(--surface)] hover:text-foreground"
+            className="inline-flex h-7 items-center rounded-[var(--radius-sm)] px-1.5 text-xs text-muted hover:bg-[var(--surface)] hover:text-foreground"
             onClick={(event) => {
               if (
                 event.button !== 0 ||

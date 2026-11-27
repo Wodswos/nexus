@@ -73,7 +73,7 @@ export function WorkspaceBindings({
         {bindings.map((b) => (
           <div
             key={b.id}
-            className="flex gap-2 rounded-md bg-[var(--surface)] p-2"
+            className="flex gap-2 rounded-[var(--radius-sm)] bg-[var(--surface)] p-2"
           >
             <span className="min-w-0 flex-1 truncate">
               {b.environment.name || b.environmentId}

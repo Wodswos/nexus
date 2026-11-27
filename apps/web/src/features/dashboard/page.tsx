@@ -76,7 +76,7 @@ export default function DashboardPage() {
 
         <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr]">
           {/* 今日任务 */}
-          <section className="glass rounded-2xl p-4">
+          <section className="glass rounded-[var(--radius-lg)] p-4">
             <div className="mb-2 flex items-center justify-between">
               <h2 className="flex items-center gap-1.5 text-sm font-semibold">
                 <Clock className="h-4 w-4 text-[var(--accent-from)]" /> 今日任务
@@ -103,7 +103,7 @@ export default function DashboardPage() {
 
           {/* 接下来 + 习惯 */}
           <div className="space-y-4">
-            <section className="glass rounded-2xl p-4">
+            <section className="glass rounded-[var(--radius-lg)] p-4">
               <div className="mb-2 flex items-center justify-between">
                 <h2 className="flex items-center gap-1.5 text-sm font-semibold">
                   <CalendarClock className="h-4 w-4 text-[var(--accent-to)]" /> 接下来
@@ -124,7 +124,7 @@ export default function DashboardPage() {
                       <button
                         key={e.id}
                         onClick={() => navigate('/tasks?view=timeline')}
-                        className={cn('flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left text-xs transition-colors hover:bg-[var(--surface)]', past && 'opacity-60')}
+                        className={cn('flex w-full items-center gap-2.5 rounded-[var(--radius-md)] px-2 py-2 text-left text-xs transition-colors hover:bg-[var(--surface)]', past && 'opacity-60')}
                       >
                         <span className="tabular text-muted">{fmtHM(e.start)}</span>
                         <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: style.color }} />
@@ -140,7 +140,7 @@ export default function DashboardPage() {
               )}
             </section>
 
-            <section className="glass rounded-2xl p-4">
+            <section className="glass rounded-[var(--radius-lg)] p-4">
               <div className="mb-2 flex items-center justify-between">
                 <h2 className="flex items-center gap-1.5 text-sm font-semibold">
                   <Flame className="h-4 w-4 text-[var(--warning)]" /> 今日习惯
@@ -161,7 +161,7 @@ export default function DashboardPage() {
                     return (
                       <span
                         key={h.id}
-                        className={cn('inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs', done ? 'text-white' : 'text-muted border-[var(--border)]')}
+                        className={cn('inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs', done ? 'text-inverse' : 'text-muted border-[var(--border)]')}
                         style={done ? { background: h.color, borderColor: 'transparent' } : undefined}
                       >
                         {h.name} {done ? '✓' : ''}
@@ -174,12 +174,12 @@ export default function DashboardPage() {
 
             <button
               onClick={() => navigate('/focus')}
-              className="flex w-full items-center gap-3 rounded-2xl glass p-4 text-left transition-all hover:glow-border"
+              className="flex w-full items-center gap-3 rounded-[var(--radius-lg)] glass p-4 text-left transition-all hover:glow-border"
             >
               <Timer className="h-8 w-8 text-[var(--accent-from)]" />
               <div>
                 <div className="text-sm font-medium">开始一轮专注?</div>
-                <div className="text-[11px] text-muted">25 分钟 · 一个番茄 · 一件小事</div>
+                <div className="text-micro text-muted">25 分钟 · 一个番茄 · 一件小事</div>
               </div>
               <ChevronRight className="ml-auto h-4 w-4 text-muted" />
             </button>
@@ -193,7 +193,7 @@ export default function DashboardPage() {
 function DashboardTaskRow({ task, onOpen }: { task: Task; onOpen: () => void }) {
   const store = useNexus();
   return (
-    <div className="group flex items-center gap-2.5 rounded-lg px-1.5 py-1.5 transition-colors hover:bg-[var(--surface)]">
+    <div className="group flex items-center gap-2.5 rounded-[var(--radius-md)] px-1.5 py-1.5 transition-colors hover:bg-[var(--surface)]">
       <TaskCheckbox
         done={task.status === 'done'}
         onChange={() => {

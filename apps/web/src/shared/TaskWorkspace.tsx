@@ -112,7 +112,7 @@ export function TaskWorkspace({ taskId }: { taskId: string }) {
           <DropdownTrigger asChild>
             <button
               aria-label="添加工作资源"
-              className="inline-flex min-h-8 items-center gap-1 rounded-md px-1.5 text-xs text-muted hover:bg-[var(--surface)] hover:text-foreground"
+              className="inline-flex min-h-8 items-center gap-1 rounded-[var(--radius-sm)] px-1.5 text-xs text-muted hover:bg-[var(--surface)] hover:text-foreground"
             >
               <Plus size={14} />
               添加
@@ -163,7 +163,7 @@ export function TaskWorkspace({ taskId }: { taskId: string }) {
               setAdding(null);
             }
           }}
-          className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3"
+          className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] p-3"
         >
           <div className="mb-3 flex items-center justify-between gap-2">
             <span className="text-xs font-medium">添加{kinds[adding].label}</span>
@@ -244,7 +244,7 @@ function WorkspaceOpener({ link, compact = false }: { link: TaskLink; compact?: 
       <span className="min-w-0 flex-1">
         <span className="block truncate">{label}</span>
         {!compact && (
-          <span className="mt-0.5 block truncate text-[10px] font-normal text-muted">
+          <span className="mt-0.5 block truncate text-micro font-normal text-muted">
             {subtitle}
           </span>
         )}
@@ -253,7 +253,7 @@ function WorkspaceOpener({ link, compact = false }: { link: TaskLink; compact?: 
     </>
   );
   const className = cn(
-    'flex min-w-0 items-center gap-2 rounded-md text-left text-xs outline-offset-2 hover:bg-[var(--surface)] hover:text-[var(--accent-solid)]',
+    'flex min-w-0 items-center gap-2 rounded-[var(--radius-sm)] text-left text-xs outline-offset-2 hover:bg-[var(--surface)] hover:text-[var(--accent-solid)]',
     compact ? 'min-h-8 max-w-36 bg-[var(--surface)] px-2' : 'min-h-11 flex-1 px-1.5 py-2',
     !available && 'opacity-50',
   );
@@ -318,7 +318,7 @@ function WorkspaceRow({ link, first, last }: { link: TaskLink; first: boolean; l
       data-workspace-resource={link.id}
       data-resource-type={link.type}
       data-pinned={!!link.pinned}
-      className="rounded-md border border-transparent focus-within:border-[var(--border)] hover:bg-[var(--surface)]/50"
+      className="rounded-[var(--radius-sm)] border border-transparent focus-within:border-[var(--border)] hover:bg-[var(--surface)]/50"
     >
       <div className="flex min-w-0 items-center gap-0.5">
         <WorkspaceOpener link={link} />
@@ -328,7 +328,7 @@ function WorkspaceRow({ link, first, last }: { link: TaskLink; first: boolean; l
           title={link.pinned ? '取消置顶' : '置顶到任务快捷入口'}
           onClick={() => isolated(store, () => store.updateLink(link.id, { pinned: !link.pinned }))}
           className={cn(
-            'grid h-9 w-8 shrink-0 place-items-center rounded-md hover:bg-[var(--surface)]',
+            'grid h-9 w-8 shrink-0 place-items-center rounded-[var(--radius-sm)] hover:bg-[var(--surface)]',
             link.pinned ? 'text-[var(--accent-solid)]' : 'text-muted',
           )}
         >
@@ -338,7 +338,7 @@ function WorkspaceRow({ link, first, last }: { link: TaskLink; first: boolean; l
           <DropdownTrigger asChild>
             <button
               aria-label={`资源 ${label} 菜单`}
-              className="grid h-9 w-8 shrink-0 place-items-center rounded-md text-muted hover:bg-[var(--surface)] hover:text-foreground"
+              className="grid h-9 w-8 shrink-0 place-items-center rounded-[var(--radius-sm)] text-muted hover:bg-[var(--surface)] hover:text-foreground"
             >
               <MoreHorizontal size={15} />
             </button>
@@ -515,7 +515,7 @@ function LinkResourceForm({
           className="h-9 text-xs"
         />
       </label>
-      <p className="text-[11px] leading-5 text-muted">{spec.hint}</p>
+      <p className="text-micro leading-5 text-muted">{spec.hint}</p>
       {error && (
         <p role="alert" className="text-xs text-[var(--danger)]">
           {error}
@@ -628,7 +628,7 @@ function TmuxResourceForm({ taskId, onDone }: { taskId: string; onDone: () => vo
             setCreating(false);
             void load(event.target.value);
           }}
-          className="h-9 min-w-0 flex-1 rounded-md border border-[var(--border-strong)] bg-transparent px-2 text-xs"
+          className="h-9 min-w-0 flex-1 rounded-[var(--radius-sm)] border border-[var(--border-strong)] bg-transparent px-2 text-xs"
         >
           <option value="">选择服务器</option>
           {data.settings.servers.map((server) => (
@@ -662,7 +662,7 @@ function TmuxResourceForm({ taskId, onDone }: { taskId: string; onDone: () => vo
               value={session}
               disabled={status !== 'ready' || busy}
               onChange={(event) => setSession(event.target.value)}
-              className="h-9 min-w-0 flex-1 rounded-md border border-[var(--border-strong)] bg-transparent px-2 text-xs"
+              className="h-9 min-w-0 flex-1 rounded-[var(--radius-sm)] border border-[var(--border-strong)] bg-transparent px-2 text-xs"
             >
               <option value="">
                 {status === 'loading'
@@ -702,7 +702,7 @@ function TmuxResourceForm({ taskId, onDone }: { taskId: string; onDone: () => vo
                 }}
                 className="h-9 text-xs"
               />
-              <p className="text-[11px] text-muted">会话名支持字母、数字及 _ . : @ $ = -</p>
+              <p className="text-micro text-muted">会话名支持字母、数字及 _ . : @ $ = -</p>
               <div className="flex gap-2">
                 <Button
                   size="sm"

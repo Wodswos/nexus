@@ -32,21 +32,21 @@ test('sidebar resizing follows the pointer, persists, supports keyboard and rese
   await page.goto('/tasks');
   const separator = page.getByRole('separator', { name: '调整侧边栏宽度', exact: true });
   const sidebar = page.locator('aside.workspace-sidebar');
-  await expect(separator).toHaveAttribute('aria-valuenow', '224');
+  await expect(separator).toHaveAttribute('aria-valuenow', '232');
   const box = (await separator.boundingBox())!;
   await page.mouse.move(box.x + box.width / 2, box.y + 100);
   await page.mouse.down();
   await page.mouse.move(box.x + box.width / 2 + 64, box.y + 100, { steps: 8 });
   await page.mouse.up();
-  await expect(separator).toHaveAttribute('aria-valuenow', '288');
-  expect((await sidebar.boundingBox())!.width).toBe(288);
+  await expect(separator).toHaveAttribute('aria-valuenow', '240');
+  expect((await sidebar.boundingBox())!.width).toBe(240);
   await page.reload();
-  await expect(separator).toHaveAttribute('aria-valuenow', '288');
+  await expect(separator).toHaveAttribute('aria-valuenow', '240');
   await separator.focus();
   await page.keyboard.press('ArrowRight');
-  await expect(separator).toHaveAttribute('aria-valuenow', '296');
+  await expect(separator).toHaveAttribute('aria-valuenow', '240');
   await page.keyboard.press('End');
-  await expect(separator).toHaveAttribute('aria-valuenow', '360');
+  await expect(separator).toHaveAttribute('aria-valuenow', '240');
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole('button', { name: '打开导航', exact: true }).click();
   await expect(sidebar).toHaveCSS('position', 'fixed');
@@ -56,7 +56,7 @@ test('sidebar resizing follows the pointer, persists, supports keyboard and rese
   await page.getByRole('button', { name: '关闭导航', exact: true }).click({ position: { x: 385, y: 100 } });
   await page.setViewportSize({ width: 1280, height: 900 });
   await separator.dblclick();
-  await expect(separator).toHaveAttribute('aria-valuenow', '224');
+  await expect(separator).toHaveAttribute('aria-valuenow', '232');
 });
 
 test('sidebar project menu edits without opening the project and deletes a subtree as one undoable action', async ({ page }) => {
@@ -178,7 +178,7 @@ for (const scheme of ['light', 'dark'] as const) {
     await expect(node(page, 'alpha').locator('[data-mind-title]')).toHaveCSS('font-style', 'italic');
     await page.getByRole('button', { name: '调整所选节点样式', exact: true }).click();
     await panel.getByLabel('自定义节点背景', { exact: true }).fill('#243848');
-    await expect(node(page, 'alpha').locator('[data-mind-title]')).toHaveCSS('color', 'rgb(245, 246, 248)');
+    await expect(node(page, 'alpha').locator('[data-mind-title]')).toHaveCSS('color', 'rgb(255, 255, 255)');
     await panel.getByLabel('自定义节点文字', { exact: true }).fill('#f3e8c8');
     for (const id of ['project', 'group', 'alpha', 'beta']) await expect(node(page, id).locator('[data-mind-title]')).toHaveCSS('color', 'rgb(243, 232, 200)');
     await expect(node(page, 'alpha').locator('.group').first()).toHaveCSS('background-color', 'rgb(36, 56, 72)');
@@ -195,8 +195,8 @@ for (const scheme of ['light', 'dark'] as const) {
     await canvas(page).focus(); await page.keyboard.press('Control+a');
     await page.getByRole('button', { name: '调整所选节点样式', exact: true }).click();
     await panel.getByRole('button', { name: '恢复默认样式', exact: true }).click();
-    await expect(node(page, 'alpha').locator('[data-mind-title]')).toHaveCSS('font-size', '16px');
-    await expect(node(page, 'group').locator('[data-mind-title]')).toHaveCSS('font-size', '16px');
+    await expect(node(page, 'alpha').locator('[data-mind-title]')).toHaveCSS('font-size', '14px');
+    await expect(node(page, 'group').locator('[data-mind-title]')).toHaveCSS('font-size', '14px');
     await page.setViewportSize({ width: 390, height: 844 });
     await expect(panel).toBeVisible();
     const bounds = (await panel.boundingBox())!;

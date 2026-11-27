@@ -39,19 +39,19 @@ export function MapHelp() {
       event.stopPropagation();
       if (event.key === 'Escape' && ref.current?.open) { event.preventDefault(); ref.current.open = false; summary.current?.focus(); }
     }}>
-      <summary ref={summary} aria-label="导图操作说明" title="导图操作说明" className="flex h-9 cursor-pointer list-none items-center justify-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--background)] px-2 shadow-sm sm:px-3">
+      <summary ref={summary} aria-label="导图操作说明" title="导图操作说明" className="flex h-9 cursor-pointer list-none items-center justify-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--background)] px-2 shadow-sm sm:px-3">
         <HelpCircle size={14} />
         <span className="hidden sm:inline">操作说明</span>
         <ChevronDown size={12} className="hidden sm:block" />
       </summary>
-      <div role="dialog" aria-label="导图操作说明内容" aria-modal="false" className="absolute bottom-full left-0 mb-2 max-h-[60vh] w-[min(340px,calc(100vw-24px))] overflow-y-auto rounded-xl border border-[var(--border)] bg-[var(--background)] p-4 shadow-lg">
+      <div role="dialog" aria-label="导图操作说明内容" aria-modal="false" className="absolute bottom-full left-0 mb-2 max-h-[60vh] w-[min(340px,calc(100vw-24px))] overflow-y-auto rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--background)] p-4 shadow-lg">
         <div className="space-y-4">
           {sections.map(([title, lines]) => <section key={title}>
             <h3 className="mb-2 text-xs font-medium text-foreground">{title}</h3>
             <ul className="space-y-2 pl-3 leading-relaxed marker:text-[var(--border-strong)] [list-style-type:disc]">{lines.map((line) => <li key={line}>{line}</li>)}</ul>
           </section>)}
         </div>
-        <p className="mt-4 border-t border-[var(--border)] pt-3 text-[11px] leading-relaxed">每个项目会自动记住上次的缩放和位置。</p>
+        <p className="mt-4 border-t border-[var(--border)] pt-3 text-micro leading-relaxed">每个项目会自动记住上次的缩放和位置。</p>
       </div>
     </details>
   );

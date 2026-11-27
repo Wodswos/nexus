@@ -84,7 +84,7 @@ export function TaskDescription({ task, draft, textNode }: { task: Task; draft: 
   });
   const editor = (expanded: boolean) => <textarea id={expanded ? undefined : `notes-${task.id}`} aria-label={expanded ? '编辑任务正文' : '任务备注'}
     value={value} placeholder={textNode ? '记录说明、结论或数据…' : '添加描述或记录下一步…'} rows={expanded ? 20 : 6}
-    className={`w-full resize-y bg-transparent text-[13px] leading-7 outline-none placeholder:text-muted/60 ${expanded ? 'min-h-[60dvh] font-mono' : ''}`}
+    className={`w-full resize-y bg-transparent text-control leading-7 outline-none placeholder:text-muted/60 ${expanded ? 'min-h-[60dvh] font-mono' : ''}`}
     onChange={event => draft.change('notes', event.target.value)} onBlur={draft.commit} onCompositionStart={draft.compositionStart} onCompositionEnd={draft.compositionEnd} />;
   const difference = useMemo(() => {
     if (!selected || !latest) return [];
@@ -111,7 +111,7 @@ export function TaskDescription({ task, draft, textNode }: { task: Task; draft: 
       <p id="task-document-description" className="sr-only">自由编辑任务正文，查看、比较或恢复历史版本</p>
       <div className="flex flex-wrap items-center gap-2 border-b border-[var(--border)] pb-3">
         {(['read', 'edit', 'history'] as const).map(view => <Button key={view} size="sm" variant={view === tab ? 'outline' : 'ghost'} onClick={() => show(view)}>{view === 'read' ? '阅读' : view === 'edit' ? '编辑' : '历史版本'}</Button>)}
-        <span className="ml-auto text-[11px] text-muted">{draft.status || `${value.length.toLocaleString()} 字符`}</span>
+        <span className="ml-auto text-micro text-muted">{draft.status || `${value.length.toLocaleString()} 字符`}</span>
       </div>
       {error && <p role="alert" className="my-2 text-xs text-[var(--danger)]">{error}{tab === 'history' && <button className="ml-2 underline" onClick={() => void act(() => history())}>刷新版本</button>}</p>}
       {tab === 'edit' ? <div className="min-h-0 flex-1 overflow-auto py-4">{editor(true)}</div> : tab === 'read' ? <div className="flex min-h-0 flex-1 gap-5 pt-4">
@@ -124,18 +124,18 @@ export function TaskDescription({ task, draft, textNode }: { task: Task; draft: 
           }}>{heading.text}</button>) : <p className="leading-5 text-muted">正文标题会显示在这里</p>}
         </aside>
         <div className="flex min-w-0 flex-1 flex-col">
-          <label className="mb-3 flex items-center gap-2 rounded-lg border border-[var(--border)] px-3 py-2 text-xs"><Search size={13} className="text-muted" /><input aria-label="搜索正文" value={search} onChange={event => setSearch(event.target.value)} placeholder="搜索正文…" className="min-w-0 flex-1 bg-transparent outline-none" /></label>
+          <label className="mb-3 flex items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border)] px-3 py-2 text-xs"><Search size={13} className="text-muted" /><input aria-label="搜索正文" value={search} onChange={event => setSearch(event.target.value)} placeholder="搜索正文…" className="min-w-0 flex-1 bg-transparent outline-none" /></label>
           <div ref={readingElement} onScroll={event => { if (!search) { try { sessionStorage.setItem(memoryKey, String(event.currentTarget.scrollTop)); } catch { /* optional preference */ } } }} className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-8 pr-2">
-            {search ? <div className="space-y-3 text-sm"><p className="text-xs text-muted">{matches.length >= 100 ? '前 100 条' : `${matches.length} 条`}匹配</p>{matches.map(row => <div key={row.i} className="rounded-lg border border-[var(--border)] px-3 py-2"><span className="mr-2 text-xs text-muted">第 {row.i + 1} 行</span><span className="whitespace-pre-wrap break-words">{row.line}</span></div>)}</div> : <MarkdownDocument text={value} />}
+            {search ? <div className="space-y-3 text-sm"><p className="text-xs text-muted">{matches.length >= 100 ? '前 100 条' : `${matches.length} 条`}匹配</p>{matches.map(row => <div key={row.i} className="rounded-[var(--radius-md)] border border-[var(--border)] px-3 py-2"><span className="mr-2 text-xs text-muted">第 {row.i + 1} 行</span><span className="whitespace-pre-wrap break-words">{row.line}</span></div>)}</div> : <MarkdownDocument text={value} />}
           </div>
         </div>
       </div> : <div className="flex min-h-0 flex-1 flex-col gap-4 pt-4 md:flex-row">
         <aside className="max-h-40 shrink-0 overflow-auto md:max-h-none md:w-56" aria-label="版本列表">
           {busy && !rows.length && <p role="status" className="text-xs text-muted">正在读取历史版本…</p>}
           {rows.map((row, index) => <button key={row.id} type="button" onClick={() => void choose(row.id)} aria-pressed={selected?.id === row.id}
-            className={`mb-1 block w-full rounded-lg px-3 py-2 text-left text-xs ${selected?.id === row.id ? 'bg-[var(--surface)]' : 'hover:bg-[var(--surface)]'}`}>
+            className={`mb-1 block w-full rounded-[var(--radius-md)] px-3 py-2 text-left text-xs ${selected?.id === row.id ? 'bg-[var(--surface)]' : 'hover:bg-[var(--surface)]'}`}>
             <span className="block">版本 {total - index}{row.id === latest?.id ? ' · 当前' : ''} · {new Date(row.createdAt).toLocaleString()}</span>
-            <span className="mt-1 block text-[11px] text-muted">{origins[row.source] ?? row.source}{row.agentId ? ` · ${row.agentId.slice(0, 8)}` : row.author ? ` · ${row.author}` : ''}{row.roundId ? ` · 轮次 ${row.roundId.slice(0, 8)}` : ''} · {row.length} 字符</span>
+            <span className="mt-1 block text-micro text-muted">{origins[row.source] ?? row.source}{row.agentId ? ` · ${row.agentId.slice(0, 8)}` : row.author ? ` · ${row.author}` : ''}{row.roundId ? ` · 轮次 ${row.roundId.slice(0, 8)}` : ''} · {row.length} 字符</span>
           </button>)}
           {rows.length < total && <Button size="sm" variant="ghost" disabled={busy} onClick={() => void act(() => history(true))}>加载更早版本</Button>}
         </aside>
@@ -146,11 +146,11 @@ export function TaskDescription({ task, draft, textNode }: { task: Task; draft: 
               {compare && <SelectField aria-label="比较目标版本" value={compareTo?.id ?? latest?.id ?? ''} options={rows.map(row => ({ value: row.id, label: row.id === latest?.id ? '当前版本' : new Date(row.createdAt).toLocaleString() }))} onValueChange={id => void choose(id, true)} />}
               <Button size="sm" variant="ghost" disabled={busy || selected.id === latest?.id} onClick={() => setConfirmRestore(true)}><RotateCcw size={12} />恢复此版本</Button>
             </div>
-            {confirmRestore && <div className="mb-3 rounded-lg border border-[var(--border)] p-3 text-xs leading-6"><p>将标题和正文恢复到所选版本，并保留现有历史。状态、日期和其他配置不会变更。</p><div className="mt-2 flex gap-2"><Button size="sm" disabled={busy} onClick={restore}>确认恢复</Button><Button size="sm" variant="ghost" onClick={() => setConfirmRestore(false)}>取消</Button></div></div>}
+            {confirmRestore && <div className="mb-3 rounded-[var(--radius-md)] border border-[var(--border)] p-3 text-xs leading-6"><p>将标题和正文恢复到所选版本，并保留现有历史。状态、日期和其他配置不会变更。</p><div className="mt-2 flex gap-2"><Button size="sm" disabled={busy} onClick={restore}>确认恢复</Button><Button size="sm" variant="ghost" onClick={() => setConfirmRestore(false)}>取消</Button></div></div>}
             <div className="min-h-0 flex-1 overflow-auto">
               <p className="mb-3 text-sm font-medium">{selected.title}</p>
-              {compare ? <><p className="mb-2 text-[11px] text-muted">− 所选版本移除的内容　＋ 比较目标新增的内容</p>{selected.title !== (compareTo ?? latest)?.title && <p className="mb-2 text-xs">标题：{selected.title} → {(compareTo ?? latest)?.title}</p>}
-                <pre className="whitespace-pre-wrap break-words text-xs leading-6">{difference.map((part, i) => <span key={i} className={part.added ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300' : part.removed ? 'bg-rose-500/10 text-rose-700 dark:text-rose-300' : ''}>{part.added ? '+ ' : part.removed ? '− ' : ''}{part.value}</span>)}</pre></> : <MarkdownDocument text={selected.notes} />}
+              {compare ? <><p className="mb-2 text-micro text-muted">− 所选版本移除的内容　＋ 比较目标新增的内容</p>{selected.title !== (compareTo ?? latest)?.title && <p className="mb-2 text-xs">标题：{selected.title} → {(compareTo ?? latest)?.title}</p>}
+                <pre className="whitespace-pre-wrap break-words text-xs leading-6">{difference.map((part, i) => <span key={i} className={part.added ? 'bg-[var(--success)]/10 text-[var(--success)] dark:text-[var(--success)]' : part.removed ? 'bg-[var(--danger)]/10 text-[var(--danger)] dark:text-[var(--danger)]' : ''}>{part.added ? '+ ' : part.removed ? '− ' : ''}{part.value}</span>)}</pre></> : <MarkdownDocument text={selected.notes} />}
             </div>
           </> : <p className="py-8 text-center text-xs text-muted">选择一个版本查看正文或比较差异</p>}
         </div>

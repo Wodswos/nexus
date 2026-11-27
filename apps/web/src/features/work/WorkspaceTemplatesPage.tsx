@@ -60,7 +60,7 @@ export default function WorkspaceTemplatesPage() {
           <button
             key={profile.id}
             onClick={() => setEditing(profile)}
-            className="flex w-full items-center gap-3 rounded-xl border border-[var(--border)] px-4 py-3 text-left hover:bg-[var(--surface)]"
+            className="flex w-full items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--border)] px-4 py-3 text-left hover:bg-[var(--surface)]"
           >
             <Box size={18} className="shrink-0 text-muted" />
             <span className="min-w-0 flex-1">
@@ -76,7 +76,7 @@ export default function WorkspaceTemplatesPage() {
           </button>
         ))}
         {loaded && !profiles.length && (
-          <p className="rounded-xl border border-dashed border-[var(--border)] p-5 text-xs leading-6 text-muted">
+          <p className="rounded-[var(--radius-lg)] border border-dashed border-[var(--border)] p-5 text-xs leading-6 text-muted">
             创建一个模板，在项目中设为默认；新建 Agent
             时也可以为这一次选择其他模板。
           </p>

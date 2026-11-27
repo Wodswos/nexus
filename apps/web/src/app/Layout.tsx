@@ -52,7 +52,7 @@ function SyncStatus() {
           ? '正在同步'
           : '离线可用';
   return (
-    <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap text-[10px] text-muted" title={label}>
+    <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap text-micro text-muted" title={label}>
       {phase === 'local' ? (
         <CloudOff size={12} />
       ) : (
@@ -187,7 +187,7 @@ export function Layout() {
         <Icon />
         <span>{label}</span>
         {to === '/inbox' && inboxCount > 0 && (
-          <span className="ml-auto text-xs opacity-70">{inboxCount}</span>
+          <span className="ui-count ml-auto">{inboxCount > 999 ? '999+' : inboxCount}</span>
         )}
       </Link>
     ));
@@ -198,7 +198,7 @@ export function Layout() {
           <button
             aria-label="关闭导航"
             tabIndex={navigationOpen ? 0 : -1}
-            className={cn('workspace-navigation-backdrop fixed inset-x-0 top-0 z-40 h-[var(--app-height,100dvh)] bg-black/20 md:hidden', navigationOpen && 'workspace-navigation-backdrop-open')}
+            className={cn('workspace-navigation-backdrop fixed inset-x-0 top-0 z-40 h-[var(--app-height,100dvh)] bg-[var(--bg-overlay)] md:hidden', navigationOpen && 'workspace-navigation-backdrop-open')}
             onClick={() => setNavigationOpen(false)}
           />
           <aside
@@ -210,29 +210,35 @@ export function Layout() {
             )}
           >
             <SidebarResize width={sidebar.width} onChange={sidebar.setWidth} />
-            <Link to="/" className="mb-6 flex shrink-0 items-center gap-2.5 px-3">
-              <span className="grid h-7 w-7 place-items-center rounded-lg bg-[var(--accent-solid)] text-white">
-                <Check size={18} strokeWidth={2} />
+            <Link to="/" className="mb-3 flex shrink-0 items-center gap-2 px-2">
+              <span className="grid h-7 w-7 place-items-center rounded-[var(--radius-md)] bg-[var(--accent-solid)] text-inverse">
+                <Check size={16} />
               </span>
-              <span className="text-[16px] font-semibold tracking-tight">Nexus</span>
+              <span className="min-w-0">
+                <span className="block text-base font-semibold tracking-tight">Nexus</span>
+                <span className="block truncate text-xs text-muted">我的工作空间</span>
+              </span>
             </Link>
             <button
               onClick={() => setCapture(true)}
-              className="mb-4 flex h-11 shrink-0 items-center gap-2 rounded-lg border border-[var(--border-strong)] bg-[var(--background)] px-3 text-sm font-medium text-foreground hover:bg-[var(--surface)]"
+              className="workspace-capture"
             >
-              <Plus size={18} className="text-[var(--accent-solid)]" />
-              添加任务<span className="ml-auto text-[10px] opacity-60">N</span>
+              <Plus size={16} />
+              添加任务<kbd className="ml-auto">N</kbd>
             </button>
-            {agentView && (
+            <div className="mb-3 hidden items-center gap-1 md:flex">
               <button
                 aria-label="搜索或执行命令"
                 onClick={() => setCommand(true)}
-                className="mb-3 hidden h-8 shrink-0 items-center gap-2 px-3 text-xs text-muted hover:text-foreground md:flex"
+                className="flex h-8 min-w-0 flex-1 items-center gap-2 rounded-[var(--radius-sm)] px-2 text-xs text-muted hover:bg-[var(--bg-hover)] hover:text-foreground"
               >
-                <Search size={14} />搜索任务
-                <kbd className="ml-auto text-[10px] opacity-70">⌘ K</kbd>
+                <Search size={16} />搜索任务
+                <kbd className="ml-auto">⌘ K</kbd>
               </button>
-            )}
+              <button title="撤销 (⌘Z)" aria-label="撤销 (⌘Z)" disabled={!store.canUndo()} onClick={() => store.undo()} className="rounded-[var(--radius-sm)] p-1 text-muted hover:bg-[var(--bg-hover)]"><Undo2 size={14} /></button>
+              <button title="重做 (⌘⇧Z)" aria-label="重做 (⌘⇧Z)" disabled={!store.canRedo()} onClick={() => store.redo()} className="rounded-[var(--radius-sm)] p-1 text-muted hover:bg-[var(--bg-hover)]"><Redo2 size={14} /></button>
+            </div>
+            <div className="mb-2 hidden items-center gap-2 px-2 md:flex"><ReviewReminder /><RunningTimer /></div>
             <div className="min-h-0 flex-1 overflow-y-auto">
               <nav aria-label="工作导航" className="space-y-0.5">
                 {nav(primary)}
@@ -246,11 +252,11 @@ export function Layout() {
                 {nav(tools)}
               </nav></>}
             </div>
-            <div className="shrink-0 border-t border-[var(--border)] pt-3">
+            <div className="shrink-0 pt-4">
               <Link to="/trash" className="workspace-nav" aria-current={location.pathname === '/trash' ? 'page' : undefined}>
                 <Trash2 />
                 <span>回收站</span>
-                {data.tasks.some((task) => task.deletedAt != null) && <span className="ml-auto text-xs opacity-70">{data.tasks.filter((task) => task.deletedAt != null).length}</span>}
+                {data.tasks.some((task) => task.deletedAt != null) && <span className="ui-count ml-auto">{data.tasks.filter((task) => task.deletedAt != null).length}</span>}
               </Link>
               <div aria-label="账号与同步" className="flex min-w-0 items-center gap-1">
                 <Link to="/settings" aria-label="设置与账号" title={user?.username ?? '设置与账号'} className="workspace-nav min-w-0 flex-1 !gap-2 !px-2">
@@ -259,7 +265,7 @@ export function Layout() {
                   <span className="ml-auto"><SyncStatus /></span>
                 </Link>
                 {!user && (
-                  <Link to="/login" className="shrink-0 pr-2 text-[11px] text-muted hover:text-foreground">
+                  <Link to="/login" className="shrink-0 pr-2 text-micro text-muted hover:text-foreground">
                     登录
                   </Link>
                 )}
@@ -270,7 +276,7 @@ export function Layout() {
       )}
       <div className="flex min-w-0 flex-1 flex-col">
         {!immersive && (
-          <header className={cn("flex h-[52px] shrink-0 items-center gap-3 border-b border-[var(--border)] px-3 md:px-4 lg:px-6",agentView&&"md:hidden")}>
+          <header className="flex h-[var(--header-height)] shrink-0 items-center gap-3 border-b border-[var(--border-hairline)] px-3 md:hidden">
             <button
               aria-label="打开导航"
               aria-controls="workspace-sidebar"
@@ -291,7 +297,7 @@ export function Layout() {
               >
                 <Search size={15} />
                 <span className="hidden sm:inline">搜索任务</span>
-                <kbd className="hidden rounded border border-[var(--border)] px-1 text-[10px] opacity-70 sm:inline">
+                <kbd className="hidden rounded border border-[var(--border)] px-1 text-micro opacity-70 sm:inline">
                   ⌘ K
                 </kbd>
               </button>
@@ -330,7 +336,7 @@ export function Layout() {
                 key={to}
                 to={to}
                 className={cn(
-                  'flex min-h-12 min-w-0 max-w-28 flex-col items-center justify-center gap-0.5 px-3 text-[10px]',
+                  'flex min-h-12 min-w-0 max-w-28 flex-col items-center justify-center gap-0.5 px-3 text-micro',
                   active(to) ? 'text-[var(--accent-solid)]' : 'text-muted',
                 )}
               >

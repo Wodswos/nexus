@@ -16,7 +16,7 @@ export const Switch = React.forwardRef<
     )}
     {...props}
   >
-    <SwitchPrimitive.Thumb className="pointer-events-none block h-5 w-5 rounded-full bg-white shadow transition-transform data-[state=checked]:translate-x-[22px] data-[state=unchecked]:translate-x-0.5" />
+    <SwitchPrimitive.Thumb className="pointer-events-none block h-5 w-5 rounded-full bg-[var(--bg-canvas)] transition-transform data-[state=checked]:translate-x-[22px] data-[state=unchecked]:translate-x-0.5" />
   </SwitchPrimitive.Root>
 ));
 Switch.displayName = 'Switch';
@@ -29,7 +29,7 @@ export function Tooltip({ label, children }: { label: React.ReactNode; children:
         <TooltipPrimitive.Portal>
           <TooltipPrimitive.Content
             sideOffset={6}
-            className="z-50 rounded-lg glass-raised px-2.5 py-1.5 text-xs text-foreground"
+            className="z-50 rounded-[var(--radius-md)] glass-raised px-2.5 py-1.5 text-xs text-foreground"
           >
             {label}
           </TooltipPrimitive.Content>
@@ -49,7 +49,7 @@ export function Progress({
   return (
     <div className={cn('h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface)]', className)}>
       <div
-        className="h-full rounded-full gradient-bg transition-[width] duration-500"
+        className="h-full rounded-full gradient-bg transition-[width] duration-[var(--duration-move)]"
         style={{ width: `${Math.min(100, Math.max(0, value * 100))}%` }}
       />
     </div>
@@ -58,7 +58,7 @@ export function Progress({
 
 export function Kbd({ children }: { children: React.ReactNode }) {
   return (
-    <kbd className="rounded-md border border-[var(--border)] bg-[var(--surface)] px-1.5 py-0.5 font-mono text-[10px] text-muted">
+    <kbd className="rounded-[var(--radius-xs)] bg-[var(--bg-muted)] px-1 py-0.5 font-mono text-micro text-muted">
       {children}
     </kbd>
   );
@@ -77,7 +77,7 @@ export function EmptyState({
 }) {
   return (
     <div className="flex flex-col items-center justify-center gap-3 py-16 text-center animate-fade-up">
-      <div className="flex h-14 w-14 items-center justify-center rounded-2xl glass glow-border text-[var(--accent-from)]">
+      <div className="flex h-14 w-14 items-center justify-center rounded-[var(--radius-lg)] glass glow-border text-[var(--accent-from)]">
         {icon}
       </div>
       <div>

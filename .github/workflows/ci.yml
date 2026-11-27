@@ -16,8 +16,9 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm lint:ui
       - run: pnpm typecheck
-      - run: pnpm test
       - run: pnpm build
+      - run: pnpm test
       - run: pnpm --filter @nexus/e2e exec playwright install --with-deps ${{ matrix.browser }}
       - run: pnpm e2e --project=${{ matrix.browser }}

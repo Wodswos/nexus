@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router';
 import App from './App';
 import { setNexusUser } from '@nexus/crdt';
+import '@fontsource-variable/inter';
 import '@nexus/ui/theme.css';
 import './sw-register';
 import './app/theme';

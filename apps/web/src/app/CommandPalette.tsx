@@ -39,10 +39,10 @@ export function CommandPalette() {
       label="命令面板"
       shouldFilter
       className="fixed left-1/2 top-[14%] z-50 w-[min(94vw,620px)] -translate-x-1/2"
-      overlayClassName="fixed inset-0 z-40 bg-black/55 backdrop-blur-[2px]"
+      overlayClassName="fixed inset-0 z-40 bg-[var(--bg-overlay)] backdrop-blur-[2px]"
       loop
     >
-      <div className="glass-raised overflow-hidden rounded-2xl">
+      <div className="glass-raised overflow-hidden rounded-[var(--radius-lg)]">
         <Command.Input
           value={search}
           onValueChange={setSearch}
@@ -50,7 +50,7 @@ export function CommandPalette() {
           placeholder="搜索任务、执行命令…"
           className="h-12 w-full border-b border-[var(--border)] bg-transparent px-4 text-base text-foreground placeholder:text-muted/60 outline-none"
         />
-        <Command.List className="max-h-[52vh] overflow-y-auto p-2">
+        <Command.List className="max-h-[52vh] overflow-y-auto p-1">
           <Command.Empty className="py-8 text-center text-sm text-muted">没有匹配结果</Command.Empty>
 
           <Command.Group
@@ -149,7 +149,7 @@ function Item({
 }: React.ComponentProps<typeof Command.Item> & { icon?: React.ReactNode }) {
   return (
     <Command.Item
-      className="flex cursor-pointer items-center gap-2.5 rounded-xl px-2.5 py-2.5 text-sm text-foreground outline-none data-[selected=true]:bg-[color-mix(in_srgb,var(--accent-from)_14%,transparent)]"
+      className="flex cursor-pointer items-center gap-2 rounded-[var(--radius-sm)] px-2.5 py-2.5 text-sm text-foreground outline-none data-[selected=true]:bg-[color-mix(in_srgb,var(--accent-from)_14%,transparent)]"
       {...props}
     >
       <span className="text-muted [&>svg]:h-4 [&>svg]:w-4">{icon}</span>
@@ -160,7 +160,7 @@ function Item({
 
 function Kbd({ children }: { children: React.ReactNode }) {
   return (
-    <kbd className="ml-1 rounded border border-[var(--border)] bg-[var(--surface)] px-1 font-mono text-[10px] text-muted">
+    <kbd className="ml-1 rounded border border-[var(--border)] bg-[var(--surface)] px-1 font-mono text-micro text-muted">
       {children}
     </kbd>
   );

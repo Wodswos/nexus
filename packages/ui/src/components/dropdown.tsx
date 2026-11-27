@@ -14,7 +14,7 @@ export const DropdownContent = React.forwardRef<
       ref={ref}
       sideOffset={sideOffset}
       className={cn(
-        'z-50 min-w-[180px] glass-raised rounded-xl p-1.5 data-[state=open]:animate-fade-up',
+        'z-50 min-w-[180px] glass-raised rounded-[var(--radius-lg)] p-1 data-[state=open]:animate-fade-up',
         className,
       )}
       {...props}
@@ -30,7 +30,7 @@ export const DropdownItem = React.forwardRef<
   <DropdownPrimitive.Item
     ref={ref}
     className={cn(
-      'flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-2 text-sm outline-none transition-colors',
+      'flex cursor-pointer select-none items-center gap-2 rounded-[var(--radius-sm)] px-2.5 py-2 text-sm outline-none transition-colors',
       danger ? 'text-[var(--danger)]' : 'text-foreground',
       'focus:bg-[var(--surface)] data-[highlighted]:bg-[color-mix(in_srgb,var(--accent-from)_14%,transparent)]',
       className,

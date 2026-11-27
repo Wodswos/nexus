@@ -1,4 +1,5 @@
 export * from './utils';
+export * from './tokens';
 export * from './components/button';
 export * from './components/input';
 export * from './components/badge';

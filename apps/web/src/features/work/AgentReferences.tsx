@@ -35,7 +35,7 @@ export function AgentReferences({
             <div className="mt-2 flex gap-2">
               <input
                 aria-label="引用文件路径"
-                className="min-w-0 flex-1 rounded-md border border-[var(--border)] bg-transparent p-2"
+                className="min-w-0 flex-1 rounded-[var(--radius-sm)] border border-[var(--border)] bg-transparent p-2"
                 placeholder="src/example.ts"
                 value={path}
                 onChange={(e) => setPath(e.target.value)}
@@ -55,7 +55,7 @@ export function AgentReferences({
             Task
             <input
               aria-label="搜索引用 Task"
-              className="my-2 w-full rounded-md border border-[var(--border)] bg-transparent p-2"
+              className="my-2 w-full rounded-[var(--radius-sm)] border border-[var(--border)] bg-transparent p-2"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="搜索任务标题…"

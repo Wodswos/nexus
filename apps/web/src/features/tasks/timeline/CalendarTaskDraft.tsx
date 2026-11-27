@@ -103,7 +103,7 @@ export function CalendarTaskDraft({
         onSubmit={(event) => void submit(event)}
         role="dialog"
         aria-label="新建日历任务"
-        className="fixed z-40 w-[min(320px,calc(100vw-24px))] space-y-3 rounded-lg border border-[var(--border-strong)] bg-[var(--background)] p-4 shadow-lg"
+        className="fixed z-40 w-[min(320px,calc(100vw-24px))] space-y-3 rounded-[var(--radius-md)] border border-[var(--border-strong)] bg-[var(--background)] p-4 shadow-lg"
         style={{
           left: Math.max(12, Math.min(anchor.x, window.innerWidth - 332)),
           top: Math.max(12, Math.min(anchor.y, window.innerHeight - 360)),
@@ -148,7 +148,7 @@ export function CalendarTaskDraft({
             value={date}
             disabled={created.current}
             onChange={(event) => setDate(event.target.value)}
-            className="h-8 w-full rounded-md border border-[var(--border-strong)] bg-transparent px-2 text-foreground"
+            className="h-8 w-full rounded-[var(--radius-sm)] border border-[var(--border-strong)] bg-transparent px-2 text-foreground"
           />
         </label>
         <div className="flex gap-2">
@@ -157,7 +157,7 @@ export function CalendarTaskDraft({
             value={projectId}
             disabled={created.current}
             onChange={(event) => setProjectId(event.target.value)}
-            className="h-8 min-w-0 flex-1 rounded-md border border-[var(--border-strong)] bg-transparent px-2 text-xs"
+            className="h-8 min-w-0 flex-1 rounded-[var(--radius-sm)] border border-[var(--border-strong)] bg-transparent px-2 text-xs"
           >
             <option value="">无项目</option>
             {data.tasks
@@ -173,7 +173,7 @@ export function CalendarTaskDraft({
             value={priority}
             disabled={created.current}
             onChange={(event) => setPriority(event.target.value as Priority)}
-            className="h-8 rounded-md border border-[var(--border-strong)] bg-transparent px-2 text-xs"
+            className="h-8 rounded-[var(--radius-sm)] border border-[var(--border-strong)] bg-transparent px-2 text-xs"
           >
             <option value="P3">普通</option>
             <option value="P2">紧急</option>

@@ -31,9 +31,9 @@ export function ChangePreview({ text }: { text: string }) {
   }, [lines]);
   const color = (line: string) =>
     line.startsWith("+")
-      ? "bg-emerald-500/10"
+      ? "bg-[var(--success)]/10"
       : line.startsWith("-")
-        ? "bg-red-500/10"
+        ? "bg-[var(--danger)]/10"
         : line.startsWith("@@")
           ? "bg-[var(--surface)] text-muted"
           : "";
@@ -57,7 +57,7 @@ export function ChangePreview({ text }: { text: string }) {
           并排
         </Button>
       </div>
-      <div className="overflow-auto rounded-md border border-[var(--border)] font-mono text-[11px] leading-5">
+      <div className="overflow-auto rounded-[var(--radius-sm)] border border-[var(--border)] font-mono text-micro leading-5">
         {split ? (
           <table className="hidden w-full table-fixed border-collapse md:table">
             <thead>
@@ -70,12 +70,12 @@ export function ChangePreview({ text }: { text: string }) {
               {pairs.map((pair, i) => (
                 <tr key={i}>
                   <td
-                    className={`whitespace-pre-wrap break-all border-r border-[var(--border)] px-2 align-top ${pair.kind === "change" ? "bg-red-500/10" : ""}`}
+                    className={`whitespace-pre-wrap break-all border-r border-[var(--border)] px-2 align-top ${pair.kind === "change" ? "bg-[var(--danger)]/10" : ""}`}
                   >
                     {pair.left || " "}
                   </td>
                   <td
-                    className={`whitespace-pre-wrap break-all px-2 align-top ${pair.kind === "change" ? "bg-emerald-500/10" : ""}`}
+                    className={`whitespace-pre-wrap break-all px-2 align-top ${pair.kind === "change" ? "bg-[var(--success)]/10" : ""}`}
                   >
                     {pair.right || " "}
                   </td>

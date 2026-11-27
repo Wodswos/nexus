@@ -20,12 +20,12 @@ export const DialogContent = React.forwardRef<
   ) => (
     <DialogPrimitive.Portal>
       <DialogPrimitive.Overlay
-        className={cn("fixed inset-0 z-40 bg-black/40", overlayClassName)}
+        className={cn("fixed inset-0 z-40 bg-[var(--bg-overlay)]", overlayClassName)}
       />
       <DialogPrimitive.Content
         ref={ref}
         className={cn(
-          "fixed left-1/2 top-[18%] z-50 w-[min(92vw,560px)] -translate-x-1/2 border border-[var(--border)] bg-[var(--background)] shadow-lg rounded-xl p-5 outline-none data-[state=open]:animate-fade-up",
+          "fixed left-1/2 top-[18%] z-50 w-[min(92vw,560px)] -translate-x-1/2 border border-[var(--border)] bg-[var(--background)] shadow-lg rounded-[var(--radius-lg)] p-5 outline-none data-[state=open]:animate-fade-up",
           className,
         )}
         {...props}
@@ -47,7 +47,7 @@ export const DialogContent = React.forwardRef<
           </DialogPrimitive.Title>
           <DialogPrimitive.Close
             aria-label="关闭面板"
-            className="rounded-md p-1 text-muted transition-colors hover:text-foreground"
+            className="rounded-[var(--radius-sm)] p-1 text-muted transition-colors hover:text-foreground"
           >
             <X className="h-4 w-4" />
           </DialogPrimitive.Close>

@@ -15,15 +15,15 @@ export function TaskBatchActions({ ids, onOpen }: { ids: string[]; onOpen?: () =
     useUI.getState().openTaskBatch(store.userId, ids, section);
   };
   return <>
-    <button type="button" aria-label="批量设置时间" disabled={disabled} title={disabled ? '选择 TODO 任务设置时间' : undefined} onClick={() => open('time')} className="flex min-h-8 items-center gap-1 rounded-lg px-2 text-muted hover:bg-[var(--surface)] hover:text-foreground disabled:opacity-40"><CalendarDays size={14} />时间</button>
-    <button type="button" aria-label="批量设置优先级" disabled={disabled} title={disabled ? '选择 TODO 任务设置优先级' : undefined} onClick={() => open('priority')} className="flex min-h-8 items-center gap-1 rounded-lg px-2 text-muted hover:bg-[var(--surface)] hover:text-foreground disabled:opacity-40"><Flag size={14} />优先级</button>
+    <button type="button" aria-label="批量设置时间" disabled={disabled} title={disabled ? '选择 TODO 任务设置时间' : undefined} onClick={() => open('time')} className="flex min-h-8 items-center gap-1 rounded-[var(--radius-md)] px-2 text-muted hover:bg-[var(--surface)] hover:text-foreground disabled:opacity-40"><CalendarDays size={14} />时间</button>
+    <button type="button" aria-label="批量设置优先级" disabled={disabled} title={disabled ? '选择 TODO 任务设置优先级' : undefined} onClick={() => open('priority')} className="flex min-h-8 items-center gap-1 rounded-[var(--radius-md)] px-2 text-muted hover:bg-[var(--surface)] hover:text-foreground disabled:opacity-40"><Flag size={14} />优先级</button>
   </>;
 }
 
 type Request = NonNullable<ReturnType<typeof useUI.getState>['taskBatch']>;
 type DateDraft = { action: 'keep' | 'set' | 'clear'; date: string; time: string };
 const initialDate = (): DateDraft => ({ action: 'keep', date: dayKeyOf(Date.now()), time: '' });
-const inputClass = 'h-9 min-w-0 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 text-xs outline-none focus:border-[var(--accent-solid)]';
+const inputClass = 'h-9 min-w-0 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-2 text-xs outline-none focus:border-[var(--accent-solid)]';
 const dateEdit = (draft: DateDraft): BatchDateEdit | undefined => draft.action === 'keep' ? undefined : draft.action === 'clear' ? { action: 'clear' } : { action: 'set', date: draft.date, ...(draft.time ? { time: draft.time } : {}) };
 
 function summary(tasks: Task[], field: 'startAt' | 'dueAt' | 'priority') {
@@ -88,7 +88,7 @@ function Editor({ request }: { request: Request }) {
       <p id="task-batch-scope" className="mb-4 text-xs leading-5 text-muted">已选 {request.ids.length} 项，{eligible.length} 项 TODO 任务可设置。{skipped > 0 && `${skipped} 项文本节点、项目、归档或无排期项已跳过。`}修改范围为所选 TODO 任务。</p>
       {applied ? <p role="status" className="py-4 text-sm">{message}</p> : <>
         <div role="tablist" aria-label="批量设置属性" className="mb-5 flex gap-1 border-b border-[var(--border)] pb-2">
-          {(['time', 'priority'] as const).map(key => <button key={key} role="tab" aria-selected={section === key} onClick={() => { setSection(key); setError(''); }} className={cn('rounded-lg px-3 py-1.5 text-xs', section === key ? 'bg-[var(--selection)] text-foreground' : 'text-muted hover:bg-[var(--surface)]')}>{key === 'time' ? '时间' : '优先级'}</button>)}
+          {(['time', 'priority'] as const).map(key => <button key={key} role="tab" aria-selected={section === key} onClick={() => { setSection(key); setError(''); }} className={cn('rounded-[var(--radius-md)] px-3 py-1.5 text-xs', section === key ? 'bg-[var(--selection)] text-foreground' : 'text-muted hover:bg-[var(--surface)]')}>{key === 'time' ? '时间' : '优先级'}</button>)}
         </div>
         {section === 'time' ? <div className="space-y-4">
           <SelectField aria-label="批量时间方式" value={mode} onValueChange={value => setMode(value as typeof mode)} options={[{ value: 'fields', label: '设置或清除日期' }, { value: 'shift', label: '整体提前 / 顺延' }]} className="w-full" />
@@ -100,7 +100,7 @@ function Editor({ request }: { request: Request }) {
           </> : <label className="block space-y-2 text-xs"><span>移动天数（正数顺延，负数提前）</span><input aria-label="移动天数" type="number" min={-3660} max={3660} step={1} value={days} onChange={e => setDays(e.target.value)} className={cn(inputClass, 'w-full')} /><span className="block leading-5 text-muted">保留每项原时刻和起止间隔，未排期任务不修改。</span></label>}
         </div> : <div className="space-y-3">
           <p className="text-xs text-muted">当前：{summary(eligible, 'priority')}</p>
-          <div className="grid grid-cols-2 gap-2">{PRIORITY_ORDER.map(value => <button key={value} type="button" aria-pressed={priority === value} onClick={() => setPriority(value)} className={cn('min-h-11 rounded-lg border px-3 py-2 text-left text-xs', priority === value ? 'border-[var(--accent-solid)] bg-[var(--selection)]' : 'border-[var(--border)] hover:bg-[var(--surface)]')}>{PRIORITY_META[value].label}</button>)}</div>
+          <div className="grid grid-cols-2 gap-2">{PRIORITY_ORDER.map(value => <button key={value} type="button" aria-pressed={priority === value} onClick={() => setPriority(value)} className={cn('min-h-11 rounded-[var(--radius-md)] border px-3 py-2 text-left text-xs', priority === value ? 'border-[var(--accent-solid)] bg-[var(--selection)]' : 'border-[var(--border)] hover:bg-[var(--surface)]')}>{PRIORITY_META[value].label}</button>)}</div>
         </div>}
         {hasChange && <p role={validation ? 'alert' : 'status'} className={cn('mt-4 text-xs leading-5', validation ? 'text-[var(--danger)]' : 'text-muted')}>{validation || `将更新 ${count} 项${skipped ? `，${skipped} 项不适用` : ''}。`}</p>}
       </>}

@@ -133,7 +133,7 @@ export function MonthView({
     <div className="flex h-full flex-col overflow-y-auto" data-testid="calendar-month">
       <div className="grid shrink-0 grid-cols-7 border-y border-[var(--calendar-grid)]">
         {weekdayLabels.map((label) => (
-          <div key={label} className="px-2 py-2 text-center text-[11px] text-muted">
+          <div key={label} className="px-2 py-2 text-center text-micro text-muted">
             周{label}
           </div>
         ))}
@@ -175,9 +175,9 @@ export function MonthView({
                 aria-label={`${key}，查看日程`}
                 onClick={() => onDateChange(day)}
                 className={cn(
-                  'calendar-date grid place-items-center rounded-full text-[11px]',
+                  'calendar-date grid place-items-center rounded-full text-micro',
                   today
-                    ? 'bg-[var(--accent-solid)] font-medium text-white'
+                    ? 'bg-[var(--accent-solid)] font-medium text-inverse'
                     : day.getMonth() !== date.getMonth()
                       ? 'text-muted/60'
                       : 'text-foreground',
@@ -216,7 +216,7 @@ export function MonthView({
                   <span
                     className={cn(
                       'h-1.5 w-1.5 shrink-0',
-                      item.type === 'task' ? 'rounded-full' : 'rounded-sm',
+                      item.type === 'task' ? 'rounded-full' : 'rounded-[var(--radius-xs)]',
                     )}
                     style={{ background: item.done ? 'var(--muted-foreground)' : item.color }}
                   />
@@ -226,7 +226,7 @@ export function MonthView({
               {entries.length > visibleCount && (
                 <Dropdown open={expandedDay === key} onOpenChange={open => { if (open) openingTask.current = false; setExpandedDay(open ? key : null); }}>
                   <DropdownTrigger asChild>
-                    <button type="button" aria-label={`${key}，还有 ${entries.length - visibleCount} 项`} className="calendar-more max-w-full truncate rounded px-1 text-left text-[10px] text-muted hover:bg-[var(--selection)] hover:text-foreground">
+                    <button type="button" aria-label={`${key}，还有 ${entries.length - visibleCount} 项`} className="calendar-more max-w-full truncate rounded px-1 text-left text-micro text-muted hover:bg-[var(--selection)] hover:text-foreground">
                       还有 {entries.length - visibleCount} 项
                     </button>
                   </DropdownTrigger>
@@ -249,9 +249,9 @@ export function MonthView({
                         if (item.type === 'task') { openingTask.current = true; selectTask(item.id); }
                         else onDateChange(day);
                       }}>
-                        <span className={cn('mt-1.5 h-1.5 w-1.5 shrink-0', item.type === 'task' ? 'rounded-full' : 'rounded-sm')} style={{ background: item.done ? 'var(--muted-foreground)' : item.color }} />
-                        <span className={cn('min-w-0 flex-1 break-words text-[13px] leading-5', item.done && 'text-muted line-through')}>{item.type === 'task' ? <TaskTitle title={item.title} /> : item.title}</span>
-                        <span className="mt-0.5 shrink-0 text-[10px] leading-4 text-muted">{item.type === 'task' ? '任务' : '日程'}{item.done ? ' · 已完成' : ''}</span>
+                        <span className={cn('mt-1.5 h-1.5 w-1.5 shrink-0', item.type === 'task' ? 'rounded-full' : 'rounded-[var(--radius-xs)]')} style={{ background: item.done ? 'var(--muted-foreground)' : item.color }} />
+                        <span className={cn('min-w-0 flex-1 break-words text-control leading-5', item.done && 'text-muted line-through')}>{item.type === 'task' ? <TaskTitle title={item.title} /> : item.title}</span>
+                        <span className="mt-0.5 shrink-0 text-micro leading-4 text-muted">{item.type === 'task' ? '任务' : '日程'}{item.done ? ' · 已完成' : ''}</span>
                       </DropdownItem>)}
                     </div>
                   </DropdownContent>
@@ -265,7 +265,7 @@ export function MonthView({
         role="status"
         aria-label="日历操作状态"
         aria-live="polite"
-        className="flex min-h-9 shrink-0 items-center border-t border-[var(--border)] px-4 text-[11px] text-muted"
+        className="flex min-h-9 shrink-0 items-center border-t border-[var(--border)] px-4 text-micro text-muted"
       >
         {message || '点击空白处新建任务 · 拖动可改期 · 点击日期数字查看当日日程'}
       </div>

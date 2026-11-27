@@ -2,6 +2,8 @@
 
 设计文档区分当前实现、历史背景和目标方案。目标方案的存在不代表功能已上线；开发时应同时核对源码、API 文档及对应验收项。
 
+全局视觉的唯一事实来源是 [UI 工程规范 v1.0](../UI_ENGINEERING_SPEC.md)，改版顺序见 [P0–P2 手册](../UI_REFACTOR_PLAYBOOK.md)。本文档目录中的历史色彩、字体、阴影和密度描述若与工程规范冲突，以工程规范为准。
+
 ## Agent 与 Workspace 的最新方案
 
 当前 Agent UI 尚未完成与 T3 Code 的视觉对齐，详见 [对齐复核](T3_ALIGNMENT_REVIEW.md)。功能实现记录不等同于视觉验收完成。
@@ -20,6 +22,8 @@
 - [总体交互基线](INTERACTION_DESIGN.md)：任务视图、导图、详情、导航、习惯和复盘。
 - [移动端 UI](MOBILE_UI_DESIGN.md)：移动布局、安全区与原生手势。
 - [Task 多选与批量操作](TASK_BATCH_OPERATIONS.md)：选择、批量编辑与待扩展视图。
+
+当前 UI 基础风格的执行范围、验证与截图见 [UI 规范实施记录](UI_SPEC_IMPLEMENTATION.md)。
 
 ## 实施与发布边界
 

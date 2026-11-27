@@ -35,7 +35,7 @@ export const agentStateLabels: Record<WorkspaceAgentView["state"], string> = {
 const pendingStates = new Set(["queued", "preparing", "starting", "running"]);
 function State({ agent }: { agent: WorkspaceAgentView }) {
   return (
-    <span className="inline-flex items-center gap-1.5 text-[11px] text-muted">
+    <span className="inline-flex items-center gap-1.5 text-micro text-muted">
       {pendingStates.has(agent.state) ? (
         <LoaderCircle size={11} className="animate-spin" />
       ) : (
@@ -182,7 +182,7 @@ export function AgentConversation({
               <Bot size={14} />
               Agents{" "}
               {agents.length > 0 && (
-                <span className="text-[10px] font-normal text-muted">
+                <span className="text-micro font-normal text-muted">
                   {agents.length}
                 </span>
               )}
@@ -203,9 +203,9 @@ export function AgentConversation({
               type="button"
               key={agent.id}
               onClick={() => openWorkbench(agent.id)}
-              className="flex w-full items-center gap-2.5 rounded-lg px-2 py-2 hover:bg-[var(--surface)] text-left transition-colors hover:border-[var(--border-strong)]"
+              className="flex w-full items-center gap-2.5 rounded-[var(--radius-md)] px-2 py-2 hover:bg-[var(--surface)] text-left transition-colors hover:border-[var(--border-strong)]"
             >
-              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[var(--surface-raised)] text-muted">
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-[var(--radius-md)] bg-[var(--surface-raised)] text-muted">
                 {agent.mode === "tmux" ? (
                   <Terminal size={15} />
                 ) : (
@@ -222,7 +222,7 @@ export function AgentConversation({
             </button>
           ))}
           {error && (
-            <p role="alert" className="text-[11px] text-[var(--danger)]">
+            <p role="alert" className="text-micro text-[var(--danger)]">
               {error}
             </p>
           )}
