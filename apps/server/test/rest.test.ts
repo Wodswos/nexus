@@ -101,6 +101,18 @@ it('creates project trees, filters descendants, rejects cycles/unknown fields an
   await value(`/api/v1/projects/${project.id}/restore`, 'POST');
   expect(await value(`/api/v1/tasks/${childTask.id}`)).toMatchObject({ deletedAt: null });
 });
+it('keeps standalone text nodes addressable through the task API after creation and type changes', async () => {
+  const text = await value('/api/v1/tasks', 'POST', { title: 'Recorded result', kind: 'node', notes: '42' });
+  expect(text).toMatchObject({ kind: 'node', project: false, parentId: null, status: 'todo', notes: '42' });
+  expect(await value(`/api/v1/tasks/${text.id}`)).toMatchObject({ id: text.id, notes: '42' });
+  expect((await request(`/api/v1/projects/${text.id}`)).status).toBe(404);
+  const task = await value('/api/v1/tasks', 'POST', { title: 'Convert me', status: 'todo' });
+  await value(`/api/v1/tasks/${task.id}`, 'PATCH', { kind: 'node', notes: 'leaf content' });
+  expect(await value(`/api/v1/tasks/${task.id}`)).toMatchObject({ kind: 'node', project: false, parentId: null, notes: 'leaf content' });
+  await value(`/api/v1/tasks/${task.id}`, 'PATCH', { kind: 'todo' });
+  expect(await value(`/api/v1/tasks/${task.id}`)).toMatchObject({ kind: 'todo', notes: 'leaf content' });
+});
+
 it('prevents repeated creation/check-in via durable idempotency and detects stale conditional writes', async () => {
   const headers = { 'Idempotency-Key': 'create-once' };
   const first = await request('/api/v1/habits', 'POST', { name: 'twice', targetPerDay: 2, reminderTimes: ['20:00', '08:00'] }, token, headers);
@@ -137,28 +149,52 @@ it('shares live Yjs state bidirectionally without overwriting unrelated online e
 it('creates, edits, completes and deletes reviews with live root sync and explicit timezone validation', async () => {
   const online = await device('root');
   const id = 'daily_2026-10-01';
-  await value(`/api/v1/reviews/${id}`, 'PUT', { highlights: '计划：推进 API', friction: '依赖不清', resolution: '先定义接口', nextSteps: '补齐测试' });
+  await value(`/api/v1/reviews/${id}`, 'PUT', { highlights: '已完成接口设计', plan: '推进 API', friction: '依赖不清', resolution: '先定义接口', nextSteps: '补齐测试' });
   await expect.poll(() => online.doc.getMap('reviewFields').get(`${id}/resolution`)).toBe('先定义接口');
+  await expect.poll(() => online.doc.getMap('reviewFields').get(`${id}/plan`)).toBe('推进 API');
   expect((await request(`/api/v1/reviews/${id}`, 'GET', undefined, otherToken)).status).toBe(404);
   expect((await request('/api/v1/reviews/daily_2026-02-30', 'PUT', {})).status).toBe(400);
   expect((await request(`/api/v1/reviews/${id}/complete`, 'POST', {})).status).toBe(400);
   const complete = await value(`/api/v1/reviews/${id}/complete`, 'POST', { timeZone: 'Asia/Shanghai' });
-  expect(complete.completedAt).toBeGreaterThan(0); expect(complete.facts).toMatchObject({ completed: [], pending: [], focusMin: 0 });
+  expect(complete.completedAt).toBeGreaterThan(0); expect(complete.facts).toMatchObject({ completed: [], planned: [], pending: [], focusMin: 0 });
   await value(`/api/v1/reviews/${id}`, 'PATCH', { nextSteps: '继续实现' });
-  expect(await value(`/api/v1/reviews/${id}`)).toMatchObject({ completedAt: null, highlights: '计划：推进 API', resolution: '先定义接口' });
+  expect(await value(`/api/v1/reviews/${id}`)).toMatchObject({ completedAt: null, highlights: '已完成接口设计', plan: '推进 API', resolution: '先定义接口' });
   await value(`/api/v1/reviews/${id}`, 'DELETE');
   expect((await request(`/api/v1/reviews/${id}`)).status).toBe(404);
   await expect.poll(() => online.doc.getMap('reviewFields').has(`${id}/kind`)).toBe(false);
 });
 it('publishes self-contained Swagger/OpenAPI with resolvable schemas and correct authentication', async () => {
   const response = await request('/api/openapi.json', 'GET', undefined, ''); expect(response.status).toBe(200);
-  const spec = await response.json() as any; expect(spec.openapi).toBe('3.0.3'); expect(Object.keys(spec.paths)).toHaveLength(13);
+  const spec = await response.json() as any; expect(spec.openapi).toBe('3.0.3');
+  for (const path of ['/api/workspace-profiles', '/api/tasks/{taskId}/workspace-launch', '/api/kubernetes-connections', '/api/agents/{id}/events', '/api/agent-context/{id}/reports']) expect(spec.paths[path]).toBeTruthy();
+  expect(spec.paths['/api/agent-context/{id}/reports'].post.security).toEqual([{ agentBearer: [] }]);
+  expect(spec.paths['/api/workspaces/{id}/instructions'].post.security).toEqual([{ browserSession: [] }]);
   expect(spec.paths['/api/v1/habits/{id}/check-ins'].post).toBeTruthy();
   expect(spec.security).toEqual([{ bearerAuth: [] }]);
   const walk = (value: any) => { if (!value || typeof value !== 'object') return; if (value.$ref) { let target = spec; for (const part of value.$ref.slice(2).split('/')) target = target?.[part]; expect(target).toBeTruthy(); } for (const item of Object.values(value)) walk(item); }; walk(spec);
   const html = await request('/api/docs', 'GET', undefined, '').then(response => response.text());
   expect(html).toContain('/api/docs/swagger-ui-bundle.js'); expect(html).toContain('persistAuthorization:false'); expect(html).not.toContain('unpkg');
   expect((await request('/api/v1/not-a-resource')).status).toBe(404);
+});
+it('keeps execution workspace routes behind account-scoped browser sessions', async () => {
+  const project = await value('/api/v1/projects', 'POST', { title: 'workspace-fixture' });
+  const node = await value('/api/v1/tasks', 'POST', { title: 'content record', kind: 'node', parentId: project.id });
+  const path = `/api/workspaces/${node.id}`;
+  expect((await request(path, 'GET', undefined, '')).status).toBe(401);
+  expect((await request(path)).status).toBe(401);
+  expect((await request(path, 'GET', undefined, '', { Cookie: otherCookie })).status).toBe(404);
+  const browser = (suffix = '', method = 'GET', data?: unknown) => request(path + suffix, method, data, '', { Cookie: cookie, 'X-Cortex-User': userId });
+  expect(await browser().then(response => response.json())).toMatchObject({ data: { workspace: { configured: false, disabled: false }, environments: [], instructions: [] } });
+  expect((await browser('/environments', 'POST', { requestId: 'missing-config' })).status).toBe(400);
+  const config = { runtime: 'ssh', serverId: 'other-account-host', image: '', repository: '', ref: '', directory: '', session: '', agentCommand: '', context: '', namespace: 'default', secretRef: '', imagePullSecret: '' };
+  expect((await browser('/environments', 'POST', { requestId: 'missing-host', config })).status).toBe(404);
+  expect((await request('/api/workspace-environments/missing/panes', 'GET', undefined, '', { Cookie: cookie })).status).toBe(404);
+  const online = await device('root');
+  online.doc.getMap('workspaceFields').set(`${node.id}/mode`, 'disabled');
+  await expect.poll(async () => (await browser().then(response => response.json()) as any).data.workspace.disabled).toBe(true);
+  expect((await browser('/discover', 'POST', { config })).status).toBe(400);
+  await value(`/api/v1/projects/${project.id}`, 'DELETE');
+  expect((await browser()).status).toBe(404);
 });
 it('publishes the canonical Agent guide anonymously and keeps documentation links discoverable', async () => {
   const source = readFileSync(new URL('../../../docs/skills/nexus-api/SKILL.md', import.meta.url), 'utf8');

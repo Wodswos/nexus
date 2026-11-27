@@ -1,17 +1,21 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { SlidersHorizontal } from 'lucide-react';
 import { cn, SelectField } from '@nexus/ui';
 import { useNexusData } from '@nexus/crdt';
-import { readTaskFilters, TASK_STATUSES, TASK_PRIORITIES } from './taskFilters';
+import { readTaskFilters, readTaskSort, selectWorkspaceTasks, TASK_STATUSES, TASK_PRIORITIES } from './taskFilters';
 import { useTaskWindow } from './TaskWindowControls';
 
 export function TaskFilterControls() {
   const [params, setParams] = useSearchParams();
   const filters = readTaskFilters(params);
+  const data = useNexusData();
   const { range } = useTaskWindow();
+  const priorityPreset = filters.focus === 'all' && range.scope === 'all' && filters.status === 'unfinished' && !filters.tagId;
   const selected =
-    filters.focus === 'current'
+    priorityPreset && (filters.priority === 'high' || filters.priority === 'unreviewed')
+      ? filters.priority
+      : filters.focus === 'current'
       ? 'current'
       : filters.focus === 'overdue'
         ? 'overdue'
@@ -22,22 +26,36 @@ export function TaskFilterControls() {
             : null;
   const presets = [
     ['all', '全部', '全部任务，不限制日期或工作状态'],
-    ['current', '当前工作', '所有手动标为进行中的任务，以及所有未完成的逾期任务'],
+    ['current', '推进与逾期', '已到开始时间的进行中任务，以及所有未完成的逾期任务'],
+    ['high', '高优', '集中查看未完成的 P0 / P1 任务，按优先级排列'],
+    ['unreviewed', '待分级', '尚未主动选择优先级的未完成任务，当前按 P3 处理'],
     ['week', '本周', '本周有开始、截止或关联日程的任务'],
     ['overdue', '逾期', '截止时间已过且尚未完成的任务'],
   ] as const;
+  const counts = useMemo(() => {
+    const result = { high: 0, unreviewed: 0 };
+    for (const key of ['high', 'unreviewed'] as const) {
+      const query = new URLSearchParams(params);
+      query.set('work', 'all'); query.set('scope', 'all'); query.set('taskStatus', 'unfinished'); query.set('taskPriority', key);
+      query.delete('taskTag'); query.delete('focusTask');
+      result[key] = selectWorkspaceTasks(data, query, new Date()).matching.size;
+    }
+    return result;
+  }, [data, params]);
   return (
     <div role="region" aria-label="工作概览" className="flex shrink-0 items-center gap-1 text-xs">
       {presets.map(([key, label, hint]) => (
         <button
           key={key}
           type="button"
+          aria-label={label}
           aria-pressed={selected === key}
           title={hint}
           onClick={() => {
             const next = new URLSearchParams(window.location.search);
             next.delete('focusTask');
-            next.set('work', key === 'week' ? 'all' : key);
+            const priorityPreset = key === 'high' || key === 'unreviewed';
+            next.set('work', key === 'week' || priorityPreset ? 'all' : key);
             next.set('scope', key === 'week' ? 'week' : 'all');
             next.delete('from');
             next.delete('to');
@@ -46,6 +64,11 @@ export function TaskFilterControls() {
             next.delete('taskStatus');
             next.delete('taskPriority');
             next.delete('taskTag');
+            if (priorityPreset) {
+              next.set('taskPriority', key);
+              next.set('taskStatus', 'unfinished');
+              next.set('taskSort', 'priority');
+            }
             setParams(next, { replace: true });
           }}
           className={cn(
@@ -56,6 +79,7 @@ export function TaskFilterControls() {
           )}
         >
           {label}
+          {(key === 'high' || key === 'unreviewed') && <span className="ml-1 tabular-nums opacity-70">{counts[key]}</span>}
         </button>
       ))}
     </div>
@@ -164,7 +188,7 @@ export function MoreTaskFilters() {
               options={TASK_PRIORITIES.map((value) => ({
                 value,
                 label:
-                  value === 'all' ? '全部优先级' : value === 'high' ? '高优先级 · P0 / P1' : value,
+                  value === 'all' ? '全部优先级' : value === 'high' ? '高优先级 · P0 / P1' : value === 'unreviewed' ? '待分级 · 默认 P3' : value,
                 ...(/^P[0-3]$/.test(value) ? { color: `var(--${value.toLowerCase()})` } : {}),
               }))}
             />
@@ -208,4 +232,19 @@ export function MoreTaskFilters() {
       )}
     </div>
   );
+}
+
+export function TaskSortControl() {
+  const [params, setParams] = useSearchParams();
+  return <SelectField
+    aria-label="任务排序"
+    value={readTaskSort(params)}
+    className="h-8 w-28 shrink-0 text-[11px]"
+    options={[{ value: 'manual', label: '手动顺序' }, { value: 'priority', label: '优先级排序', description: 'P0 → P3，已完成靠后，父级随最高优先级子任务排列' }]}
+    onValueChange={value => {
+      const next = new URLSearchParams(window.location.search);
+      if (value === 'priority') next.set('taskSort', value); else next.delete('taskSort');
+      setParams(next, { replace: true });
+    }}
+  />;
 }

@@ -12,7 +12,8 @@ export function ReviewTimeline({ reviews }: { reviews: Review[] }) {
   const groups = useMemo(() => {
     const query = search.trim().toLowerCase();
     const sorted = reviews.filter(review => (filter === 'all' || review.kind === filter)
-      && [review.periodStart, dayKeyOf(addDays(dateFromDayKey(review.periodEnd), -1)), review.kind === 'daily' ? '日报' : '周报', review.highlights, review.friction, review.resolution, review.nextSteps]
+      && [review.periodStart, dayKeyOf(addDays(dateFromDayKey(review.periodEnd), -1)), review.kind === 'daily' ? '日报' : '周报', review.highlights, review.plan, review.friction, review.resolution, review.nextSteps,
+        ...[review.facts?.completed, review.facts?.planned, review.facts?.pending].flatMap(tasks => tasks?.map(task => task.title) ?? [])]
         .join(' ').toLowerCase().includes(query))
       .sort((a, b) => b.periodStart.localeCompare(a.periodStart) || a.kind.localeCompare(b.kind));
     const months = new Map<string, Review[]>();
@@ -66,14 +67,16 @@ export function ReviewTimeline({ reviews }: { reviews: Review[] }) {
           const label = review.kind === 'daily' ? '日报' : '周报';
           const end = dayKeyOf(addDays(dateFromDayKey(review.periodEnd), -1));
           const details = [
+            { title: '推进计划', text: review.plan },
             { title: '阻碍与反思', text: review.friction },
             { title: '如何解决？', text: review.resolution },
             { title: '下一步', text: review.nextSteps },
           ].filter(section => section.text?.trim());
           const sections = [
-            { title: review.kind === 'daily' ? '计划与进展' : '进展与收获', text: review.highlights },
+            { title: '实际进展', text: review.highlights },
             ...details,
           ].filter(section => section.text?.trim());
+          const hasSnapshot = review.facts && (review.facts.completed.length > 0 || (review.facts.planned?.length ?? 0) > 0 || review.facts.pending.length > 0 || review.facts.focusMin > 0);
           return <li key={review.id} className="relative">
             <span aria-hidden="true" className={cn('absolute -left-[25px] top-6 h-2 w-2 rounded-full ring-4 ring-[var(--background)] sm:-left-[33px]', completed ? 'bg-[var(--accent-solid)]' : 'bg-[var(--muted-foreground)]')} />
             <article aria-label={`${label} ${review.periodStart}`} className="min-w-0 rounded-xl border border-[var(--border)] bg-[var(--background)] p-4 sm:p-5">
@@ -85,9 +88,12 @@ export function ReviewTimeline({ reviews }: { reviews: Review[] }) {
                 </Link>
                 <span className={cn('inline-flex items-center gap-1 text-[11px]', completed ? 'text-[var(--accent-solid)]' : 'text-muted')}>{completed ? <Check size={12} /> : <PencilLine size={12} />}{completed ? '已复盘' : '草稿'}</span>
               </header>
+              {!!review.facts?.completed.length && <ul aria-label="已完成任务" className="mt-4 space-y-1 text-sm leading-6">
+                {review.facts.completed.slice(0, 3).map(task => <li key={task.id} className="flex min-w-0 items-start gap-2"><Check size={13} aria-hidden="true" className="mt-1.5 shrink-0 text-[var(--accent-solid)]" /><span className="break-words">{task.title}</span></li>)}
+              </ul>}
               {sections.length ? review.kind === 'daily' ? <div className="mt-4">
                 {review.highlights.trim() && <div className="min-w-0">
-                  <h4 className="text-xs font-medium text-muted">计划与进展</h4>
+                  <h4 className="text-xs font-medium text-muted">实际进展</h4>
                   <p className="mt-1.5 whitespace-pre-wrap break-words text-sm leading-6">{review.highlights}</p>
                 </div>}
                 {details.length > 0 && <dl className={cn('space-y-1.5 text-xs text-muted', review.highlights.trim() && 'mt-4 border-t border-[var(--border)] pt-3')}>
@@ -99,7 +105,7 @@ export function ReviewTimeline({ reviews }: { reviews: Review[] }) {
               </div> : <div className="mt-4 grid gap-4 sm:grid-cols-2">{sections.map(section => <div key={section.title} className="min-w-0">
                 <h4 className="text-[11px] text-muted">{section.title}</h4>
                 <p className="mt-1 line-clamp-3 whitespace-pre-wrap break-words text-sm leading-6">{section.text}</p>
-              </div>)}</div> : <p className="mt-4 text-xs text-muted">尚未填写内容，点击日期继续编辑。</p>}
+              </div>)}</div> : !hasSnapshot && <p className="mt-4 text-xs text-muted">尚未填写内容，点击日期继续编辑。</p>}
               {completed && review.facts && <p className="mt-4 border-t border-[var(--border)] pt-3 text-[11px] text-muted">完成 {review.facts.completed.length} 项任务<span className="mx-2">·</span>专注 {fmtDuration(review.facts.focusMin)}</p>}
             </article>
           </li>;

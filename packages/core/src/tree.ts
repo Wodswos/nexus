@@ -165,13 +165,18 @@ export function activeTasks(tasks: Task[]): Task[] {
   return tasks.filter((t) => !t.deletedAt && t.status !== 'archived' && !hidden.has(t.id));
 }
 
-/** 结构性节点(非 TODO):不可完成、无状态/优先级/时间,视图里作纯容器/主题(见 types.Task.kind) */
+/** Historical capability predicate for text nodes and project roots. */
 export function isStructural(t: Task): boolean {
   return t.kind === 'node' || t.project === true;
 }
 
 export function isProject(task: Task): boolean {
   return task.project ?? (task.kind === 'node' && task.parentId === null);
+}
+
+/** A content record can be a leaf or hold children. Project roots have their own identity. */
+export function isTextNode(task: Task): boolean {
+  return task.kind === 'node' && !isProject(task);
 }
 
 /** Keep a project's root and complete descendant tree; a missing project yields no content. */
@@ -191,7 +196,7 @@ export function fullyDoneIds(tasks: Task[]): Set<string> {
   const kids = buildChildrenMap(activeTasks(tasks));
   const done = new Set<string>();
   const visit = (t: Task): boolean => {
-    let all = t.status === 'done';
+    let all = !isStructural(t) && t.status === 'done';
     for (const c of kids.get(t.id) ?? []) all = visit(c) && all;
     if (all) done.add(t.id);
     return all;

@@ -23,12 +23,14 @@ export function DateTimeField({
   className,
   title = '时间',
   autoOpenKey,
+  compact = false,
 }: {
   value: number | null | undefined;
   onChange: (value: number | null) => void;
   className?: string;
   title?: string;
   autoOpenKey?: number;
+  compact?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [mobile, setMobile] = useState(() => window.matchMedia('(max-width: 767px)').matches);
@@ -68,16 +70,19 @@ export function DateTimeField({
       aria-haspopup="dialog"
       aria-expanded={open}
       onClick={mobile ? () => show(true) : undefined}
-      title={title}
+      title={value == null ? title : `${title} · ${new Date(value).toLocaleString()}`}
       aria-label={title}
       className={cn(
         'inline-flex min-h-8 min-w-[112px] items-center justify-between gap-2 rounded-lg border px-2.5 py-1 text-xs outline-none transition-colors hover:border-[var(--border-strong)] focus-visible:ring-2 focus-visible:ring-[var(--ring)]',
         value == null
           ? 'border-dashed border-[var(--border-strong)] text-muted'
           : 'border-[var(--border)] bg-[var(--surface)]',
+        compact && 'min-w-0 w-full gap-1 px-2',
       )}
     >
-      <span className="truncate tabular-nums">{label}</span>
+      <span className={cn('min-w-0 tabular-nums', compact ? 'flex flex-wrap items-center gap-x-1 text-[11px] leading-4' : 'truncate')}>
+        {compact && value != null ? <><span>{new Date(value).getMonth() + 1}/{new Date(value).getDate()}</span>{timeOf(value) !== '00:00' && <span className="whitespace-nowrap text-muted"> · {timeOf(value)}</span>}</> : label}
+      </span>
       <ChevronDown size={12} className="shrink-0 text-muted" />
     </button>
   );
@@ -220,7 +225,7 @@ export function DateTimeField({
           </DialogContent>
         </Dialog>
       )}
-      {value != null && (
+      {value != null && !compact && (
         <button
           type="button"
           aria-label={`清除${title}`}

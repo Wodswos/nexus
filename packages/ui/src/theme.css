@@ -138,28 +138,26 @@ select option, select optgroup { background: var(--surface-raised); color: var(-
   display: none;
 }
 
-/* 优先级色 = 四象限色 = 导图连线色。**固定语义色,不随 accent 主题变**
-   (曾按主题换色:P0 红但 P1 变成主题色,mono 下更是全灰,优先级一眼看不出;
-   现按滴答清单惯例固定 红 P0 / 橙 P1 / 蓝 P2 / 灰 P3)。 */
+/* Fixed priority colors across accent themes: P0 red, P1 amber, P2 blue, P3 teal. */
 :root {
   --p0: #e5484d;
   --p1: #f59e0b;
   --p2: #3b82f6;
-  --p3: #9ca3af;
+  --p3: #168b9b;
   --p0-glow: rgba(229, 72, 77, 0.08);
   --p1-glow: rgba(245, 158, 11, 0.08);
   --p2-glow: rgba(59, 130, 246, 0.08);
-  --p3-glow: rgba(156, 163, 175, 0.06);
+  --p3-glow: rgba(22, 139, 155, 0.09);
 }
 .dark {
   --p0: #fb7185;
   --p1: #fbbf24;
   --p2: #60a5fa;
-  --p3: #a1a1aa;
+  --p3: #45b7c6;
   --p0-glow: rgba(251, 113, 133, 0.09);
   --p1-glow: rgba(251, 191, 36, 0.08);
   --p2-glow: rgba(96, 165, 250, 0.08);
-  --p3-glow: rgba(161, 161, 170, 0.05);
+  --p3-glow: rgba(69, 183, 198, 0.09);
 }
 /* 象限 ↔ 优先级是同一件事(do=P0 plan=P1 delegate=P2 eliminate=P3),别名复用 */
 :root,
@@ -577,3 +575,56 @@ body::before {
     min-height: 40px;
   }
 }
+
+/* Freeform task documents: readable prose without imposing a document template. */
+.task-markdown :is(h1,h2,h3,h4,h5,h6) { font-weight: 600; line-height: 1.5; margin: 1.2em 0 .6em; scroll-margin-top: 1rem; }
+.task-markdown h1 { font-size: 1.45em; }
+.task-markdown h2 { font-size: 1.25em; }
+.task-markdown h3 { font-size: 1.1em; }
+.task-markdown p { margin: .65em 0; }
+.task-markdown :is(ul,ol) { padding-left: 1.5em; margin: .65em 0; }
+.task-markdown ul { list-style: disc; }
+.task-markdown ol { list-style: decimal; }
+.task-markdown li { margin: .2em 0; }
+.task-markdown a { color: var(--accent-solid); text-decoration: underline; text-underline-offset: 3px; }
+.task-markdown pre { overflow-x: auto; padding: .9rem; border-radius: .6rem; background: var(--surface); font-size: .85em; line-height: 1.65; }
+.task-markdown :not(pre) > code { border-radius: .25rem; padding: .1rem .25rem; background: var(--surface); font-size: .9em; }
+.task-markdown blockquote { border-left: 2px solid var(--border-strong); padding-left: 1rem; color: var(--muted); }
+.task-markdown table { border-collapse: collapse; width: 100%; margin: .8em 0; font-size: .9em; }
+.task-markdown :is(td,th) { border: 1px solid var(--border); padding: .4rem .7rem; text-align: left; }
+.task-markdown hr { border-color: var(--border); margin: 1rem 0; }
+.task-markdown .document-section > summary { display: list-item; list-style-position: inside; }
+.task-markdown .document-section > summary :is(h1,h2) { display: inline; }
+.task-markdown .document-section { margin: 1em 0; }
+
+/* Agent workbench: shared semantic surfaces, T3-style density and reading measure. */
+.agent-shell { background:var(--background); color:var(--foreground); font-family:var(--font-sans,system-ui,sans-serif); }
+.agent-topbar { height:52px; min-height:52px; display:flex; align-items:center; gap:12px; padding:0 20px; border-bottom:1px solid var(--border); }
+.agent-reading { max-width:784px; margin-inline:auto; padding-inline:24px; }
+.agent-reading .task-markdown {font-size:15px;line-height:1.65;font-weight:400;}
+.agent-user-message {margin-left:auto;max-width:85%;padding:12px 16px;border-radius:12px;background:var(--surface);overflow-wrap:anywhere;}
+.agent-assistant-message {padding:4px 0;overflow-wrap:anywhere;}
+.agent-message-meta {display:flex;align-items:center;gap:10px;margin-top:8px;font-size:11px;color:var(--muted);opacity:.55;}
+.agent-user-message:hover .agent-message-meta,.agent-assistant-message:hover .agent-message-meta,.agent-message-meta:focus-within {opacity:1;}
+.agent-tool {font-size:12px;color:var(--muted);border-radius:8px;}
+.agent-tool>summary {display:flex;align-items:center;gap:6px;min-height:30px;padding:3px 6px;cursor:pointer;}
+.agent-tool>summary::before {content:'›';font-size:15px;}
+.agent-tool[open]>summary::before {transform:rotate(90deg);}
+.agent-tool>summary:hover {background:var(--surface);border-radius:8px;}
+.agent-tool pre {max-height:280px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;background:var(--surface);padding:12px;border-radius:8px;font-size:12px;}
+.agent-request {border:1px solid var(--border-strong);border-radius:10px;padding:12px;background:var(--surface);}
+.agent-composer {border:1px solid var(--border-strong);border-radius:14px;background:var(--surface);box-shadow:0 2px 8px #00000005;}
+.agent-composer:focus-within {border-color:var(--accent-solid);}
+.agent-composer textarea {display:block;resize:none;min-height:84px;max-height:220px;width:100%;background:transparent;padding:12px 14px;outline:none;font-size:15px;line-height:1.6;}
+.agent-context-panel {display:flex;flex-direction:column;width:360px;max-width:40%;border-left:1px solid var(--border);background:var(--background);}
+.agent-terminal {display:flex;flex:1;flex-direction:column;min-height:0;overflow:hidden;border-top:1px solid var(--border);}
+.agent-terminal-fullscreen {position:fixed;inset:0;z-index:60;height:100dvh;max-height:100dvh;background:var(--background);}
+.agent-search {display:flex;align-items:center;gap:7px;margin:8px 4px 12px;padding:6px 8px;color:var(--muted);border:1px solid var(--border);border-radius:8px;}
+.agent-search input {width:100%;min-width:0;background:transparent;font-size:12px;outline:none;}
+.agent-group {display:flex;align-items:center;gap:4px;width:100%;padding:12px 8px 6px;color:var(--muted);font-size:11px;}
+.agent-nav-row {display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;font-size:13px;min-height:36px;}
+.agent-nav-row:hover,.agent-nav-row:focus-visible {background:var(--surface);}
+.agent-nav-row[aria-current=page] {background:var(--accent-soft,var(--surface-raised));}
+@media(max-width:1100px){.agent-context-panel{position:absolute;right:0;top:52px;bottom:0;z-index:20;max-width:90%;box-shadow:-8px 0 24px #00000010;}}
+@media(max-width:767px){.agent-reading{padding-inline:14px;}.agent-topbar{padding-inline:12px;}.agent-composer textarea{font-size:16px;}.agent-user-message{max-width:93%;}.agent-context-panel{top:104px;max-width:100%;width:100%!important;}.agent-nav-row{min-height:44px;}}
+@media(prefers-reduced-motion:reduce){.agent-shell *{scroll-behavior:auto!important;}}

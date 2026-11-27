@@ -1,3 +1,4 @@
+import { pasteTaskTitle } from '@/shared/taskTitlePaste';
 import React, { useEffect, useRef, useState } from 'react';
 import { Inbox, Hash, AlertTriangle, Clock, Minus } from 'lucide-react';
 import { Dialog, DialogContent, Badge } from '@nexus/ui';
@@ -45,6 +46,7 @@ export function QuickCapture() {
     store.createTask({
       title: p.title,
       status: 'inbox',
+      startAt: p.startAt ?? null,
       dueAt: p.dueAt ?? null,
       estimateMin: p.estimateMin,
       priority: p.priority ?? null,
@@ -75,6 +77,7 @@ export function QuickCapture() {
         <input
           ref={inputRef}
           value={text}
+          onPaste={event => pasteTaskTitle(event, setText)}
           disabled={saving}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => {

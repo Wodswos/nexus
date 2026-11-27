@@ -1,10 +1,11 @@
+import { pasteTaskTitle } from '@/shared/taskTitlePaste';
 import { workspaceTaskDefaults } from '../taskFilters';
 import React, { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { Button, Input } from '@nexus/ui';
-import { isProject, newOrder, type Priority } from '@nexus/core';
+import { startOfDay, isProject, newOrder, type Priority } from '@nexus/core';
 import { useNexus, useNexusData } from '@nexus/crdt';
 import { isComposing } from '@/shared/ime';
 
@@ -72,6 +73,7 @@ export function CalendarTaskDraft({
           title: title.trim(),
           ...workspaceTaskDefaults(new URLSearchParams(window.location.search)),
           parentId: projectId || null,
+          startAt: startOfDay(dueAt).getTime(),
           dueAt,
           priority,
           important: priority === 'P0' || priority === 'P1',
@@ -124,6 +126,7 @@ export function CalendarTaskDraft({
           aria-label="新任务标题"
           placeholder="准备做什么？"
           value={title}
+          onPaste={event => pasteTaskTitle(event, setTitle)}
           disabled={created.current}
           onChange={(event) => setTitle(event.target.value)}
           onCompositionStart={() => {

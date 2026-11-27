@@ -19,14 +19,14 @@
 
 ## 服务与公网
 
-Node.js ≥22.13;推荐 Docker Compose。单进程提供静态 Web、HTTP API 和两条 WebSocket 通道。
+Node.js ≥22.13;推荐 Docker Compose。单进程提供静态 Web、HTTP API、三条 WebSocket 通道（数据同步、旧 SSH 终端、Workspace终端）及 Agent SSE 事件流。
 
 ```bash
 PUBLIC_ORIGIN=https://nexus.example.com docker compose up -d --build
 curl http://127.0.0.1:30090/healthz
 ```
 
-`PUBLIC_ORIGIN` 必须是浏览器实际使用的来源(协议、域名和可选端口)。HTTPS 反向代理需要透传 `/api/sync`、`/api/tmux/attach` 的 WebSocket Upgrade。保留同源访问,无需开放 CORS。Tailscale Serve/Cloudflare Tunnel 也需把此来源设置为其实际 HTTPS 地址;仅给 Node 的 HTTP 端口加 HTTPS URL 不会自动提供 TLS。
+`PUBLIC_ORIGIN` 必须是浏览器实际使用的来源(协议、域名和可选端口)。HTTPS 反向代理需要透传 `/api/sync`、`/api/tmux/attach`、`/api/workspace-terminal/attach` 的 WebSocket Upgrade；`/api/agents/*/stream` 是 SSE，应关闭响应缓冲并允许长连接。保留同源访问,无需开放 CORS。Tailscale Serve/Cloudflare Tunnel 也需把此来源设置为其实际 HTTPS 地址;仅给 Node 的 HTTP 端口加 HTTPS URL 不会自动提供 TLS。
 
 `COOKIE_SECURE` 在 Compose 中默认 `true`。本机/受信内网 HTTP 调试可用:
 
@@ -49,7 +49,7 @@ data/ssh/<账号 UUID>/id_ed25519
 # 或 id_rsa;同目录 known_hosts 保存该账号信任的主机
 ```
 
-不再挂载宿主机 `~/.ssh`,禁用全局 SSH 配置、默认密钥和 agent。目标格式为 `user@host[:port]`,IPv6 写作 `user@[::1]:22`。两个 Nexus 账号若使用同一远端 UNIX 账号和凭据,远端权限仍相同;需要远端会话隔离时应配置不同的 UNIX 账号/凭据。Nexus 无法隔离远端机器本身授予的权限。
+不再挂载宿主机 `~/.ssh`,禁用全局 SSH 配置、默认密钥和 agent。目标格式为 `user@host[:port]`,IPv6 写作 `user@[::1]:22`。旧 SSH/tmux 工具若两个 Nexus 账号使用同一远端 UNIX 账号和凭据,远端权限仍相同,应配置不同的 UNIX 账号/凭据。新的 Workspace 执行入口会记录真实 machine-id + UID 并拒绝跨账号复用该身份；这项检查不改变远端机器本身授予的 OS 权限。
 
 旧客户端档案在账户首次在线时迁入 vault 并移除同步中的明文密码。旧快照、历史客户端及旧备份可能仍包含明文凭据,应更换曾保存的密码并按敏感文件保管旧备份。被删的服务端档案不会由现代客户端自动重建;历史链接可在设置中重新配置。
 
@@ -259,7 +259,7 @@ Ctrl/⌘ + Enter 查看任务详情。Tab 添加子任务，Enter 添加同级�
 跨夏令时不漂移。一次手势及其惯性只翻一页；纵向／近对角线滚动、捏合缩放和任务拖动不触发翻页。
 放大后的时间轴可用横向滚动条或 Shift + 滚轮平移，也可用区间两侧的箭头翻页。
 
-五个视图共用「全部／当前工作／本周／逾期」、时间区间和更多筛选（状态、优先级、标签）。
+五个视图共用「全部／当前工作／高优／待分级／本周／逾期」、时间区间和更多筛选（状态、优先级、标签）。
 「进行中」仅指手动标记为 doing；「当前工作」为进行中或未完成逾期的并集，不限制历史日期。
 「本周」为按账号起始日设置计算的自然周，匹配任务日期或关联日程；不自动改变任务状态。
 快捷按钮重新设定工作与日期范围并清除额外条件；更多筛选和日期范围按交集计算。
@@ -272,9 +272,9 @@ Ctrl/⌘ + Enter 查看任务详情。Tab 添加子任务，Enter 添加同级�
 任务菜单「清除日期」同时清除开始与截止日期，支持批量操作、一次撤销和本地持久化；
 不改动子任务或关联日程。详情中单独日期字段的清除按钮只清除对应字段。
 
-## 任务工作区
+## 节点 Workspace 与相关资源
 
-任务详情正文按「日期与优先级 → 工作区 → 描述 → 子任务」排列；列表、导图、甘特、四象限和日历共用同一详情面板。
+任务详情正文按「日期与优先级 → Workspace → 相关资源 → 描述 → 子任务」排列；列表、导图、甘特、四象限和日历共用同一详情面板。
 开始／截止日期使用月历面板，支持今天、明天、下周、手动日期和时间。点击「应用时间」才保存，取消或 Esc 放弃草稿；
 开始日期确认后，原先未设置的截止日期会自动打开，取消截止编辑保留已确认的开始日期。日期月历遵循账号的周起始日。
 
@@ -282,12 +282,12 @@ Ctrl/⌘ + Enter 查看任务详情。Tab 添加子任务，Enter 添加同级�
 支持键盘方向键、Home／End、Enter 和 Esc。关闭子面板返回原控件，不同时关闭任务详情。
 桌面日期区间可点击日历按钮选择或直接输入；手机自定义区间显示月历、区间高亮和天数预览，点击「应用日期」才更新范围。
 
-任务详情中的「工作区」集中保存这项任务使用的 tmux、网页、GitHub PR、dsh、Agent 和笔记链接。
+任务详情中的「相关资源」集中保存这项任务使用的 tmux、网页、GitHub PR、dsh、Agent 和笔记链接。
 点击「添加」选择资源类型；未使用的类型不占据表单。每类可关联多项，同一资源可以分别关联不同任务，
 同一任务内重复添加相同资源会沿用已有记录。普通 GitHub PR 网址会自动识别，也可显式添加 Enterprise PR。
 
 资源可以命名、重命名、置顶，以及通过菜单上移／下移；排序在置顶和普通资源组内分别生效。
-任务顶部提供工作区定位按钮及前三个置顶资源的快捷入口。名称、排序、置顶和目标随账号同步，
+任务顶部提供资源定位按钮及前三个置顶资源的快捷入口。名称、排序、置顶和目标随账号同步，
 包含在 JSON 和 Yjs 备份中；沿用原有 links 文档和关联 ID，旧 tmux、Agent、Obsidian、语雀及网页记录直接显示。
 
 网页和 PR 在新标签页打开；本阶段不枚举或定位已有浏览器标签页，不查询 PR 的实时状态。
@@ -299,6 +299,14 @@ tmux 支持关联已有会话、创建并关联，以及打开现有终端弹窗
 解除关联、完成任务和软删除任务均不会结束远端会话；
 「结束远程会话」需要单独确认，并保留资源关联以供之后重新连接或解除。连接失败与暂无会话分别显示，
 不会自动移除资源。连接状态保留在当前设备，不作为工作区配置同步。
+
+### 执行 Workspace
+
+所有节点都可保存运行配置，后代按字段继承。详情中的 Workspace 支持 SSH/tmux、Linux 独立用户、Docker 容器和 Kubernetes Pod；可使用账号自有 SSH 连接控制主机，Kubernetes 也可直接连接 API。配置后创建或复用Workspace，再创建独立 Agent 或选择准确的已有 tmux pane。配置字段、快照和操作细节见 [Workspace Agent 设计](ui-design/WORKSPACE_AGENT_DESIGN.md)。
+
+通过 SSH 控制时需要可用的 SSH 凭据。SSH 后端需要 tmux 和 git，容器后端还要求该主机可操作 docker 或 kubectl。镜像应包含 sh、tmux、git 和所用 Agent，root 的 apt／apk 镜像可在准备时安装缺少的 tmux／git。Git／Agent 凭据以远端 env 文件或 Kubernetes Secret 引用。SSH/kubectl 使用控制主机已有 kubeconfig，直连 Kubernetes 使用本账号保存的 API 凭据。
+
+workspace_records 保存各账号环境、配置快照及指令历史。部署和恢复时随完整 data 备份，业务 JSON 备份保存节点配置和环境 ID。服务重启后，中断的远端操作显示待核对，通过目标输出或「检查」核对现场，再继续操作。运行中的容器／Pod 保留到用户主动结束，创建失败时也可查看日志、重试准备或结束环境。
 
 ## 习惯与提醒
 
@@ -346,10 +354,15 @@ HTTP 公网网页仍只保证应用内提醒；安全上下文且浏览器支持
 
 「复盘」提供日报、周报和时间线。时间线按复盘日期倒序、按月分组展示全部历史
 日报与周报（含草稿），支持类型筛选、搜索日期与正文，点击日期查看或继续编辑。
-第 02 项「哪里卡住了，为什么？」下增加独立的「如何解决？」输入，随复盘同步、
-备份并导出至 Markdown；旧复盘的这一字段默认为空。
-草稿随账号同步并包含在 JSON 备份中;
-点击「完成复盘」后保存任务与专注汇总快照,继续编辑会恢复为草稿。
+最上方「真正推进了什么」自动列出本期完成的任务，并可补充阶段进展。
+「需要推进什么」按开始／截止日期带入本日或整周的任务，按优先级排列，单独保存计划文字。
+「哪里卡住了」列出截至所选日期尚未完成的已排期任务，包含更早遗留和只有开始日期的任务。
+进行中的周报以今天为截止日，后续几天的任务仍显示在本周计划中。
+草稿中的任务可以直接勾选完成，按实际完成时间进入对应日报和周报的进展列表，
+计划中保留完成标记，未完成列表同步移除。阻碍原因和「如何解决」可分别补充文字。
+草稿随账号同步并包含在 JSON 备份中。
+有任务或专注记录时可直接「完成复盘」，保存计划、完成、未完成列表与专注汇总快照。
+继续编辑恢复为草稿并重新读取当前任务。旧复盘的原文和已有快照继续保留，新增计划文字默认为空。
 默认提醒为设备本地时间每天 21:30、每周日 20:00,可在复盘页面调整或关闭。
 提醒在应用打开时检查,未完成的最近一期会在下次打开时提示,可推迟一小时;
 不提供网页关闭后的后台定时推送。工作汇总基于当前任务状态与已记录的专注会话,
@@ -374,3 +387,144 @@ Agent REST API 覆盖任务、项目、习惯打卡与复盘；在设置的「Ag
 | 离线启动失败 | 是否曾在线完成生产 SW 安装,是否清过浏览器存储 |
 | 登录后数据不同 | 检查账号;匿名迁移不会重复复制到后续账号,可从备份恢复 |
 | 忘记密码 | 保留完整数据卷和浏览器数据库,先备份;当前没有自助重置接口,勿删除数据重建 |
+
+## Workspace Agent 运行和恢复
+
+Nexus 后端直接连接 SSH 或 Kubernetes，无需部署独立 Runner。Docker 由所选 SSH 主机执行。新 Agent 使用目标环境已安装的 ACP 命令，普通终端 CLI 可通过 tmux 启动或关联。环境需要 sh、tmux，以及准备仓库／独立 worktree 时使用的 git。模型凭据由目标环境、SSH env 文件或容器 Secret 提供。
+
+直连 Kubernetes 在「设置 → Kubernetes 集群」（SSH 服务器之后）管理账号连接，也可在模板编辑中添加。选择连接时将集群的 Namespace 带入模板，已保存模板的显式 Namespace 保留。填写 HTTPS API 根地址、CA（可留空采用系统信任链）、Token 或成对客户端证书／私钥。集群须支持 v5 WebSocket exec（Kubernetes 1.29+）。所需 namespace Role 示例为以下规则，实际绑定到为该账号配置的 ServiceAccount。
+
+```yaml
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "create", "delete"]
+  - apiGroups: [""]
+    resources: ["pods/exec"]
+    verbs: ["get", "create"]
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims"]
+    verbs: ["get", "create", "delete"]
+```
+
+凭据不会返回给浏览器或进入 CRDT。`data/kubernetes/.key` 与同目录的账号密文文件必须一起备份。命名 Workspace 位于 root 文档，环境、组合创建意图及 Agent 消息／事件／报告位于 SQLite。升级继续停服备份完整 `data/`，不得只复制数据库而遗漏凭据密钥。
+
+Agent 必须能访问 Prompt 中的 Nexus URL。默认由 PUBLIC_ORIGIN 产生回调地址；部署环境变更时需核对从 SSH 主机、容器或 Pod 到这个地址的连通性。不要在 URL 中放入 API Token。
+
+服务启动自动恢复排队的创建意图。已经就绪的 tmux Agent 在 Nexus 重启时保留有效执行凭据和状态，启动后先核对原 pane 身份，再恢复监测。ACP 连接随服务关闭，继续撤销凭据并按能力提供恢复或新开会话。发送中断的消息保留待核对，不自动重投。结束 Agent 保留工作目录，清理环境前先停止其中活动的 Agent。Kubernetes 连接的地址或 CA 变更需重新关联环境，更新 Token 可沿用原环境。
+
+事件记录按 Agent 限制为 16 MiB 或 20000 条，达到上限后需新建 Agent。每个账号的活动会话和远端通道有并发预算，返回 429 时先结束不用的会话再重试。普通 tmux 不提供可靠的结构化执行状态，应通过终端或工作报告确认结果。
+
+
+## Workspace与 Agent 升级（2026-11-24）
+
+本次新增 task_revisions、agent_rounds 等 SQLite 表，保留原 CRDT、任务 ID、环境实例和模板。部署前必须备份完整 data；新表自动创建，不清理历史库。正文版本从升级后的首次记录开始保留，无法还原上线前未记录的编辑。
+
+Workspace 模板支持远程与执行侧本地仓库，基准分支 ref 可以是自定义开发分支。新建实例使用持久目录布局和独立 Git 分支；旧实例不移动已有工作目录。Docker 默认新建命名数据卷，Kubernetes 默认创建 PVC；集群角色需补充 PVC get/create/delete 权限。删除数据和销毁实例分开。
+
+新 SSH 工作目录默认为远端 `$HOME/.local/share/nexus/workspaces/<environment-id>/repo`，Agent 并行工作树位于相邻的 `nexus-agent/<worktreeName>`（旧 Agent 保留原有目录和分支），不会建在源 Git 仓库旁或切换源仓库分支。`workRoot` 是持久父目录，新实例追加自己的 ID。Linux 默认使用 `/var/lib/nexus/workspaces/<environment-id>/data`（仓库和工作树）与相邻 home；Docker／Kubernetes 默认是容器内 `/workspace/<environment-id>`。接口显示准备后解析的绝对路径，不能把它理解为 Nexus 服务容器的本地路径。
+
+Linux 新用户预设需要在 SSH 控制主机上安装 git、tmux、sudo、用户管理和进程管理工具，并允许 Nexus 的管理连接非交互执行生成的受管用户管理脚本。执行用户由实例 ID 派生，没有 sudo 或 Docker 组权限。不要将管理连接凭据配置为 Agent 模型凭据。自定义 Linux 数据根及祖先需 root 持有且不可被普通用户写入。能力检查与失败日志会指出缺失工具；Nexus 不自动改变现有 SSH 账号的 sudo 策略。
+
+Linux 预设还需要 prlimit；当前以 `--nproc` 限制独立 UID 的进程数，默认 256，不实现 CPU／内存配额。CPU／内存限制使用 Docker 或 Kubernetes 运行方式；Kubernetes 的进程数限制由集群策略提供。实机验证前检查目标镜像／主机的工具、UID 权限、存储和资源控制能力。
+
+反向代理需增加 `/api/workspace-terminal/attach` WebSocket Upgrade；`/api/agents/*/stream` 为 SSE，需要关闭响应缓冲。终端使用一次性网页登录票据，不把 Agent 执行 Token 放进 URL。关闭终端仅断开连接。
+
+Agent 运行需要目标环境安装选定 CLI／ACP 适配器并配置模型与 Git 凭据。预设或握手成功不证明真实模型调用成功。生产验证只读；实际 SSH、Docker、Kubernetes 的创建/删除回归在用户明确指定的测试目标或隔离实例运行，不新增生产 Task 或账号。
+
+### Workspace 的 HTTP 回归
+
+`e2e/specs/workspace-http.spec.ts` 使用独立临时服务器的非 loopback 网卡地址，明确断言非安全上下文及 randomUUID 不可用；验证模板保存、Workspace 创建表单和幂等重试。不要仅用 localhost 验证公网 HTTP：浏览器对 localhost 的安全上下文特例会开放不同的 API。测试不使用生产账号或数据。
+
+### Workspace 创建流程更新（2026-11-24）
+
+新建 Agent 使用 `nexus-agent/` 分支与同名目录层，记录 worktreeLayoutVersion=2；旧记录继续使用 worktrees 或 .nexus-worktrees，不移动目录、不改分支。Git 状态检查与数据清理同时识别两种目录。新实例使用账号、Task 与幂等请求派生的唯一 ID，使只读路径预览与实际创建一致；旧幂等请求继续返回原实例。
+
+路径预览 `/api/workspaces/{taskId}/preview` 不持久化或创建资源，默认 SSH 路径需只读访问远端 HOME；网络不可用时显示读取失败，不能把占位文字当成实际路径。创建 Agent 不要求阶段表单，默认轮次为 auto；已有轮次与会话不改写。
+
+相关回归：workspacePreview、workspaceGit、agents、kubernetes 服务端测试，以及 workspace-flow、workspace-creation、workspace-defaults、workspace-http 浏览器测试。批量浏览器回归使用独立临时服务分组运行，避免 20 次/分钟的登录注册限流；不要为测试削弱线上限流。
+
+### Agent 启动提示 no such window（2026-11-24）
+
+旧启动流程先运行 CLI，再设置 tmux 的 remain-on-exit；命令立即退出时窗口会先消失，后续设置只返回 no such window，掩盖实际错误。当前流程先创建等待 pane，标记归属并启用退出保留，再启动命令；失败保留退出码与输出，重试仅回收归属与进程身份匹配的旧 pane。Workspace 准备错误会直接显示在 Agent 提示中。
+
+NVM 安装的 CLI 可能只在交互式 .bashrc 中可见。启动与连接检测现在使用一致的登录 Shell 环境；PATH 中找不到命令时，只读取当前执行用户已有的 NVM 默认 Node 路径，供该进程及其子进程使用。不安装软件、不修改 shell 配置或 NVM 默认版本，也不替换 PATH 中已能找到的命令。显式自定义复杂 Shell 命令继续由用户控制其环境。
+
+回归使用独立 tmux socket，覆盖 CLI 立即退出、保留输出、修正命令后的重试、运行后退出，以及保留 Workspace 的其他 pane。生产排查仅检查命令路径和环境状态，不向用户 Agent 自动重投任务指令。
+
+### Agent 终端重复输出与 SSH reset（2026-11-24）
+
+旧实现约每 800ms 读取最近 200 行终端，每次读取包含多次 SSH 请求，并将变化后的整屏内容作为新事件保存。TUI 重绘会产生大量重叠快照，不能当作连续对话。tmux 工作台现默认用持续 WebSocket／远端 PTY 展示同一终端屏幕；切换「工作记录」查看消息和报告，历史普通快照仅显示最近一份，数据库历史不删除。
+
+后台改为每 30 秒检查 pane 身份与存活，不再轮询画面。`kex_exchange_identification`、connection reset 等暂时检查失败按 60／120 秒退避，不撤销回调凭据，不重启 Agent。浏览器终端按 2／4／8／16／30 秒有界重连同一 pane；权限失效或 pane 身份变化不自动重连。打开完整终端会移除内嵌连接，尺寸变化在 750ms 后按需重连。
+
+SSH reset 本身不能证明 CLI 退出，也不能仅凭客户端错误断言 SSH 服务端限流。若持续发生，检查远端进程、SSH 服务日志和连接容量。旧版本已撤销凭据的会话需点击「恢复连接」并重新读取凭据文件；恢复不会自动重投已确认送达或状态不明的指令。生产验证不替用户发送工作指令。
+
+回归覆盖独立 tmux 的低频检查、短暂故障后 Token 保持有效和指令不重放、真正退出、终端票据和账号隔离、连续输出、桌面／窄屏布局、同 pane 自动重连以及历史快照合并。
+
+### Agent 首次读取成功后返回 401（2026-11-24）
+
+旧实现会在 Nexus 部署关闭服务时撤销 tmux Agent 凭据，即使远端 CLI 仍在运行；恢复连接又更换凭据，长期缓存旧 Token 的 Agent 会持续 401。当前版本区分 Nexus 控制连接与 tmux 进程生命周期，已就绪会话跨部署保留有效凭据，恢复相同 pane 时复用仍有效的文件；原子替换文件避免读到空白或半写入内容。
+
+有效请求会续期，连续七天不使用后过期。停止／确认进程退出／身份变化仍撤销；已过期或撤销的 Token 不因重试而复活。初次升级时旧服务关闭逻辑仍会撤销，可在停服备份后迁移停服前仍有效、原 pane 未变化且仅因正常服务关闭而断开的 tmux 会话。只保留原 Token 的哈希及到期时间，不从历史备份恢复早已撤销的 Token。
+
+生产排查只使用当前凭据文件读取上下文／消息接口，记录 HTTP 状态而不打印 Token 或业务内容。当前文件返回 200 而 Agent 仍报 401，通常是 Agent 缓存了旧值；让它重新读取文件，使用原 requestId 重试，不反复新建 Agent 或重放任务。回归覆盖真实隔离 tmux 的跨服务重启、读取／确认／waiting 回报、同 pane 恢复复用 Token、停止撤销、进程替换、到期和续期。
+
+## 多账号登录（2026-11-26）
+
+设置页的账号区直接列出已登录身份，可直接切换、添加或退出。旧 `/accounts` 地址自动转到 `/settings#accounts`。
+
+新增 `browser_logins`、`browser_sessions` 表，自动建表，旧登录无需强制退出。
+首次添加另一个账号时，将当前有效会话纳入本浏览器列表；不延长旧会话原到期时间。
+`nexus_accounts` 为随机 HttpOnly Cookie，数据库仅保存其 SHA-256；来源、Secure、SameSite 配置沿用现有部署。
+它只授权本浏览器已验证过的账号，活动业务身份仍为 `cortex_session`。
+
+切换／退出断开旧同步与终端、使未使用的票据失效；后台 Agent 生命周期和执行凭据不受影响。
+切换最多保存 10 个账号，密码验证后的授权期限为 180 天；仅切换不会永久续期。
+退出必须联网完成服务端撤销；不删除 IndexedDB 或业务数据。其他设备保持登录。
+桌面源码同步支持两种私有原生 Cookie；桌面安装包需在有 Rust/Tauri 环境的构建机重新发布，服务器发布不更新已安装客户端。
+
+仍需先构建、保留回滚镜像、停服备份完整 data 后替换容器；无需再次运行历史 Agent 凭据迁移。
+回归使用独立临时服务，覆盖账号切换、跨标签页身份、失败登录恢复、旧连接／票据失效和退出撤销。
+
+## 结构化 Agent 宿主（2026-11-27）
+
+Nexus 构建会生成 `apps/server/dist/agent-host.cjs`。新结构化 Agent 首次启动时，经已有的 SSH／Kubernetes exec 通道将宿主安装到 Workspace 持久根目录下 `.nexus-sessions/<agent-id>-<代次>/`。不需要额外公网端口，也不需要单独部署调度 Runner。
+
+执行环境需要 Linux `/proc`、Node.js 18+（建议 22/24）及选择的产品：
+
+- Codex：安装支持 `codex app-server` 的 CLI，并在所属执行用户／指定 CODEX_HOME 中登录。
+- Claude：在 Workspace 可解析位置或相同 Node 安装的全局模块中安装 `@anthropic-ai/claude-agent-sdk`，并完成认证。仅安装 `claude` CLI 不等于 SDK 可用。
+- ACP：配置实际支持 ACP v1 的命令；连接检测仅握手，不发工作 Prompt，不证明模型认证可用。
+- 人工终端需要 tmux；新 UI 的 on-demand Workspace 准备不依赖它。旧 Workspace 保持原启动规则。
+
+SSH 可读取执行用户已有的 NVM default 来寻找 Node／CLI；不会安装工具、编辑 shell 配置或切换 NVM default。容器／Pod 应使用已经准备好依赖的镜像。Provider 的 configDirectory 必须是执行侧绝对路径；显式选择它时会清理继承的模型 API Key 环境，避免错误复用另一配置的凭据。
+
+### Agent 执行网络与代理
+
+「设置 → 服务器 → 配置」支持 Agent 代理开关、URL 及 `NO_PROXY` 列表。它属于当前账号的 SSH 连接档案，保存到 `servers.agent_proxy`，完整 data 备份包含该配置。旧客户端省略 `agentProxy` 时保留配置，显式 `null` 才移除 Nexus 的代理注入。URL 支持 HTTP(S)／SOCKS5(H)，不接收用户名密码或查询参数；需认证的代理继续使用执行环境的私有 env 文件。
+
+SSH 和独立用户 Agent 启动时注入大小写两套 `HTTP_PROXY`、`HTTPS_PROXY`、`ALL_PROXY`、`NO_PROXY`；服务器显式代理配置优先于 env 文件中的代理变量。loopback 和 Nexus 的 PUBLIC_ORIGIN 主机自动绕过代理，保障任务 API 回调。未配置时沿用执行环境；关闭开关不会清空用户自行设置的环境变量。Nexus 服务及 SSH 连接本身不走此代理，已有 tmux pane 不被改写；Docker／Pod 用其可访问的地址单独配置 env／Secret。
+
+SSH 的非交互启动不调用 `.bashrc` 中手动定义的 `proxy on`。`failed to refresh available models: request timed out` 是 Codex 模型目录诊断；需结合真实 turn 和网络情况判断。若同时出现 `Reconnecting... waiting for network`，在执行用户环境核对目标模型地址及代理。更改配置不会热更新已运行进程：先取消当前执行并确认回执，再结束 Agent、恢复原会话；不创建替代 Task、不自动重发初始指令。未知投递须先核对结果，不能绕过保护。
+
+宿主通过所属 UID 的私有 Unix socket 通信；目录 0700，配置、Token 与状态文件 0600。不同 Nexus 账号的 SSH Workspace 不能共用同一 machine-id + UID；已有远端凭据本身仍决定 OS 权限。共享执行身份时应改为独立用户／容器／Pod，而不是仅更改显示名称。
+
+故障排查按以下顺序进行，避免重复执行：
+
+1. 查看 Agent 错误和启动日志，区分安装／登录失败、执行失败及仅连接中断。
+2. Nexus 重启优先重新连接原宿主；凭据文件与有效 Token 保留，不重放初始消息。
+3. 宿主也重启且原生进程尚存时，自动恢复会被阻止。核对原进程／目录；需要结束时使用“结束 Agent”，等待实际退出确认。
+4. 未知投递在工作台核对为执行结束／中断后才能继续队列；核对不回滚已发生的代码修改。
+5. state.json 损坏时不要删除它“尝试恢复”；保留现场、核对进程与原生历史，避免创建重复工作。
+6. 多 Agent 使用独立 worktree。共享目录的运行租约只约束 Nexus 管理的写入者，不能阻止用户在外部 Shell 修改文件。
+
+备份除服务端完整 `data/` 外，还需按实际存储备份 Workspace 根目录、其 Git 公共目录、Provider 配置及宿主状态。服务端数据备份不包含远端工作目录。
+
+### 此次升级与回滚
+
+数据库新增运行记录和稳定对话投影表；旧任务、Workspace、会话和凭据不重命名或清空。旧 tmux Agent 不被自动切换为原生协议。首次投影旧事件保留 legacy 身份，不伪造过去的原生会话边界。
+
+构建新镜像后保留当前镜像 tag，停服务备份完整 data，再替换。上线只读检查 health、入口资源、Swagger／guide、新工作台路由及已有 Agent 的进程身份，生产不创建测试任务或发送测试指令。
+
+刚发布即失败且尚未产生新会话时，可恢复旧镜像并按需要恢复发布前完整备份。**新原生会话创建后不可盲目热降级旧镜像**：旧代码不认识宿主的状态与凭据保留规则；应先保留数据、确认结束或交接新会话，再恢复兼容代码。不能用旧备份覆盖升级后新增的用户成果来宣称无损回滚。

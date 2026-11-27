@@ -8,11 +8,20 @@ import { join, dirname, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomBytes } from 'node:crypto';
 import { DB } from './db';
+import { SavedAccountLimitError } from './browserLogins';
 import { setupSync } from './sync';
 import { setupTmux, sshRun, SESSION_RE } from './tmux';
 import { Connections, parseSshHost, shellQuote, sshCredentialError } from './connections';
 import { hashPassword, verifyPassword, RateLimit, originAllowed, upgradeUrl, type WsIdentity } from './security';
 import { setupRestApi } from './rest';
+import { setupWorkspaces } from './workspaces/routes';
+import { setupWorkspaceProfiles } from './workspaces/profiles';
+import { setupKubernetesConnections } from './workspaces/kubernetesConnections';
+import { setupAgents } from './agents/routes';
+import { setupWorkspaceLaunch } from './workspaces/launch';
+import { setupTaskDescriptions } from './taskDescriptions';
+import { setupWorkspaceTerminal } from './workspaceTerminal';
+import { parseAgentProxy } from './agentProxy';
 
 const PORT = Number(process.env.PORT ?? 30090);
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -23,17 +32,29 @@ const db = new DB(DATA_DIR);
 const connections = new Connections(db, DATA_DIR);
 const app = new Hono();
 const COOKIE = 'cortex_session';
+const ACCOUNTS_COOKIE = 'nexus_accounts';
 const secureCookie = process.env.COOKIE_SECURE !== undefined ? process.env.COOKIE_SECURE === 'true'
   : !!process.env.PUBLIC_ORIGIN?.startsWith('https:') || process.env.NODE_ENV === 'production';
 const cookieOptions = { httpOnly: true, sameSite: 'Lax' as const, path: '/', secure: secureCookie };
 function currentUser(c: Context): string | null { const token = getCookie(c, COOKIE); return token ? db.getSession(token)?.user_id ?? null : null; }
+function disconnectSessions(tokens: string[]) {
+  for (const token of tokens) { sync.disconnectSession(token); tmux.disconnectSession(token); workspaceTerminal.disconnectSession(token); }
+}
+function activateAccount(c: Context, userId: string, authenticated: boolean) {
+  const result = db.browserLogins.activate(userId, getCookie(c, ACCOUNTS_COOKIE), getCookie(c, COOKIE), authenticated);
+  if (!result) return false;
+  disconnectSessions(result.revoked);
+  setCookie(c, COOKIE, result.token, { ...cookieOptions, maxAge: Math.max(1, Math.floor((result.expiresAt - Date.now()) / 1000)) });
+  setCookie(c, ACCOUNTS_COOKIE, result.device, { ...cookieOptions, maxAge: 180 * 86400 });
+  return true;
+}
 function incoming(c: Context) { return (c.env as { incoming?: import('node:http').IncomingMessage }).incoming; }
 async function json(c: Context): Promise<Record<string, unknown> | null> {
   const body: unknown = await c.req.json().catch(() => null);
   return body !== null && typeof body === 'object' && !Array.isArray(body) ? body as Record<string, unknown> : null;
 }
 const text = (value: unknown) => typeof value === 'string' ? value.trim() : '';
-app.use('/api/*', bodyLimit({ maxSize: 64 * 1024, onError: (c) => c.json({ error: '请求过大' }, 413) }));
+app.use('/api/*', (c, next) => bodyLimit({ maxSize: c.req.path.endsWith('/description') ? 512 * 1024 : 64 * 1024, onError: (context) => context.json({ error: '请求过大' }, 413) })(c, next));
 app.use('/api/*', async (c, next) => {
   c.header('Cache-Control', 'no-store');
   const req = incoming(c);
@@ -60,6 +81,8 @@ app.get('/api/auth/me', (c) => {
   return user ? c.json({ id: user.id, username: user.username, isAdmin: !!user.is_admin }) : c.json({ error: 'unauthorized' }, 401);
 });
 app.post('/api/auth/login', async (c) => {
+  const original = getCookie(c, COOKIE);
+  const activeAtStart = original && db.getSession(original);
   const body = await json(c);
   const username = text(body?.username);
   const password = typeof body?.password === 'string' ? body.password : '';
@@ -67,23 +90,28 @@ app.post('/api/auth/login', async (c) => {
   const user = db.getUserByUsername(username);
   const valid = await verifyPassword(password, user?.salt ?? 'cortex-dummy-salt', user?.password_hash ?? '00'.repeat(64));
   if (!user || !valid) return c.json({ error: '用户名或密码错误' }, 401);
-  const token = db.createSession(user.id);
-  setCookie(c, COOKIE, token, { ...cookieOptions, maxAge: 180 * 86400 });
+  if (activeAtStart && !db.getSession(original!)) return c.json({ error: '账号已切换，请重试' }, 409);
+  try { activateAccount(c, user.id, true); }
+  catch (error) { if (error instanceof SavedAccountLimitError) return c.json({ error: error.message }, 400); throw error; }
   return c.json({ id: user.id, username: user.username, isAdmin: !!user.is_admin });
 });
 app.post('/api/auth/register', async (c) => {
+  const original = getCookie(c, COOKIE);
+  const activeAtStart = original && db.getSession(original);
   const body = await json(c);
   const username = text(body?.username);
   const password = typeof body?.password === 'string' ? body.password : '';
   if (!/^[a-zA-Z0-9_一-龥-]{2,32}$/.test(username)) return c.json({ error: '用户名需 2–32 位，仅支持中文、字母、数字、下划线（_）和连字符（-）' }, 400);
   if (password.length < 6 || password.length > 1024) return c.json({ error: '密码需 6–1024 位' }, 400);
   const { hash, salt } = await hashPassword(password);
+  if (activeAtStart && !db.getSession(original!)) return c.json({ error: '账号已切换，请重试' }, 409);
   try {
+    db.browserLogins.checkCapacity(getCookie(c, ACCOUNTS_COOKIE), getCookie(c, COOKIE));
     const user = db.registerUser(username, hash, salt, text(body?.inviteCode) || undefined);
-    const token = db.createSession(user.id);
-    setCookie(c, COOKIE, token, { ...cookieOptions, maxAge: 180 * 86400 });
+    activateAccount(c, user.id, true);
     return c.json({ id: user.id, username: user.username, isAdmin: !!user.is_admin });
   } catch (error) {
+    if (error instanceof SavedAccountLimitError) return c.json({ error: error.message }, 400);
     const message = (error as Error).message;
     if (message === '用户名已存在') return c.json({ error: message }, 409);
     if (message === '邀请码无效') return c.json({ error: message }, 403);
@@ -92,18 +120,46 @@ app.post('/api/auth/register', async (c) => {
 });
 app.post('/api/auth/logout', (c) => {
   const token = getCookie(c, COOKIE);
-  if (token) { db.deleteSession(token); sync.disconnectSession(token); tmux.disconnectSession(token); }
+  disconnectSessions(db.browserLogins.forget(getCookie(c, ACCOUNTS_COOKIE), currentUser(c), token));
   deleteCookie(c, COOKIE, cookieOptions);
+  if (!db.browserLogins.list(getCookie(c, ACCOUNTS_COOKIE)).length) deleteCookie(c, ACCOUNTS_COOKIE, cookieOptions);
   return c.json({ ok: true });
 });
-type Purpose = 'sync' | 'tmux';
+app.get('/api/auth/accounts', (c) => {
+  const current = currentUser(c);
+  const accounts = db.browserLogins.list(getCookie(c, ACCOUNTS_COOKIE)).map(user => ({ id: user.id, username: user.username, isAdmin: !!user.is_admin }));
+  const user = current ? db.getUser(current) : null;
+  if (user && !accounts.some(account => account.id === user.id)) accounts.unshift({ id: user.id, username: user.username, isAdmin: !!user.is_admin });
+  return c.json({ accounts });
+});
+app.post('/api/auth/switch', async (c) => {
+  const body = await json(c);
+  const id = text(body?.userId);
+  if (!activateAccount(c, id, false)) return c.json({ error: '此账号的登录已失效，请重新登录' }, 401);
+  const user = db.getUser(id)!;
+  return c.json({ id: user.id, username: user.username, isAdmin: !!user.is_admin });
+});
+app.delete('/api/auth/accounts/:id', (c) => {
+  const id = c.req.param('id');
+  if (id === currentUser(c)) return c.json({ error: '请使用退出当前账号' }, 400);
+  disconnectSessions(db.browserLogins.forget(getCookie(c, ACCOUNTS_COOKIE), id));
+  if (!db.browserLogins.list(getCookie(c, ACCOUNTS_COOKIE)).length) deleteCookie(c, ACCOUNTS_COOKIE, cookieOptions);
+  return c.json({ ok: true });
+});
+app.post('/api/auth/logout-all', (c) => {
+  disconnectSessions(db.browserLogins.forget(getCookie(c, ACCOUNTS_COOKIE), null, getCookie(c, COOKIE), true));
+  deleteCookie(c, COOKIE, cookieOptions);
+  deleteCookie(c, ACCOUNTS_COOKIE, cookieOptions);
+  return c.json({ ok: true });
+});
+type Purpose = 'sync' | 'tmux' | 'workspace-terminal';
 const tickets = new Map<string, WsIdentity & { expires: number; purpose: Purpose }>();
 app.get('/api/auth/ticket', (c) => {
   const userId = currentUser(c);
   if (!userId) return c.json({ error: 'unauthorized' }, 401);
   if (c.req.query('userId') !== userId) return c.json({ error: '账号已切换', code: 'identity_changed' }, 409);
   const purpose = c.req.query('purpose') ?? 'sync';
-  if (purpose !== 'sync' && purpose !== 'tmux') return c.json({ error: '无效的票据用途' }, 400);
+  if (purpose !== 'sync' && purpose !== 'tmux' && purpose !== 'workspace-terminal') return c.json({ error: '无效的票据用途' }, 400);
   for (const [key, ticket] of tickets) if (ticket.expires < Date.now()) tickets.delete(key);
   if (tickets.size >= 1024) return c.json({ error: '票据请求过多' }, 429);
   const ticket = randomBytes(24).toString('hex');
@@ -144,7 +200,10 @@ app.put('/api/servers/:id', async (c) => {
   if (!/^[A-Za-z0-9_-]{1,128}$/.test(id) || !name || name.length > 128 || !parseSshHost(host) || (body?.password !== undefined && (typeof body.password !== 'string' || body.password.length > 1024))) return c.json({ error: '无效的服务器档案' }, 400);
   const existing = db.getServer(userId, id);
   if (!existing && db.listServers(userId).length >= 100) return c.json({ error: '服务器档案过多' }, 400);
-  const row = { id, user_id: userId, name, host, password_cipher: typeof body?.password === 'string' ? connections.encrypt(body.password) : existing?.password_cipher ?? null };
+  let agentProxy;
+  try { agentProxy = parseAgentProxy(body?.agentProxy); }
+  catch (error) { return c.json({ error: (error as Error).message }, 400); }
+  const row = { id, user_id: userId, name, host, password_cipher: typeof body?.password === 'string' ? connections.encrypt(body.password) : existing?.password_cipher ?? null, agent_proxy: agentProxy === undefined ? existing?.agent_proxy ?? null : agentProxy === null ? null : JSON.stringify(agentProxy) };
   db.saveServer(row);
   return c.json(connections.public(row));
 });
@@ -192,7 +251,15 @@ app.post('/api/tmux/:action', async (c) => {
   if (action === 'windows') return c.json({ windows: result.stdout.split('\n').filter(Boolean).map((line) => { const [id, index, name, active] = line.split('|'); return { id, index: Number(index), name: name ?? '', active: active === '1' }; }) });
   return c.json({ ok: true });
 });
+const descriptions = setupTaskDescriptions(app, db, () => sync, currentUser);
+// Register versioned document routes before REST's unknown-/api/v1 fallback.
 setupRestApi(app, db, () => sync, currentUser, HERE);
+const workspaceProfiles = setupWorkspaceProfiles(app, db, () => sync, currentUser);
+const kubernetes = setupKubernetesConnections(app, DATA_DIR, currentUser);
+const workspaces = setupWorkspaces(app, db, connections, () => sync, currentUser, kubernetes);
+const agents = setupAgents(app, db, workspaces, () => sync, currentUser, { publicOrigin: process.env.PUBLIC_ORIGIN, readWorkspace: workspaceProfiles.read,
+  readTaskRevision: descriptions.read, updateTaskDescription: descriptions.update });
+const workspaceLaunch = setupWorkspaceLaunch(app, db, workspaces, agents, currentUser, workspaceProfiles.read);
 app.get('/healthz', (c) => c.json({ ok: true, uptime: process.uptime() }));
 if (existsSync(PUBLIC_DIR)) {
   app.use('/*', serveStatic({ root: relative(process.cwd(), PUBLIC_DIR) || '.' }));
@@ -206,12 +273,13 @@ if (existsSync(PUBLIC_DIR)) {
 const server = createAdaptorServer(app);
 const sync = setupSync(server, db, (ticket) => verifyTicket(ticket, 'sync'));
 const tmux = setupTmux(server, (ticket) => verifyTicket(ticket, 'tmux'), (userId, serverId) => connections.resolve(userId, serverId));
-server.on('upgrade', (req, socket) => { const path = upgradeUrl(req.url)?.pathname; if (path !== '/api/sync' && path !== '/api/tmux/attach') socket.destroy(); });
+const workspaceTerminal = setupWorkspaceTerminal(server, workspaces, ticket => verifyTicket(ticket, 'workspace-terminal'), identity => db.getSession(identity.sessionToken)?.user_id === identity.userId);
+server.on('upgrade', (req, socket) => { const path = upgradeUrl(req.url)?.pathname; if (path !== '/api/sync' && path !== '/api/tmux/attach' && path !== '/api/workspace-terminal/attach') socket.destroy(); });
 let closing = false;
 for (const signal of ['SIGINT', 'SIGTERM'] as const) process.on(signal, () => {
   if (closing) return;
   closing = true;
-  sync.close(); tmux.close();
+  workspaceLaunch.close(); agents.close(); workspaceTerminal.close(); workspaces.close(); sync.close(); tmux.close();
   server.close(() => { db.close(); process.exit(0); });
   setTimeout(() => process.exit(0), 5000).unref();
 });

@@ -1,15 +1,17 @@
+import { TaskTitle, TaskTitleButton } from '@/shared/TaskTitle';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router';
-import { CalendarClock, ChevronRight, Minus, Plus, Folder } from 'lucide-react';
+import { CalendarClock, ChevronRight, Minus, Plus, Folder, FileText } from 'lucide-react';
 import { cn } from '@nexus/ui';
 import {
   Task, activeTasks, buildChildrenMap, taskRange, startOfDay, addDays, fmtHM, WEEKDAY_ZH, weekdayOf, calendarDaysBetween, calendarPosition, timeAtCalendarPosition,
-  taskViewStatus, TaskViewStatus, priorityOf, isStructural, fullyDoneIds,
+  taskViewStatus, TaskViewStatus, priorityOf, prioritySortedChildren, compareTaskPriority, isStructural, isProject, fullyDoneIds,
 } from '@nexus/core';
 import { useNexus } from '@nexus/crdt';
 import { useTaskViewData } from '../useTaskViewData';
 import { useTaskDomFocus } from '../useTaskDomFocus';
 import { focusedTaskPath } from '../taskNavigation';
+import { readTaskSort } from '../taskFilters';
 import { useUI } from '@/state/ui';
 import { TaskCheckbox, PRIORITY_VAR } from '@/shared/components';
 import { ganttDragPatch, ganttDragRange, type GanttDragMode } from './drag';
@@ -24,7 +26,7 @@ import { useGanttTouchPaging } from './useGanttTouchPaging';
  *   无时间任务不画条、默认也不占行(底部「未排期」坞里可以拖进来排期)。
  * - 排期方式:拖条整体平移 / 拖条两端伸缩(**吸附到 5 分钟**,不是整天)/
  *   在行内空白处按下拖出一段 / 从「未排期」坞拖到某一天。
- * - 条的颜色 = 优先级(P0 红 / P1 橙 / P2 蓝 / P3 灰),整条无边框。
+ * - 条的颜色 = 优先级(P0 红 / P1 橙 / P2 蓝 / P3 青绿),整条无边框。
  *   条色不随开始/截止时间变化;已完成 = **绿色**(完成度优先于优先级,一眼可辨)。
  *   未开始/进行中/逾期由名称旁的状态点提示。
  *   逾期条右上角带红色「!」角标;结构节点(kind=node)不画条、不进未排期坞,只作分组行。
@@ -95,6 +97,7 @@ export function GanttView() {
   const ui = useUI();
   const collapsed = useUI((s) => s.collapsed);
   const [params] = useSearchParams();
+  const prioritySort = readTaskSort(params) === 'priority';
   const projectId = params.get('project');
   const { range, setRange } = useTaskWindow(true);
   const showUnscheduled = !range.scheduledOnly;
@@ -168,7 +171,7 @@ export function GanttView() {
     () => activeTasks(data.tasks).filter((t) => t.status !== 'inbox'),
     [data.tasks],
   );
-  const childrenMap = useMemo(() => buildChildrenMap(tasks), [tasks]);
+  const childrenMap = useMemo(() => prioritySort ? prioritySortedChildren(tasks) : buildChildrenMap(tasks), [tasks, prioritySort]);
   const byId = useMemo(() => new Map(tasks.map((t) => [t.id, t])), [tasks]);
   const hiddenDone = useMemo(() => {
     if (data.settings.completedDisplay !== 'hidden') return null;
@@ -209,7 +212,7 @@ export function GanttView() {
         for (const c of childrenMap.get(t.id) ?? []) walk(c, visible.has(t.id) ? depth + 1 : depth, groupBase);
       }
     };
-    const roots = projectId ? childrenMap.get(projectId) ?? [] : tasks.filter(task => !task.parentId || !byId.has(task.parentId));
+    const roots = childrenMap.get(projectId) ?? [];
     for (const root of roots) walk(root, 0, out.length);
     return out;
   }, [tasks, childrenMap, byId, projectId, hiddenDone, winStartTime, winEndTime, collapsed, data.matchingTaskIds]);
@@ -219,8 +222,8 @@ export function GanttView() {
     if (!showUnscheduled) return [];
     return tasks.filter((t) =>
       !hasDates(t) && !isStructural(t) && (t.status !== 'done' || t.id === data.focusedTaskId) && t.status !== 'archived' && data.matchingTaskIds.has(t.id),
-    ).sort((a, b) => Number(b.id === data.focusedTaskId) - Number(a.id === data.focusedTaskId)).slice(0, 12);
-  }, [tasks, showUnscheduled, data.matchingTaskIds]);
+    ).sort((a, b) => Number(b.id === data.focusedTaskId) - Number(a.id === data.focusedTaskId) || (prioritySort ? compareTaskPriority(a, b) : 0)).slice(0, 12);
+  }, [tasks, showUnscheduled, data.matchingTaskIds, data.focusedTaskId, prioritySort]);
 
   const days = winDays;
   /** Mobile trades wide day cells for a readable weekly overview; zoom keeps precise editing available. */
@@ -448,8 +451,8 @@ export function GanttView() {
                       <span className="shrink-0" style={{ width: nameColumn.mobile ? 12 : CHEVRON_W }} />
                     )}
                     {isStructural(r.task) ? (
-                      <span className="grid w-3.5 shrink-0 place-items-center text-muted/60" title="结构节点(无完成态)">
-                        <Folder className="h-3 w-3" />
+                      <span className="grid w-3.5 shrink-0 place-items-center text-muted/60" title={isProject(r.task) ? '项目根节点' : '文本节点'}>
+                        {isProject(r.task) ? <Folder className="h-3 w-3" /> : <FileText className="h-3 w-3" />}
                       </span>
                     ) : (
                       <>
@@ -457,19 +460,19 @@ export function GanttView() {
                         <span className={cn('h-1 w-1 shrink-0 rounded-full md:h-1.5 md:w-1.5', STATUS_DOT[vs.kind])} title={vs.label} />
                       </>
                     )}
-                    <button
+                    <TaskTitleButton taskTitle={r.task.title}
                       data-task-detail-trigger
                       data-gantt-focus={!r.dated ? r.task.id : undefined}
                       onClick={() => ui.selectTask(r.task.id)}
                       className={cn(
                         'min-w-0 flex-1 truncate text-left text-xs hover:underline',
                         (r.depth === 0 || isStructural(r.task)) && 'font-medium',
-                        r.task.status === 'done' && 'text-muted line-through',
+                        !isStructural(r.task) && r.task.status === 'done' && 'text-muted line-through',
                       )}
                       title={r.task.notes || r.task.title}
                     >
-                      {r.task.title || 'Untitled'}
-                    </button>
+                      <TaskTitle title={r.task.title} />
+                    </TaskTitleButton>
                   </div>
                   <div
                     data-gantt-track
@@ -539,7 +542,7 @@ export function GanttView() {
                         title={`${r.task.title || 'Untitled'} · ${p} · ${vs.label} · ${fmtMD(visibleRange.start)} ${fmtHM(visibleRange.start)} ~ ${fmtMD(visibleRange.end)} ${fmtHM(visibleRange.end)}${isDragging && dragging ? ` → ${dragging.mode === 'move' ? '平移' : dragging.mode === 'start' ? '开始端' : '截止端'} ${fmtDeltaMin(dragging.deltaMin)}` : ''}`}
                       >
                         {barW > 60 && (
-                          <span className="truncate px-2 leading-none">{r.task.title || 'Untitled'}</span>
+                          <span className="truncate px-2 leading-none"><TaskTitle title={r.task.title} /></span>
                         )}
                         {/* 逾期角标「!」:红底白字;完成/未开始由名称旁状态点提示,不加角标。 */}
                         {vs.kind === 'overdue' && (
@@ -585,7 +588,7 @@ export function GanttView() {
           </div>
           <div className="flex flex-wrap gap-1.5">
             {unscheduled.map((t) => (
-              <button
+              <TaskTitleButton taskTitle={t.title}
                 key={t.id}
                 data-task-detail-trigger
                 data-gantt-focus={t.id}
@@ -595,8 +598,8 @@ export function GanttView() {
                 className="touch-none rounded-full glass px-2.5 py-1 text-[11px] text-foreground transition-all hover:border-[var(--border-strong)] active:scale-95"
                 title="拖到甘特图上排期;点按看详情"
               >
-                {t.title || 'Untitled'}
-              </button>
+                <TaskTitle title={t.title} />
+              </TaskTitleButton>
             ))}
           </div>
         </div>

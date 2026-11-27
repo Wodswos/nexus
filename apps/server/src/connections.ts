@@ -2,12 +2,14 @@ import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import type { DB, ServerRow } from './db';
+import type { ServerConfig } from '../../../packages/core/src/types';
 
 export interface SshConnection {
   userId: string;
   host: string;
   password: string;
   sshDir: string;
+  agentProxy?: ServerConfig['agentProxy'];
 }
 
 /** Each account owns its credentials; the master key belongs in the data-volume backup. */
@@ -39,10 +41,10 @@ export class Connections {
     if (!server) return null;
     const sshDir = join(this.dataDir, 'ssh', userId);
     mkdirSync(sshDir, { recursive: true, mode: 0o700 });
-    return { userId, host: server.host, password: this.decrypt(server.password_cipher), sshDir };
+    return { userId, host: server.host, password: this.decrypt(server.password_cipher), sshDir, agentProxy: server.agent_proxy ? JSON.parse(server.agent_proxy) : null };
   }
   public(server: ServerRow) {
-    return { id: server.id, name: server.name, host: server.host, passwordSet: !!server.password_cipher, registered: true };
+    return { id: server.id, name: server.name, host: server.host, passwordSet: !!server.password_cipher, registered: true, agentProxy: server.agent_proxy ? JSON.parse(server.agent_proxy) : null };
   }
 }
 

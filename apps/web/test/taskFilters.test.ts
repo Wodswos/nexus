@@ -11,6 +11,44 @@ const data = (tasks: Task[], events: ScheduleEvent[] = []): NexusData => ({ ...E
 const choose = (values: NexusData, query: string) => selectWorkspaceTasks(values, new URLSearchParams(query), now);
 
 describe('shared workspace filters', () => {
+  it('automatic start and deadline states agree with focus and status filters without rewriting tasks', () => {
+    const stamp = now.getTime();
+    const values = data([
+      task('project', { kind: 'node', project: true }),
+      task('started', { parentId: 'project', startAt: stamp, dueAt: stamp + 3600000 }),
+      task('future', { parentId: 'project', startAt: stamp + 1 }),
+      task('deadline_only', { parentId: 'project', dueAt: stamp + 3600000 }),
+      task('overdue', { parentId: 'project', startAt: stamp - 3600000, dueAt: stamp }),
+      task('done', { parentId: 'project', startAt: stamp - 3600000, status: 'done' }),
+    ]);
+    const original = JSON.stringify(values);
+    expect([...choose(values, 'project=project&scope=all&work=current').matching]).toEqual(['started', 'overdue']);
+    expect([...choose(values, 'project=project&scope=all&taskStatus=doing').matching]).toEqual(['started']);
+    expect([...choose(values, 'project=project&scope=all&taskStatus=todo').matching]).toEqual(['future', 'deadline_only', 'overdue']);
+    values.tasks.find(value => value.id === 'started')!.startAt = null;
+    expect([...choose(values, 'project=project&scope=all&taskStatus=doing').matching]).toEqual([]);
+    values.tasks.find(value => value.id === 'started')!.startAt = stamp;
+    expect(JSON.stringify(values)).toBe(original);
+  });
+  it('finds unreviewed ordinary priorities while respecting existing explicit and legacy choices', () => {
+    const values = data([task('pending', { dueAt: day('2026-11-04') }), task('null', { priority: null, dueAt: day('2026-11-04') }), task('ordinary', { priority: 'P3' }), task('legacy', { important: true }), task('text', { kind: 'node' }), task('done', { status: 'done' })]);
+    expect([...choose(values, 'scope=all&taskStatus=unfinished&taskPriority=unreviewed').matching]).toEqual(['pending', 'null']);
+    expect(workspaceTaskDefaults(new URLSearchParams('taskPriority=unreviewed')).priority).toBeUndefined();
+  });
+
+  it('finds text leaves with content tag filters and retains recorded text after task completion conversion', () => {
+    const values = data([
+      task('project', { kind: 'node', project: true }),
+      task('text', { kind: 'node', project: false, parentId: 'project', status: 'done', tags: ['notes'] }),
+      task('other', { kind: 'node', project: false, parentId: 'project' }),
+    ]);
+    values.settings.completedDisplay = 'hidden';
+    const selected = choose(values, 'project=project&scope=all&taskTag=notes');
+    expect([...selected.matching]).toEqual(['text']);
+    expect([...selected.context]).toEqual(['text', 'project']);
+    expect([...choose(values, 'project=project&scope=all&taskStatus=done').matching]).toEqual([]);
+  });
+
   it('current means doing or unfinished overdue, including historic backlog, never merely planned work', () => {
     const values = data([task('doing', { status: 'doing', dueAt: day('2026-11-11') }), task('old', { dueAt: day('2025-01-01') }), task('week', { dueAt: day('2026-11-06') }), task('finished', { status: 'done', dueAt: 1 }), task('todo'), task('inbox', { status: 'inbox', dueAt: 1 }), task('folder', { kind: 'node', status: 'doing' })]);
     expect([...choose(values, 'work=current&scope=all').matching]).toEqual(['doing', 'old']);

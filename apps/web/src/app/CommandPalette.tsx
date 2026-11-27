@@ -69,20 +69,20 @@ export function CommandPalette() {
             >
               开始专注 25 分钟
             </Item>
-            <Item onSelect={go(() => navigate('/'))} icon={<LayoutDashboard className="h-4 w-4" />}>
-              概览
+            <Item onSelect={go(() => navigate('/work'))} icon={<LayoutDashboard className="h-4 w-4" />}>
+              当前工作
             </Item>
             <Item onSelect={go(() => navigate('/tasks?scope=week&view=list'))} icon={<ListTodo className="h-4 w-4" />}>
-              当前任务 · 列表
+              任务 · 列表
             </Item>
             <Item onSelect={go(() => navigate('/tasks?scope=week&view=matrix'))} icon={<LayoutGrid className="h-4 w-4" />}>
-              当前任务 · 四象限
+              任务 · 四象限
             </Item>
             <Item onSelect={go(() => navigate('/tasks?scope=week&view=mindmap'))} icon={<GitBranch className="h-4 w-4" />}>
-              当前任务 · 导图
+              任务 · 导图
             </Item>
             <Item onSelect={go(() => navigate('/tasks?scope=month&view=timeline'))} icon={<CalendarRange className="h-4 w-4" />}>
-              当前任务 · 本月日历
+              任务 · 本月日历
             </Item>
             <Item onSelect={go(() => navigate('/inbox'))} icon={<Inbox className="h-4 w-4" />}>
               收集箱

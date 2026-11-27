@@ -1,5 +1,5 @@
 import { isStructural } from './tree';
-import { priorityOf, quadrantFields } from './quadrant';
+import { quadrantFields } from './quadrant';
 import type { Priority, Task } from './types';
 
 export type BatchDateEdit = { action: 'clear' } | { action: 'set'; date: string; time?: string };
@@ -56,7 +56,7 @@ export function planTaskBatch(tasks: readonly Task[], ids: readonly string[], ch
     plan.eligible++;
     const patch: Partial<Task> = {};
     if (change.priority !== undefined) {
-      if (priorityOf(task) !== change.priority) patch.priority = change.priority;
+      if (task.priority !== change.priority) patch.priority = change.priority;
       Object.assign(patch, quadrantFields(change.priority));
     }
     for (const endpoint of ['startAt', 'dueAt'] as const) {

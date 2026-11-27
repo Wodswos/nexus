@@ -50,11 +50,11 @@ describe('work focus', () => {
       task('inbox', { status: 'inbox', priority: 'P0' }),
     ];
     const signals = workSignals(tasks, [], now);
-    expect([...signals.doing]).toEqual(['doing']);
+    expect([...signals.doing]).toEqual(['doing', 'cross_week']);
     expect([...signals.week]).toEqual(['week_due', 'cross_week']);
     expect([...signals.overdue]).toEqual(['old_due']);
     expect([...signals.unscheduled]).toEqual(['important']);
-    expect([...signals.current]).toEqual(['doing', 'old_due']);
+    expect([...signals.current]).toEqual(['doing', 'cross_week', 'old_due']);
   });
   it('includes linked week events and treats future events as a valid schedule', () => {
     const tasks = [

@@ -1,11 +1,13 @@
+import { TaskTitle } from '@/shared/TaskTitle';
+import { pasteTaskTitle } from '@/shared/taskTitlePaste';
 import React, { useEffect, useLayoutEffect, useRef, useState, memo } from 'react';
 import { Handle, Position, type Node, type NodeProps } from '@xyflow/react';
 import { ChevronDown, ChevronRight, Info } from 'lucide-react';
-import { isStructural, priorityOf, type MindFont, type Task } from '@nexus/core';
+import { isStructural, type MindFont, type Task } from '@nexus/core';
 import { useNexus } from '@nexus/crdt';
 import { cn } from '@nexus/ui';
 import { useUI } from '@/state/ui';
-import { TaskCheckbox } from '@/shared/components';
+import { PriorityDot, TaskCheckbox } from '@/shared/components';
 import { branchColor, mindColor, titleAppearance } from './appearance';
 import { mindMetrics, VIRTUAL_ROOT_ID, type BranchSide, type MindMetrics } from './layout';
 
@@ -29,12 +31,13 @@ export const TaskNode = memo(function TaskNode({ data, selected }: NodeProps<Nod
   const toggleCollapsed = useUI((state) => state.toggleCollapsed);
   const virtual = task.id === VIRTUAL_ROOT_ID;
   const structural = virtual || isStructural(task);
+  const done = !structural && task.status === 'done';
   const root = depth === 0;
   const color = branchColor(branch);
   const titleStyle = titleAppearance(task, depth, data.font);
   const [draft, setDraft] = useState(task.title);
   const footer = progress.total > 0 || !!data.signalLabel;
-  const liveMetrics = editing ? mindMetrics({ ...task, title: draft }, depth, footer, data.font) : metrics;
+  const liveMetrics = editing ? mindMetrics({ ...task, title: draft }, depth, footer, data.font, true) : metrics;
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const finished = useRef(false);
   useEffect(() => {
@@ -50,7 +53,6 @@ export const TaskNode = memo(function TaskNode({ data, selected }: NodeProps<Nod
     if (input) { input.style.height = '0px'; input.style.height = `${input.scrollHeight}px`; }
   }, [draft, editing, liveMetrics.width, titleStyle.fontSize, titleStyle.fontFamily]);
   const finish = (title = draft) => { if (!finished.current) { finished.current = true; onCommit?.(title); } };
-  const priority = priorityOf(task);
   const background = mindColor(task.mindBackground, true) ?? (root ? 'var(--mind-root)' : depth === 1 || structural ? `color-mix(in srgb, ${color} ${depth === 1 ? '10%' : '5%'}, var(--background))` : 'var(--background)');
   return (
     <div
@@ -58,12 +60,12 @@ export const TaskNode = memo(function TaskNode({ data, selected }: NodeProps<Nod
       data-mind-depth={depth}
       data-mind-side={side}
       data-mind-muted={data.muted && !selected ? 'true' : 'false'}
-      className={cn('group mind-node relative rounded-xl border', selected && 'mind-node-selected', task.status === 'done' && 'mind-node-done')}
+      className={cn('group mind-node relative rounded-xl border', selected && 'mind-node-selected', done && 'mind-node-done')}
       style={{
         width: liveMetrics.width, padding: `${liveMetrics.padY}px ${liveMetrics.padX}px`, background,
         borderColor: root ? 'var(--mind-root)' : depth === 1 ? `color-mix(in srgb, ${color} 30%, var(--border))` : 'var(--border)',
         color: root && !task.mindBackground ? 'var(--mind-root-text)' : 'var(--foreground)',
-        opacity: data.muted && !selected ? 0.3 : task.status === 'done' ? 0.65 : 1,
+        opacity: data.muted && !selected ? 0.3 : done ? 0.65 : 1,
         boxShadow: root ? '0 4px 14px rgb(0 0 0 / 0.06)' : undefined,
         outline: dropHint ? `2px ${dropHint === 'child' ? 'dashed' : 'solid'} var(--accent-solid)` : undefined,
         outlineOffset: dropHint ? 5 : undefined,
@@ -79,21 +81,21 @@ export const TaskNode = memo(function TaskNode({ data, selected }: NodeProps<Nod
         className={cn('nodrag nopan absolute -bottom-2 z-10 grid h-5 w-5 place-items-center rounded-full border border-[var(--border-strong)] bg-[var(--background)] text-muted shadow-sm hover:text-foreground focus-visible:opacity-100', side === 'left' && !root ? '-left-2' : '-right-2', !collapsed && 'opacity-0 group-hover:opacity-100')}
       >{collapsed ? <ChevronRight size={12} /> : <ChevronDown size={12} />}</button>}
       {dropHint && <span className="pointer-events-none absolute -top-7 left-0 z-20 whitespace-nowrap rounded-md bg-[var(--accent-solid)] px-2 py-1 text-[10px] text-white">{virtual ? '升为根任务' : dropHint === 'child' ? '挂到它下面' : dropHint === 'before' ? '插到它前面' : '插到它后面'}</span>}
-      {!structural && priority !== 'P3' && <span title={`优先级 ${priority}`} className="pointer-events-none absolute right-2 top-2 h-1.5 w-1.5 rounded-full" style={{ background: `var(--${priority.toLowerCase()})` }} />}
+      {!structural && <PriorityDot task={task} className="absolute right-2 top-2" />}
       <div className="flex items-start gap-2">
         {!structural && <span className="nodrag nopan mt-0.5 shrink-0" onPointerDown={(event) => event.stopPropagation()} onClick={(event) => event.stopPropagation()}><TaskCheckbox done={task.status === 'done'} onChange={() => store.toggleTaskDone(task.id)} className="!h-4 !w-4" /></span>}
         {editing ? <textarea
           ref={inputRef} aria-label="导图节点标题" placeholder="输入标题…" rows={1} value={draft}
           className="nodrag nopan block min-w-0 flex-1 cursor-text resize-none overflow-hidden bg-transparent p-0 outline-none"
           style={{ ...titleStyle, color: titleStyle.color ?? 'inherit' }}
-          onChange={(event) => setDraft(event.target.value)} onBlur={() => finish()}
+          onPaste={event => pasteTaskTitle(event, setDraft)} onChange={(event) => setDraft(event.target.value)} onBlur={() => finish()}
           onPointerDown={(event) => event.stopPropagation()}
           onKeyDown={(event) => {
             event.stopPropagation(); if (event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return;
             if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); finish(); onRefocus?.(); }
             else if (event.key === 'Escape') { event.preventDefault(); finish(task.title); onRefocus?.(); }
           }}
-        /> : <span data-mind-title className={cn('min-w-0 flex-1 whitespace-pre-wrap [overflow-wrap:anywhere]', task.status === 'done' && 'line-through')} style={titleStyle}>{task.title || '未命名'}</span>}
+        /> : <span data-mind-title className={cn('min-w-0 flex-1 whitespace-pre-wrap [overflow-wrap:anywhere]', done && 'line-through')} style={titleStyle}><TaskTitle title={task.title} /></span>}
       </div>
       {footer && <div className={cn('mt-1.5 flex min-h-[15px] items-center gap-2 text-[10px] leading-[15px]', !structural && 'pl-6')} style={{ color: root && !task.mindBackground ? 'var(--mind-root-muted)' : 'var(--muted-foreground)' }}>
         {progress.total > 0 && <span className="shrink-0 tabular-nums">{progress.done}/{progress.total} 完成</span>}

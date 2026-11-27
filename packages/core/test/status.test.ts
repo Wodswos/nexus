@@ -43,8 +43,17 @@ describe('taskViewStatus(自动状态: 完成 + 时间窗推导)', () => {
     expect(taskViewStatus(t2({ dueAt: NOW }), now).kind).toBe('overdue');
   });
 
-  it('手动 doing 优先于时间窗', () => {
-    expect(taskViewStatus(t2({ status: 'doing', startAt: 2000, dueAt: 3000 }), now).kind).toBe('running');
+  it('时间窗优先于历史 doing 状态,无开始时间时保留兼容', () => {
+    expect(taskViewStatus(t2({ status: 'doing', startAt: 2000, dueAt: 3000 }), now).kind).toBe('planned');
+    expect(taskViewStatus(t2({ status: 'doing', dueAt: 500 }), now).kind).toBe('overdue');
+    expect(taskViewStatus(t2({ status: 'doing' }), now).kind).toBe('running');
+  });
+
+  it('开始边界自动进入进行中,仅有未来截止日期仍待办', () => {
+    expect(taskViewStatus(t2({ startAt: NOW }), now).kind).toBe('running');
+    expect(taskViewStatus(t2({ startAt: NOW + 1 }), now).kind).toBe('planned');
+    expect(taskViewStatus(t2({ dueAt: NOW + 1 }), now).kind).toBe('todo');
+    expect(taskViewStatus(t2({ status: 'done', startAt: 100, dueAt: 500 }), now).kind).toBe('done');
   });
 
   it('收件箱/归档沿用', () => {

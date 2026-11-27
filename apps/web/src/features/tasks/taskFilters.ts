@@ -1,8 +1,11 @@
-import { activeTasks, isStructural, priorityOf, startOfDay, taskContextIds, taskRange, tasksInProject, workSignals, WORK_FOCUS, TASK_FILTER_STATUSES, TASK_FILTER_PRIORITIES, type NexusData, type WorkFocus, type Task } from '@nexus/core';
+import { activeTasks, isStructural, isTextNode, needsPriorityReview, priorityOf, startOfDay, taskContextIds, taskRange, tasksInProject, workSignals, WORK_FOCUS, TASK_FILTER_STATUSES, TASK_FILTER_PRIORITIES, type NexusData, type WorkFocus, type Task } from '@nexus/core';
 import { isScheduledOnlyWorkspace, readTaskWindow, taskMatchesWindow, windowEnd, type TaskWindow } from './taskWindow';
 
 export const TASK_STATUSES = TASK_FILTER_STATUSES;
 export const TASK_PRIORITIES = TASK_FILTER_PRIORITIES;
+export function readTaskSort(params: URLSearchParams): 'manual' | 'priority' {
+  return params.get('taskSort') === 'priority' ? 'priority' : 'manual';
+}
 export type WorkspaceTaskFilters = { focus: WorkFocus; status: typeof TASK_STATUSES[number]; priority: typeof TASK_PRIORITIES[number]; tagId?: string };
 export function readTaskFilters(params: URLSearchParams): WorkspaceTaskFilters {
   const value = params.get('work') ?? params.get('mindFocus');
@@ -19,9 +22,9 @@ export function workspaceTaskDefaults(params: URLSearchParams, now = Date.now(),
     : defaultDueAt;
   return {
     status: ['todo', 'doing', 'done'].includes(filters.status) ? filters.status as Task['status'] : filters.focus === 'current' || filters.focus === 'doing' ? 'doing' : 'todo',
-    ...(filters.priority !== 'all' ? { priority: filters.priority === 'high' ? 'P1' as const : filters.priority } : {}),
+    ...(filters.priority !== 'all' && filters.priority !== 'unreviewed' ? { priority: filters.priority === 'high' ? 'P1' as const : filters.priority } : {}),
     ...(filters.tagId ? { tags: [filters.tagId] } : {}),
-    ...(dueAt != null ? { dueAt } : {}),
+    ...(dueAt != null ? { startAt: startOfDay(dueAt).getTime(), dueAt } : {}),
   };
 }
 
@@ -37,7 +40,7 @@ export function selectWorkspaceTasks(data: NexusData, params: URLSearchParams, n
   const range = readTaskWindow(params, now, data.settings.weekStartsOn, false, !scheduledOnly);
   const filters = readTaskFilters(params);
   const signals = workSignals(tasks, events, now, data.settings.weekStartsOn);
-  // Current work includes explicitly active tasks and unfinished overdue work.
+  // Current work includes tasks whose start time has arrived and unfinished overdue work.
   const focused = filters.focus === 'all' ? null : signals[filters.focus];
   const eventTasks = new Set<string>();
   const scheduledTasks = new Set(events.filter(event => !event.completed && event.end > now.getTime()).map(event => event.taskId));
@@ -47,11 +50,21 @@ export function selectWorkspaceTasks(data: NexusData, params: URLSearchParams, n
   const matching = new Set<string>();
   // A dated calendar block remains visible even if its task has no date fields.
   const matchingEventTaskIds = new Set<string>();
+  const includeText = !scheduledOnly && !focused
+    && filters.status === 'all' && filters.priority === 'all'
+    && ['all', 'undated'].includes(range.scope);
   for (const task of tasks) {
-    if (isStructural(task)) continue;
+    if (isStructural(task)) {
+      if (includeText && isTextNode(task) && (!filters.tagId || task.tags.includes(filters.tagId))) matching.add(task.id);
+      continue;
+    }
     if (focused && !focused.has(task.id)) continue;
-    if (filters.status === 'unfinished' && task.status === 'done' || !['all', 'unfinished'].includes(filters.status) && task.status !== filters.status) continue;
-    if (filters.priority === 'high' ? !['P0', 'P1'].includes(priorityOf(task)) : filters.priority !== 'all' && priorityOf(task) !== filters.priority) continue;
+    if (filters.status === 'unfinished' && task.status === 'done') continue;
+    if (filters.status === 'doing' && !signals.doing.has(task.id)) continue;
+    if (filters.status === 'todo' && (task.status === 'done' || signals.doing.has(task.id))) continue;
+    if (filters.status === 'done' && task.status !== 'done') continue;
+    if (filters.priority === 'unreviewed' && !needsPriorityReview(task)) continue;
+    if (filters.priority === 'high' ? !['P0', 'P1'].includes(priorityOf(task)) : !['all', 'unreviewed'].includes(filters.priority) && priorityOf(task) !== filters.priority) continue;
     if (filters.tagId && !task.tags.includes(filters.tagId)) continue;
     if (range.scope === 'undated' ? task.startAt != null || task.dueAt != null || scheduledTasks.has(task.id) : !taskMatchesWindow(task, range) && !eventTasks.has(task.id)) continue;
     if (data.settings.completedDisplay === 'hidden' && task.status === 'done') continue;

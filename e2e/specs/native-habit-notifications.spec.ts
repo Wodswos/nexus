@@ -79,7 +79,7 @@ test('native habits request permission explicitly, schedule without browser noti
   await expect.poll(() => page.evaluate(() => (window as unknown as { __nativeNotifications: NativeHarness }).__nativeNotifications.pending.some(item => item.extra.key.includes('2026-11-04') && new Date(item.schedule.at).getTime() > Date.now()))).toBe(true);
   expect(await page.evaluate(() => (window as unknown as { __nativeNotifications: NativeHarness }).__nativeNotifications.requests)).toBe(1);
   await dialog.getByRole('button', { name: '取消', exact: true }).click();
-  await page.getByRole('navigation', { name: '工作导航', exact: true }).getByRole('link', { name: '当前任务', exact: true }).click();
+  await page.getByRole('navigation', { name: '快捷视图', exact: true }).getByRole('link', { name: '本周工作', exact: true }).click();
   await expect(page).toHaveURL(url => url.pathname === '/tasks' && url.searchParams.has('view'));
   const tasksURL = page.url();
   await page.evaluate(() => (window as unknown as { __nativeNotifications: NativeHarness }).__nativeNotifications.tap(true));

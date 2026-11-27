@@ -1,5 +1,7 @@
 /** 领域模型 — 见 DESIGN.md §3。时间戳一律 UTC epoch ms,渲染按本地时区。 */
 import type { MindAppearance } from './mindAppearance';
+import type { NodeWorkspace } from './executionWorkspace';
+import type { WorkspaceProfile } from './workspaceProfiles';
 import { DEFAULT_SAVED_VIEWS, type SavedTaskView } from './savedViews';
 
 export type ID = string;
@@ -14,10 +16,10 @@ export interface Task extends MindAppearance {
   notes?: string;
   status: TaskStatus;
   /**
-   * 节点类型:todo = 可勾选完成的任务(默认,老数据缺省即 todo);
-   * node = 结构性节点(分组/主题/里程碑)—— 无完成态、无状态/优先级/时间,
-   * 各视图按纯容器渲染(列表/甘特无勾选框,矩阵/时间线不出现)。
-   * 右击菜单或详情面板可双向转换。
+   * todo 为可执行的 TODO 任务，支持完成状态、优先级与排期。
+   * node 为文本节点，可作为叶子记录标题、正文、标签与资源，也可包含子节点。
+   * 文本节点使用内容展示，任务专用字段在转换回 todo 时继续使用。
+   * 项目根通过 project=true 单独标识，历史数据缺省类型按 todo 读取。
    */
   kind?: 'todo' | 'node' | null;
   /** Explicit project identity. Legacy root structural nodes remain projects when omitted. */
@@ -67,6 +69,8 @@ export interface ServerConfig {
   password?: string;
   passwordSet?: boolean;
   registered?: boolean;
+  /** Execution-side proxy for Agents launched through this account's SSH connection. */
+  agentProxy?: { url: string; noProxy: string } | null;
 }
 
 export interface TaskLink {
@@ -168,10 +172,11 @@ export interface ReviewPeriod {
   start: string; // Local YYYY-MM-DD, inclusive.
   end: string; // Local YYYY-MM-DD, exclusive.
 }
-export interface ReviewTaskFact { id: ID; title: string; project: string }
+export interface ReviewTaskFact { id: ID; title: string; project: string; done?: boolean }
 export interface ReviewFacts {
   capturedAt: number;
   completed: ReviewTaskFact[];
+  planned?: ReviewTaskFact[]; // Absent in snapshots saved before task-based planning.
   pending: ReviewTaskFact[];
   focusMin: number;
   projects: { id: ID; title: string; done: number; total: number }[];
@@ -182,6 +187,7 @@ export interface Review {
   periodStart: string;
   periodEnd: string;
   highlights: string;
+  plan: string;
   friction: string;
   resolution: string;
   nextSteps: string;
@@ -194,6 +200,7 @@ export interface Review {
 
 export interface Settings {
   savedViews: SavedTaskView[];
+  workNavigationVersion?: number;
   habitSort: 'time' | 'manual';
   habitOrder: string[];
   accent: Accent;
@@ -213,6 +220,7 @@ export interface Settings {
 
 export const DEFAULT_SETTINGS: Settings = {
   savedViews: DEFAULT_SAVED_VIEWS,
+  workNavigationVersion: 0,
   habitSort: 'time',
   habitOrder: [],
   accent: 'cyan-violet',
@@ -239,6 +247,8 @@ export interface NexusData {
   habitLogs: HabitLog[];
   tags: Tag[];
   reviews: Review[];
+  workspaces: NodeWorkspace[];
+  workspaceProfiles?: WorkspaceProfile[];
   settings: Settings;
 }
 
@@ -251,6 +261,8 @@ export const EMPTY_DATA: NexusData = {
   habitLogs: [],
   tags: [],
   reviews: [],
+  workspaces: [],
+  workspaceProfiles: [],
   settings: DEFAULT_SETTINGS,
 };
 

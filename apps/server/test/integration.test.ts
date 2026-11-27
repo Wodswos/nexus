@@ -93,6 +93,17 @@ afterAll(async () => {
 });
 
 describe('authenticated HTTP / WebSocket integration', () => {
+  it('validates and persists account-owned Agent proxies, preserves omitted settings and allows removal', async () => {
+    const profile = { name: '代理主机', host: 'alice@host.invalid', agentProxy: { url: 'http://127.0.0.1:7890', noProxy: ' localhost,127.0.0.1 ' } };
+    const saved = await request('/api/servers/proxy-host', a.cookie, profile, 'PUT');
+    expect(saved.status).toBe(200);
+    expect(await saved.json()).toMatchObject({ agentProxy: { ...profile.agentProxy, noProxy: 'localhost,127.0.0.1' } });
+    expect(await request('/api/servers', b.cookie).then(r => r.json())).not.toContainEqual(expect.objectContaining({ id: 'proxy-host' }));
+    expect(await request('/api/servers/proxy-host', a.cookie, { name: '改名', host: profile.host }, 'PUT').then(r => r.json())).toMatchObject({ agentProxy: { url: profile.agentProxy.url } });
+    for (const url of ['file:///tmp/proxy', 'http://user:password@proxy.invalid', 'http://proxy.invalid?key=secret', 'http://proxy.invalid\nINVALID=value'])
+      expect((await request('/api/servers/proxy-host', a.cookie, { ...profile, agentProxy: { url } }, 'PUT')).status).toBe(400);
+    expect(await request('/api/servers/proxy-host', a.cookie, { ...profile, agentProxy: null }, 'PUT').then(r => r.json())).toMatchObject({ agentProxy: null });
+  });
   it('accepts native socket origins only with a valid, single-use session ticket', async () => {
     for (const origin of ['capacitor://localhost', 'tauri://localhost']) {
       await expect(open('/api/sync', origin)).rejects.toThrow('401');

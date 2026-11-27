@@ -1,6 +1,6 @@
 import { Task } from './types';
 import { endOfDay, addDays, startOfDay, dayKeyOf } from './time';
-import { activeTasks, sortSiblings, fullyDoneIds } from './tree';
+import { activeTasks, sortSiblings, fullyDoneIds, isStructural } from './tree';
 
 export type ListGroupKey = 'overdue' | 'today' | 'upcoming' | 'anytime' | 'done';
 
@@ -16,6 +16,7 @@ export const GROUP_ORDER: ListGroupKey[] = ['overdue', 'today', 'upcoming', 'any
 
 /** 注意:调用方应保证 showDone=false 时已完成任务已从输入剔除 */
 export function listGroupOf(task: Task, now: Date): ListGroupKey {
+  if (isStructural(task)) return 'anytime';
   // 原位变灰:已完成任务按 dueAt 归入对应分组,而非单独「已完成」组
   if (task.dueAt != null) {
     if (task.dueAt < startOfDay(now).getTime()) return 'overdue';
@@ -91,6 +92,6 @@ export function inboxTasks(tasks: Task[]): Task[] {
 export function completedToday(tasks: Task[], now: Date): Task[] {
   const key = dayKeyOf(now);
   return tasks.filter(
-    (t) => t.status === 'done' && t.completedAt != null && dayKeyOf(t.completedAt) === key,
+    (t) => !isStructural(t) && t.status === 'done' && t.completedAt != null && dayKeyOf(t.completedAt) === key,
   );
 }

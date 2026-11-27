@@ -41,7 +41,7 @@ test('project backlog remains available and legacy current undated links return 
   await expect(page).toHaveURL(/scope=week/);
   await expect(page.locator('[data-row]').getByText('scheduled', { exact: true })).toBeVisible();
   await page.goto('/tasks?saved=removed_view&view=list&scope=all');
-  await expect(page.getByRole('heading', { name: '当前任务', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '任务', exact: true, level: 1 })).toBeVisible();
   await expect(page.locator('[data-row]').getByText('backlog', { exact: true })).toHaveCount(0);
   expect(await selectValues(page.getByRole('combobox', { name: '任务时间范围', exact: true }))).not.toContain('undated');
   await page.goto('/tasks?project=project&view=list&scope=undated');
@@ -57,6 +57,7 @@ test('adding a task in the current all-time list keeps it visible by giving it t
   await page.getByRole('textbox', { name: '添加任务', exact: true }).fill('new scheduled task');
   await page.getByRole('textbox', { name: '添加任务', exact: true }).press('Enter');
   await expect(page.locator('[data-row]').getByText('new scheduled task', { exact: true })).toBeVisible();
+  await expect(page.getByRole('status', { name: '保存状态', exact: true })).toHaveText('已保存');
   await page.reload();
   await expect(page.locator('[data-row]').getByText('new scheduled task', { exact: true })).toBeVisible();
 });

@@ -1,4 +1,4 @@
-import type { ServerConfig } from '@nexus/core';
+import type { ServerConfig, WorkspaceConfig, WorkspaceEnvironment, WorkspaceInstruction, WorkspacePane } from '@nexus/core';
 import { apiUrl } from './endpoint';
 
 let expectedUserId: string | null = null;
@@ -9,6 +9,8 @@ type ApiRequest = { path: string; method: string; userId: string | null; body?: 
 type ApiTransport = (request: ApiRequest) => Promise<{ status: number; body: string }>;
 let apiTransport: ApiTransport | undefined;
 export function configureApiTransport(transport?: ApiTransport): void { apiTransport = transport; }
+/** Native transports cannot share browser EventSource authentication. */
+export function apiSupportsBrowserStreaming(): boolean { return !apiTransport; }
 
 export interface AuthUser {
   id: string;
@@ -34,6 +36,7 @@ export class ApiError extends Error {
 }
 
 async function req<T>(path: string, { method = 'GET', body }: { method?: string; body?: string } = {}, timeoutMs = 8000): Promise<T> {
+  const requestUserId = expectedUserId;
   let res: Response;
   if (apiTransport) {
     const response = await apiTransport({ path, method, userId: expectedUserId, body, timeoutMs });
@@ -59,10 +62,34 @@ async function req<T>(path: string, { method = 'GET', body }: { method?: string;
     throw new ApiError(res.status, msg);
   }
   if (res.status === 204) return undefined as T;
-  return (await res.json()) as T;
+  const value = (await res.json()) as T;
+  if (!path.startsWith('/api/auth/') && requestUserId !== expectedUserId) throw new ApiError(409, '账号已切换，请重新载入');
+  return value;
 }
 
+/** Shared authenticated transport for feature APIs, including native clients. */
+export { req as apiRequest };
+
 export const api = {
+  workspace(taskId: string): Promise<{ data: { environments: WorkspaceEnvironment[]; instructions: WorkspaceInstruction[] } }> {
+    return req(`/api/workspaces/${encodeURIComponent(taskId)}`);
+  },
+  workspaceResources(taskId: string, config: WorkspaceConfig): Promise<{ data: { id: string; name: string; image?: string }[] }> {
+    return req(`/api/workspaces/${encodeURIComponent(taskId)}/discover`, { method: 'POST', body: JSON.stringify({ config }) }, 15000);
+  },
+  createWorkspaceEnvironment(taskId: string, config: WorkspaceConfig, requestId: string, resourceId?: string): Promise<{ data: WorkspaceEnvironment }> {
+    return req(`/api/workspaces/${encodeURIComponent(taskId)}/environments`, { method: 'POST', body: JSON.stringify({ config, requestId, resourceId }) }, 20000);
+  },
+  workspacePanes(id: string): Promise<{ data: WorkspacePane[] }> { return req(`/api/workspace-environments/${encodeURIComponent(id)}/panes`, {}, 15000); },
+  workspaceEnvironment(id: string): Promise<{ data: WorkspaceEnvironment }> { return req(`/api/workspace-environments/${encodeURIComponent(id)}`); },
+  workspaceOutput(id: string, pane: string): Promise<{ data: string }> { return req(`/api/workspace-environments/${encodeURIComponent(id)}/output?pane=${encodeURIComponent(pane)}`, {}, 15000); },
+  workspaceEnvironmentAction(id: string, action: 'check' | 'retry' | 'stop'): Promise<{ data: WorkspaceEnvironment }> {
+    const path = `/api/workspace-environments/${encodeURIComponent(id)}${action === 'stop' ? '' : `/${action}`}`;
+    return req(path, { method: action === 'stop' ? 'DELETE' : 'POST' }, 20000);
+  },
+  sendWorkspaceInstruction(taskId: string, value: { requestId: string; environmentId: string; pane: WorkspacePane; text: string; submit: boolean; terminalInput: boolean }): Promise<{ data: WorkspaceInstruction }> {
+    return req(`/api/workspaces/${encodeURIComponent(taskId)}/instructions`, { method: 'POST', body: JSON.stringify(value) });
+  },
   agentTokens(): Promise<{ data: AgentToken[] }> { return req('/api/tokens'); },
   createAgentToken(value: { name: string; permission: 'read' | 'write'; expiresInDays: number }): Promise<{ data: AgentToken; token: string }> {
     return req('/api/tokens', { method: 'POST', body: JSON.stringify(value) });
@@ -91,8 +118,11 @@ export const api = {
     });
   },
 
-  logout(): Promise<void> {
-    return req('/api/auth/logout', { method: 'POST' });
+  accounts(): Promise<{ accounts: AuthUser[] }> { return req('/api/auth/accounts'); },
+  switchAccount(userId: string): Promise<AuthUser> { return req('/api/auth/switch', { method: 'POST', body: JSON.stringify({ userId }) }); },
+  forgetAccount(userId: string): Promise<void> { return req(`/api/auth/accounts/${encodeURIComponent(userId)}`, { method: 'DELETE' }); },
+  logout(all = false): Promise<void> {
+    return req(all ? '/api/auth/logout-all' : '/api/auth/logout', { method: 'POST' });
   },
 
   ticket(userId: string, purpose: 'sync' | 'tmux' = 'sync'): Promise<string> {
@@ -120,7 +150,7 @@ export const api = {
   },
 
   servers(): Promise<ServerConfig[]> { return req('/api/servers'); },
-  saveServer(id: string, server: { name: string; host: string; password?: string }): Promise<ServerConfig> {
+  saveServer(id: string, server: { name: string; host: string; password?: string; agentProxy?: ServerConfig['agentProxy'] }): Promise<ServerConfig> {
     return req(`/api/servers/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(server) });
   },
   removeServer(id: string): Promise<void> { return req(`/api/servers/${encodeURIComponent(id)}`, { method: 'DELETE' }); },

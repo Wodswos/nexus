@@ -44,7 +44,7 @@ export function TaskViewLinks({
       aria-label="任务定位"
       className="flex shrink-0 flex-wrap items-center gap-0.5 border-b border-[var(--border)] px-3 py-1.5"
     >
-      <span className="mr-1 text-[11px] text-muted">跳转到</span>
+      <span title="在另一个视图中打开" className="mr-1 text-[11px] text-muted">View in</span>
       {links.map(({ view, label, text, href }) => {
         if (!href) return null;
         return (

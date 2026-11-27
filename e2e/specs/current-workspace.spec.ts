@@ -17,11 +17,14 @@ test('sidebar contains workspaces, project directory collapse persists and creat
   await seed(page, { tasks: [task('project_a', { kind: 'node', project: true }), task('project_b', { kind: 'node', project: true })] });
   await page.goto('/');
   const navigation = page.getByRole('navigation', { name: '工作导航', exact: true });
-  await expect(navigation.getByRole('link')).toHaveText(['当前任务', '收集箱']);
-  await expect(page.getByRole('navigation', { name: '快捷视图', exact: true }).getByRole('link')).toHaveText(['本月日历']);
-  await expect(page.getByRole('heading', { name: '当前任务', exact: true })).toBeVisible();
+  await expect(navigation.getByRole('link')).toHaveText(['当前工作', '收集箱']);
+  await expect(page.getByRole('navigation', { name: '快捷视图', exact: true }).getByRole('link')).toHaveText(['本周工作', '本月日历']);
+  await expect(page.getByRole('heading', { name: '当前工作', exact: true })).toBeVisible();
+  await expect(navigation.getByRole('link', { name: '当前工作', exact: true })).toHaveAttribute('aria-current', 'page');
+  const week = page.getByRole('navigation', { name: '快捷视图', exact: true }).getByRole('link', { name: '本周工作', exact: true });
+  await week.click();
   await expect(view(page, '甘特图')).toHaveAttribute('data-state', 'active');
-  await expect(navigation.getByRole('link', { name: '当前任务', exact: true })).toHaveAttribute('aria-current', 'page');
+  await expect(week).toHaveAttribute('aria-current', 'page');
   await expect(page.getByRole('navigation', { name: '视图', exact: true })).toHaveCount(0);
   const projects = page.getByRole('navigation', { name: '项目', exact: true });
   await expect(projects.getByRole('link')).toHaveCount(2);
@@ -38,7 +41,7 @@ test('sidebar contains workspaces, project directory collapse persists and creat
   await page.reload();
   await expect(page.getByRole('button', { name: '收起项目', exact: true })).toHaveAttribute('aria-expanded', 'true');
   await page.setViewportSize({ width: 390, height: 844 });
-  await expect(page.getByRole('navigation', { name: '移动导航', exact: true }).getByRole('link')).toHaveText(['当前任务', '本月日历']);
+  await expect(page.getByRole('navigation', { name: '移动导航', exact: true }).getByRole('link')).toHaveText(['当前工作', '本周工作']);
 });
 
 test('current workspace preserves the same custom window across its five views and keeps project backlog accessible', async ({ page }) => {

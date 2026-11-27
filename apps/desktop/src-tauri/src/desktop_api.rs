@@ -5,6 +5,7 @@ use tauri::{webview::Cookie, State, WebviewWindow};
 use tokio::sync::Mutex;
 
 const SESSION_NAME: &str = "cortex_session";
+const ACCOUNTS_NAME: &str = "nexus_accounts";
 const STORAGE_DOMAIN: &str = "cortex-desktop.invalid";
 const DEFAULT_ORIGIN: &str = "http://115.190.3.4:30090";
 
@@ -107,6 +108,7 @@ fn save_session(
     window: &WebviewWindow,
     origin: &Url,
     storage_name: &str,
+    server_name: &str,
     stored: Option<Cookie<'static>>,
     headers: &header::HeaderMap,
 ) -> Result<(), &'static str> {
@@ -117,7 +119,7 @@ fn save_session(
         let Ok(cookie) = Cookie::parse(header) else {
             continue;
         };
-        if cookie.name() != SESSION_NAME
+        if cookie.name() != server_name
             || cookie
                 .domain()
                 .is_some_and(|domain| Some(domain) != origin.host_str())
@@ -187,22 +189,25 @@ pub(crate) async fn desktop_api_request(
         "DELETE" => Method::DELETE,
         _ => return Err("无效的账号服务请求方法"),
     };
-    let auth_mutation = method == Method::POST
-        && matches!(
-            url.path(),
-            "/api/auth/login" | "/api/auth/register" | "/api/auth/logout"
-        );
+    let auth_mutation = method != Method::GET && url.path().starts_with("/api/auth/");
     let _auth_guard = if auth_mutation {
         Some(api.auth_mutations.lock().await)
     } else {
         None
     };
     // Read the private native cookie, which is intentionally off the API URL.
-    let stored = window
+    let cookies = window
         .cookies()
-        .map_err(|_| "无法读取桌面登录会话")?
-        .into_iter()
-        .find(|cookie| native_session(cookie, &api.origin, &api.storage_name));
+        .map_err(|_| "无法读取桌面登录会话")?;
+    let stored = cookies
+        .iter()
+        .find(|cookie| native_session(cookie, &api.origin, &api.storage_name))
+        .cloned();
+    let accounts_storage = format!("{}_accounts", api.storage_name);
+    let saved = cookies
+        .iter()
+        .find(|cookie| native_session(cookie, &api.origin, &accounts_storage))
+        .cloned();
     let mut request = api
         .client
         .request(method, url)
@@ -212,10 +217,16 @@ pub(crate) async fn desktop_api_request(
         let value = header::HeaderValue::from_str(&user_id).map_err(|_| "无效的账号标识")?;
         request = request.header("X-Cortex-User", value);
     }
+    let mut cookie_values = Vec::new();
     if let Some(cookie) = &stored {
-        let mut value =
-            header::HeaderValue::from_str(&format!("{SESSION_NAME}={}", cookie.value()))
-                .map_err(|_| "无效的桌面登录会话")?;
+        cookie_values.push(format!("{SESSION_NAME}={}", cookie.value()));
+    }
+    if let Some(cookie) = &saved {
+        cookie_values.push(format!("{ACCOUNTS_NAME}={}", cookie.value()));
+    }
+    if !cookie_values.is_empty() {
+        let mut value = header::HeaderValue::from_str(&cookie_values.join("; "))
+            .map_err(|_| "无效的桌面登录会话")?;
         value.set_sensitive(true);
         request = request.header(header::COOKIE, value);
     }
@@ -229,7 +240,16 @@ pub(crate) async fn desktop_api_request(
             &window,
             &api.origin,
             &api.storage_name,
+            SESSION_NAME,
             stored,
+            response.headers(),
+        )?;
+        save_session(
+            &window,
+            &api.origin,
+            &accounts_storage,
+            ACCOUNTS_NAME,
+            saved,
             response.headers(),
         )?;
     }

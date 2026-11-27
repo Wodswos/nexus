@@ -2,6 +2,7 @@ import type { ScheduleEvent, Task } from './types';
 import { activeTasks, isStructural } from './tree';
 import { addDays, startOfWeek } from './time';
 import { priorityOf } from './quadrant';
+import { taskViewStatus } from './status';
 
 export type WorkFocus = 'current' | 'doing' | 'week' | 'overdue' | 'unscheduled' | 'all';
 export const WORK_FOCUS = ['current', 'doing', 'week', 'overdue', 'unscheduled', 'all'] as const;
@@ -23,8 +24,9 @@ export function workSignals(tasks: Task[], events: ScheduleEvent[], now: Date, w
   }
   for (const task of activeTasks(tasks)) {
     if (isStructural(task) || task.status === 'done' || task.status === 'inbox') continue;
-    if (task.status === 'doing') doing.add(task.id);
-    if (task.dueAt != null && task.dueAt < now.getTime()) overdue.add(task.id);
+    const status = taskViewStatus(task, now).kind;
+    if (status === 'running') doing.add(task.id);
+    if (status === 'overdue') overdue.add(task.id);
     const first = task.startAt ?? task.dueAt;
     const last = task.dueAt ?? task.startAt;
     if (

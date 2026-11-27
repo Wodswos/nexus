@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router';
 import {
   Download,
   Upload,
-  LogOut,
   KeyRound,
   Moon,
   Sun,
@@ -23,7 +22,9 @@ import { useAuth } from '@/app/auth';
 import { useTheme } from '@/app/theme';
 import { requestNotifPermission, getNotifPermission, nativeNotifSupported, onNotifPermissionChange } from '@nexus/platform';
 import { isComposing } from '@/shared/ime';
+import { KubernetesConnections } from '@/shared/KubernetesConnections';
 import { AgentApiSettings } from './AgentApiSettings';
+import { AccountSwitcher } from '../auth/AccountSwitcher';
 
 export default function SettingsPage() {
   const auth = useAuth();
@@ -47,6 +48,9 @@ export default function SettingsPage() {
   const [serverName, setServerName] = useState('');
   const [serverHost, setServerHost] = useState('');
   const [serverPassword, setServerPassword] = useState('');
+  const [serverProxyEnabled, setServerProxyEnabled] = useState(false);
+  const [serverProxyUrl, setServerProxyUrl] = useState('');
+  const [serverNoProxy, setServerNoProxy] = useState('localhost,127.0.0.1,::1');
   const [serverError, setServerError] = useState('');
   const [serverBusy, setServerBusy] = useState(false);
   const [editingServer, setEditingServer] = useState<string | null>(null);
@@ -83,6 +87,7 @@ export default function SettingsPage() {
         name,
         host,
         password: serverPassword || undefined,
+        agentProxy: serverProxyEnabled ? { url: serverProxyUrl.trim(), noProxy: serverNoProxy.trim() } : null,
       });
       store.updateSettings({
         servers: [...store.getData().settings.servers.filter((item) => item.id !== server.id), server],
@@ -90,6 +95,9 @@ export default function SettingsPage() {
       setServerName('');
       setServerHost('');
       setServerPassword('');
+      setServerProxyEnabled(false);
+      setServerProxyUrl('');
+      setServerNoProxy('localhost,127.0.0.1,::1');
       setEditingServer(null);
     } catch (error) {
       setServerError((error as Error).message);
@@ -180,26 +188,19 @@ export default function SettingsPage() {
     <div className="h-full overflow-y-auto">
       <div className="mx-auto max-w-2xl space-y-4 px-4 py-5 pb-24 md:px-6">
         <h1 className="text-lg font-semibold">设置</h1>
+        <Button size="sm" variant="outline" onClick={() => navigate('/workspaces')}>Workspace 与模板</Button>
 
         {/* 账号 */}
-        <Card>
+        <Card id="accounts">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <KeyRound className="h-4 w-4 text-[var(--accent-from)]" /> 账号
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
+            <AccountSwitcher />
             {auth.phase === 'authed' && auth.user ? (
               <>
-                <div className="flex items-center gap-2 text-sm">
-                  <span className="gradient-text font-semibold">{auth.user.username}</span>
-                  {auth.user.isAdmin && <Badge variant="accent">管理员</Badge>}
-                </div>
-                <div className="flex gap-2">
-                  <Button size="sm" variant="secondary" onClick={() => void auth.logout()}>
-                    <LogOut className="h-3.5 w-3.5" /> 登出
-                  </Button>
-                </div>
                 {auth.user.isAdmin && (
                   <div className="rounded-xl border border-[var(--border)] p-3">
                     <div className="mb-2 flex items-center justify-between">
@@ -252,12 +253,7 @@ export default function SettingsPage() {
                 )}
               </>
             ) : (
-              <div className="flex items-center justify-between gap-3">
-                <div className="text-xs text-muted">当前是本地模式,数据只存在这台设备的浏览器里</div>
-                <Button size="sm" variant="primary" onClick={() => navigate('/login')}>
-                  登录 / 注册
-                </Button>
-              </div>
+              <p className="text-xs text-muted">当前是本地模式，添加账号后可登录或注册。</p>
             )}
           </CardContent>
         </Card>
@@ -351,6 +347,7 @@ export default function SettingsPage() {
                         密码
                       </Badge>
                     )}
+                    {s.agentProxy && <span className="shrink-0 text-[10px] text-muted" title={s.agentProxy.url}>代理</span>}
                     <button
                       className="shrink-0 text-xs text-muted underline disabled:opacity-40"
                       disabled={auth.phase !== 'authed' || connectionCheck?.busy}
@@ -366,6 +363,9 @@ export default function SettingsPage() {
                         setServerName(s.name);
                         setServerHost(s.host);
                         setServerPassword('');
+                        setServerProxyEnabled(!!s.agentProxy);
+                        setServerProxyUrl(s.agentProxy?.url ?? '');
+                        setServerNoProxy(s.agentProxy?.noProxy ?? 'localhost,127.0.0.1,::1');
                       }}
                     >
                       {s.registered === false ? '重新配置' : '配置'}
@@ -408,12 +408,20 @@ export default function SettingsPage() {
                 size="sm"
                 variant="secondary"
                 className="h-8 shrink-0"
-                disabled={auth.phase !== 'authed' || serverBusy || !serverName.trim() || !serverHost.trim()}
+                disabled={auth.phase !== 'authed' || serverBusy || !serverName.trim() || !serverHost.trim() || serverProxyEnabled && !serverProxyUrl.trim()}
                 onClick={() => void addServer()}
               >
                 <Plus className="h-3.5 w-3.5" /> {editingServer ? '保存' : '添加'}
               </Button>
             </div>
+            <fieldset aria-label="Agent 代理" className="space-y-2 rounded-lg border border-[var(--border)] p-3">
+              <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={serverProxyEnabled} onChange={event => setServerProxyEnabled(event.target.checked)} />此服务器上的 Agent 使用代理</label>
+              {serverProxyEnabled && <>
+                <Input aria-label="Agent 代理地址" value={serverProxyUrl} onChange={event => setServerProxyUrl(event.target.value)} placeholder="http://127.0.0.1:7890" className="h-8 text-xs" />
+                <label className="block space-y-1 text-xs text-muted"><span>不经过代理的地址</span><Input aria-label="不经过代理的地址" value={serverNoProxy} onChange={event => setServerNoProxy(event.target.value)} className="h-8 text-xs" /></label>
+              </>}
+              <p className="text-[11px] leading-5 text-muted">作用于此连接下新启动的 SSH／独立用户 Agent；已运行的进程需结束后恢复会话。127.0.0.1 指执行主机，容器／Pod 请在环境中单独配置。Nexus 回调地址自动直连。</p>
+            </fieldset>
             <div className="text-[10px] text-muted/60">
               SSH 密码在服务端加密保存,不进入任务同步或 JSON 导出。
               {auth.phase !== 'authed' && ' 请先登录以配置远程连接。'}
@@ -432,6 +440,11 @@ export default function SettingsPage() {
               </p>
             )}
           </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader><CardTitle className="flex items-center gap-2"><Server className="h-4 w-4 text-[var(--accent-from)]" /> Kubernetes 集群</CardTitle></CardHeader>
+          <CardContent>{auth.phase === 'authed' ? <KubernetesConnections manage /> : <p className="text-xs text-muted">登录后可管理 Kubernetes 集群。</p>}</CardContent>
         </Card>
 
         {/* 通知 */}
@@ -465,7 +478,7 @@ export default function SettingsPage() {
                     <CircleCheck className="h-3.5 w-3.5 text-[var(--success)]" /> 已授权
                   </>
                 ) : (
-                  <>{notifState === 'denied' ? nativeNotifications ? '请在 iPhone「设置 → 通知 → Nexus」中允许通知。' : '通知已被禁用，请在浏览器设置中允许通知。' : notifState === 'unsupported' ? '当前环境仅支持应用内提醒。' : '尚未授权，点击按钮后可开启通知。'}</>
+                  <>{notifState === 'denied' ? nativeNotifications ? '请在 iPhone「设置 → 通知 → Nexus」中允许通知。' : '通知已被禁用，请在浏览器设置中允许通知。' : notifState === 'unsupported' ? '当前 Workspace 仅支持应用内提醒。' : '尚未授权，点击按钮后可开启通知。'}</>
                 )}
               </div>
             )}

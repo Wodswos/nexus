@@ -155,7 +155,7 @@ test('calendar drafts cancel without records and create only after confirmation'
   const draft = page.getByRole('dialog', { name: '新建日历任务' });
   await expect(draft).toBeVisible();
   await draft.getByLabel('新任务标题', { exact: true }).fill('discard this draft');
-  const headingBox = (await page.getByRole('heading', { name: '当前任务', exact: true }).boundingBox())!;
+  const headingBox = (await page.getByRole('heading', { name: '任务', exact: true, level: 1 }).boundingBox())!;
   await page.mouse.click(headingBox.x + 10, headingBox.y + 10);
   await expect(draft).toHaveCount(0);
   await cell.click({ position: { x: 20, y: 65 } });
@@ -203,7 +203,7 @@ test('workspace distinguishes connection failure from no sessions and adds agent
   await page.goto('/tasks');
   await page.getByText('resource task', { exact: true }).click();
   const detail = page.locator('[data-inspector]');
-  await expect(detail.getByRole('region', { name: '任务工作区' })).toBeVisible();
+  await expect(detail.getByRole('region', { name: '相关资源' })).toBeVisible();
   await expect(detail.getByLabel('tmux 服务器', { exact: true })).toHaveCount(0);
   await detail.getByRole('button', { name: '添加工作资源' }).click();
   await page.getByRole('menuitem', { name: 'tmux 会话', exact: true }).click();
@@ -262,7 +262,7 @@ test('week and day blank slots open cancellable task drafts, including on mobile
   expect(draftBounds!.x).toBeGreaterThanOrEqual(0);
   expect(draftBounds!.x + draftBounds!.width).toBeLessThanOrEqual(390);
   await draft.getByLabel('新任务标题', { exact: true }).fill('mobile cancelled draft');
-  const headingBox = (await page.getByRole('heading', { name: '当前任务', exact: true }).boundingBox())!;
+  const headingBox = (await page.getByRole('heading', { name: '任务', exact: true, level: 1 }).boundingBox())!;
   await page.mouse.click(headingBox.x + 10, headingBox.y + 10);
   await expect(draft).toHaveCount(0);
 });
@@ -281,7 +281,7 @@ test('accent choices preserve circular controls and navigation only contains wor
   }
   await expect(page.getByRole('navigation', { name: '视图', exact: true })).toHaveCount(0);
   const workspaces = page.getByRole('navigation', { name: '工作导航', exact: true });
-  await expect(workspaces.getByRole('link')).toHaveText(['当前任务', '收集箱']);
+  await expect(workspaces.getByRole('link')).toHaveText(['当前工作', '收集箱']);
   await expect(page.getByRole('navigation', { name: '快捷视图', exact: true }).getByRole('link', { name: '本月日历', exact: true })).toBeVisible();
   await expect(
     page
@@ -369,7 +369,7 @@ test('anonymous tagged data migrates once across subsequent account logins', asy
   const first = await exported(page);
   expect(first.data.tasks.some((t: any) => t.title === 'anonymous task')).toBe(true);
   expect(first.data.tags.some((t: any) => t.name === 'migrated')).toBe(true);
-  await page.getByRole('button', { name: '登出' }).click();
+  await page.getByRole('button', { name: `退出账号 ${a.username}`, exact: true }).click();
   await ready(page);
   await login(page, b.username);
   const second = await exported(page);
@@ -543,7 +543,8 @@ test('current tasks defaults to this week in Gantt and offers every view in the 
   await page.goto('/tasks?scope=week');
   await ready(page);
   await expect(page.getByRole('tab', { name: '甘特图', exact: true })).toHaveAttribute('data-state', 'active');
-  const weekLink = page.getByRole('navigation', { name: '工作导航' }).getByRole('link', { name: '当前任务', exact: true });
+  const weekLink = page.getByRole('navigation', { name: '快捷视图' }).getByRole('link', { name: '本周工作', exact: true });
+  await weekLink.click();
   await expect(weekLink).toHaveAttribute('aria-current', 'page');
   const dates = page.locator('input[type="date"]');
   const thisWeek = await dates.first().inputValue();
@@ -778,8 +779,8 @@ test('mindmap focuses current work and factual risks while retaining project pat
   await page.goto('/tasks?project=focus_project&view=mindmap');
   const overview = page.getByRole('region', { name: '工作概览', exact: true });
   const node = (id: string) => page.locator(`.react-flow__node[data-id="${id}"]`);
-  await overview.getByRole('button', { name: '当前工作', exact: true }).click();
-  await expect(overview.getByRole('button', { name: '当前工作', exact: true })).toHaveAttribute(
+  await overview.getByRole('button', { name: '推进与逾期', exact: true }).click();
+  await expect(overview.getByRole('button', { name: '推进与逾期', exact: true })).toHaveAttribute(
     'aria-pressed',
     'true',
   );
@@ -888,7 +889,7 @@ test('mindmap edges meet node boundaries and stay level through filtered project
     await page.getByRole('button', { name: '关闭导图配置', exact: true }).click();
     for (const [focus, visible, hidden] of [
       ['全部', 'align_backlog', null],
-      ['当前工作', 'align_current', 'align_backlog'],
+      ['推进与逾期', 'align_current', 'align_backlog'],
       ['逾期', 'align_current', 'align_backlog'],
     ] as const) {
       await overview.getByRole('button', { name: new RegExp(`^${focus}( |$)`) }).click();
@@ -971,7 +972,7 @@ test('today finds a due child under an undated project, inline capture inherits 
       { ...task('later_child', 'later action'), parentId: 'project' },
     ],
   });
-  await page.getByRole('link', { name: '当前任务', exact: true }).first().click();
+  await page.getByRole('link', { name: '本周工作', exact: true }).first().click();
   await page.getByRole('tab', { name: '列表', exact: true }).click();
   await selectValue(page.getByRole('combobox', { name: '任务时间范围', exact: true }), 'today');
   await expect(page.locator('[data-row]').getByText('action for today', { exact: true })).toBeVisible();
@@ -1002,8 +1003,11 @@ test('mobile navigation and task editing stay accessible without horizontal over
   await page.keyboard.press('Escape');
   await page
     .getByRole('navigation', { name: '移动导航' })
-    .getByRole('link', { name: '本月日历', exact: true })
+    .getByRole('link', { name: '本周工作', exact: true })
     .click();
+  await expect(page.getByRole('tab', { name: '甘特图', exact: true })).toHaveAttribute('data-state', 'active');
+  await page.getByRole('tab', { name: '日历', exact: true }).click();
+  await selectValue(page.getByRole('combobox', { name: '任务时间范围', exact: true }), 'month');
   await expect(page.getByTestId('calendar-month')).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });

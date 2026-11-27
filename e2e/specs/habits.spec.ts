@@ -193,7 +193,7 @@ test('global reminders catch the scheduled time, open the matching history and s
   await page.clock.install({ time: now });
   await seed(page, { habits: [habit('read', { name: '阅读', reminderAt: '20:00', targetPerDay: 2 }), habit('rest', { reminderAt: '20:00', cadence: { type: 'weekly', timesPerWeek: 1, days: [2] } })] });
   await page.goto('/tasks');
-  await expect(page.getByRole('heading', { name: '当前任务', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '任务', exact: true, level: 1 })).toBeVisible();
   const reminder = page.getByRole('complementary', { name: '习惯提醒', exact: true });
   await expect(reminder).toHaveCount(0);
   await page.clock.fastForward(60000);
@@ -222,7 +222,7 @@ test('closing a reminder persists for that habit and time, preserves check-ins a
   await expect(row(page, 'twice').getByLabel('今日打卡 0/2', { exact: true })).toBeVisible();
   await page.reload(); await expect(reminder).toHaveCount(0);
   await page.clock.fastForward(600000); await expect(reminder).toHaveCount(0);
-  await page.getByRole('navigation', { name: '工作导航', exact: true }).getByRole('link', { name: '当前任务', exact: true }).click();
+  await page.getByRole('navigation', { name: '工作导航', exact: true }).getByRole('link', { name: '当前工作', exact: true }).click();
   await page.clock.fastForward(12 * 3600000 - 600000);
   await expect(reminder).toContainText('早晚阅读'); await expect(reminder).toContainText('20:00');
   await reminder.getByRole('button', { name: '关闭本次习惯提醒', exact: true }).click();

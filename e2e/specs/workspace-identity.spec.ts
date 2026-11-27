@@ -23,11 +23,11 @@ test('shortcut directory collapses independently, remembers its state, and expan
   await page.reload();
   const expand = page.getByRole('button', { name: '展开快捷视图', exact: true });
   await expect(expand).toHaveAttribute('aria-expanded', 'false');
-  await expect(expand).toHaveText('快捷视图1');
+  await expect(expand).toHaveText('快捷视图2');
   await expand.focus(); await expand.press('Enter');
   const collapse = page.getByRole('button', { name: '收起快捷视图', exact: true });
   await expect(collapse).toHaveAttribute('aria-expanded', 'true');
-  await expect(shortcuts(page).getByRole('link')).toHaveCount(1);
+  await expect(shortcuts(page).getByRole('link')).toHaveText(['本周工作', '本月日历']);
   await collapse.press('Space');
   await expect(shortcuts(page)).toBeHidden();
   await page.getByRole('button', { name: '添加快捷视图', exact: true }).click();

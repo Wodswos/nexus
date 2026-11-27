@@ -22,7 +22,7 @@ function sshEnvironment(connection: SshConnection): [NodeJS.ProcessEnv, () => vo
 }
 
 /** No shell locally, no host-provided config, agent or shared identity. */
-export async function sshRun(connection: SshConnection, command: string): Promise<{ code: number; stdout: string; stderr: string }> {
+export async function sshRun(connection: SshConnection, command: string, options: { input?: string; timeoutMs?: number; signal?: AbortSignal } = {}): Promise<{ code: number; stdout: string; stderr: string }> {
   const credentialError = sshCredentialError(connection);
   if (credentialError) return { code: -1, stdout: '', stderr: credentialError };
   const count = activeCommands.get(connection.userId) ?? 0;
@@ -38,13 +38,15 @@ export async function sshRun(connection: SshConnection, command: string): Promis
     return await new Promise((resolve) => {
       const args = sshArgs(connection);
       if (!connection.password) args.unshift('-o', 'BatchMode=yes');
-      const child = spawn('ssh', [...args, command], { env, stdio: ['ignore', 'pipe', 'pipe'] });
+      const child = spawn('ssh', [...args, command], { env, stdio: ['pipe', 'pipe', 'pipe'] });
       let stdout = '', stderr = '', finished = false;
-      const timer = setTimeout(() => { child.kill('SIGKILL'); finish(-1, 'SSH 请求超时'); }, 8000);
+      const timer = setTimeout(() => { child.kill('SIGKILL'); finish(-1, 'SSH 请求超时'); }, options.timeoutMs ?? 8000);
+      const abort = () => { child.kill('SIGKILL'); finish(-1, 'SSH 操作已取消'); };
       const finish = (code: number, error = '') => {
         if (finished) return;
         finished = true;
         clearTimeout(timer);
+        options.signal?.removeEventListener('abort', abort);
         resolve({ code, stdout, stderr: (error || stderr).slice(-500) });
       };
       child.stdout.on('data', (bytes: Buffer) => {
@@ -54,6 +56,10 @@ export async function sshRun(connection: SshConnection, command: string): Promis
       child.stderr.on('data', (bytes: Buffer) => { stderr = (stderr + bytes.toString('utf8')).slice(-500); });
       child.on('error', (error) => finish(-1, error.message));
       child.on('close', (code) => finish(code ?? -1));
+      child.stdin.on('error', () => {});
+      options.signal?.addEventListener('abort', abort, { once: true });
+      if (options.signal?.aborted) abort();
+      else child.stdin.end(options.input);
     });
   } finally {
     dispose();

@@ -97,7 +97,7 @@ export function TaskWorkspace({ taskId }: { taskId: string }) {
   return (
     <section
       id={`task-workspace-${taskId}`}
-      aria-label="任务工作区"
+      aria-label="相关资源"
       tabIndex={-1}
       data-task-resources
       data-task-workspace
@@ -106,7 +106,7 @@ export function TaskWorkspace({ taskId }: { taskId: string }) {
       <div className="flex items-center justify-between gap-2">
         <h3 className="flex items-center gap-2 text-xs font-medium">
           <Link2 size={14} />
-          工作区<span className="text-muted">· {links.length}</span>
+          相关资源
         </h3>
         <Dropdown>
           <DropdownTrigger asChild>
@@ -153,11 +153,6 @@ export function TaskWorkspace({ taskId }: { taskId: string }) {
           })}
         </ul>
       )}
-      {!links.length && !adding && (
-        <p className="text-xs leading-5 text-muted">
-          关联终端、网页、PR 或会话，随时回到这项任务的工作现场。
-        </p>
-      )}
       {adding && (
         <div
           data-task-resource-editor
@@ -201,7 +196,7 @@ export function TaskWorkspaceShortcuts({ taskId }: { taskId: string }) {
   const data = useNexusData();
   const links = sortedWorkspaceLinks(data.links, taskId),
     pinned = links.filter((link) => link.pinned);
-  if (!links.length) return null;
+  if (!pinned.length) return null;
   const jump = () => {
     const section = document.getElementById(`task-workspace-${taskId}`);
     section?.scrollIntoView({ block: 'nearest' });
@@ -209,15 +204,9 @@ export function TaskWorkspaceShortcuts({ taskId }: { taskId: string }) {
   };
   return (
     <nav
-      aria-label="工作区快捷入口"
+      aria-label="资源快捷入口"
       className="flex shrink-0 flex-wrap items-center gap-1 border-b border-[var(--border)] px-3 py-1.5"
     >
-      <button
-        onClick={jump}
-        className="min-h-8 rounded-md px-1.5 text-[11px] text-muted hover:bg-[var(--surface)] hover:text-foreground"
-      >
-        工作区 · {links.length}
-      </button>
       {pinned.slice(0, 3).map((link) => (
         <WorkspaceOpener key={link.id} link={link} compact />
       ))}

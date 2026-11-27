@@ -1,3 +1,4 @@
+import { TaskTitle } from '@/shared/TaskTitle';
 import { workspaceTaskDefaults } from '../taskFilters';
 import React, { useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router';
@@ -175,7 +176,7 @@ function MatrixChip({ task, progress, focused }: { task: Task; progress: { done:
         )}
         aria-label="完成"
       />
-      <span className={cn('min-w-0 flex-1 truncate', task.status === 'done' && 'line-through')}>{task.title || 'Untitled'}</span>
+      <span className={cn('min-w-0 flex-1 truncate', task.status === 'done' && 'line-through')}><TaskTitle title={task.title} /></span>
       {progress.total > 0 && (
         <span className="text-[9px] text-muted">
           {progress.done}/{progress.total}

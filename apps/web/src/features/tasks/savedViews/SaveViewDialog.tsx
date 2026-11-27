@@ -53,6 +53,7 @@ export function SaveViewDialog({
       work: value.work ?? 'all',
       taskStatus: value.taskStatus ?? 'all',
       taskPriority: value.taskPriority ?? 'all',
+      taskSort: value.taskSort ?? 'manual',
       ...(value.taskTag ? { taskTag: value.taskTag } : {}),
       ...(value.scope === 'custom' ? { from: value.from, to: value.to } : {}),
     };
@@ -201,7 +202,7 @@ export function SaveViewDialog({
                 onValueChange={(work) => change({ work: work as SavedTaskView['work'] })}
                 options={[
                   { value: 'all', label: '全部' },
-                  { value: 'current', label: '当前工作 · 进行中或逾期' },
+                  { value: 'current', label: '推进与逾期 · 进行中或逾期' },
                   { value: 'overdue', label: '逾期' },
                   { value: 'doing', label: '仅进行中' },
                   { value: 'week', label: '本周安排' },
@@ -248,13 +249,17 @@ export function SaveViewDialog({
                       ? '全部优先级'
                       : priority === 'high'
                         ? '高优先级 · P0 / P1'
-                        : priority,
+                        : priority === 'unreviewed' ? '待分级 · 默认 P3' : priority,
                   ...(/^P[0-3]$/.test(priority)
                     ? { color: `var(--${priority.toLowerCase()})` }
                     : {}),
                 }))}
               />
             </label>
+            {['list', 'gantt'].includes(value.view) && <label className="block min-w-0 space-y-1.5 text-sm">
+              <span>排序</span>
+              <SelectField aria-label="快捷视图任务排序" className="w-full" disabled={busy} value={value.taskSort ?? 'manual'} onValueChange={taskSort => change({ taskSort: taskSort as SavedTaskView['taskSort'] })} options={[{ value: 'manual', label: '手动顺序' }, { value: 'priority', label: '优先级排序' }]} />
+            </label>}
             <label className="block min-w-0 space-y-1.5 text-sm">
               <span>标签</span>
               <SelectField

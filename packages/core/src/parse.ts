@@ -1,5 +1,6 @@
 import { Priority } from './types';
 import { addDays, dayKeyOf, nextWeekday, startOfDay } from './time';
+import { parseTaskTitle } from './taskTitle';
 
 /**
  * Quick Capture 内联语法(全是加速器,不强制):
@@ -13,6 +14,7 @@ export interface ParsedCapture {
   title: string;
   tags: string[];
   priority?: Priority;
+  startAt?: number;
   dueAt?: number;
   estimateMin?: number;
 }
@@ -34,6 +36,15 @@ const DAY_TOKENS: Record<string, number> = {
 };
 
 export function parseCapture(input: string, now: Date = new Date()): ParsedCapture {
+  // Link labels may contain #issue, @today or !P0 as ordinary text.
+  let marker = '\uE000';
+  while (input.includes(marker)) marker += '\uE000';
+  const links: string[] = [];
+  input = parseTaskTitle(input).map(part => {
+    if (!part.href) return part.text;
+    links.push(part.source ?? part.text);
+    return `${marker}${links.length - 1}${marker}`;
+  }).join('');
   const tags: string[] = [];
   let priority: Priority | undefined;
   let estimateMin: number | undefined;
@@ -87,20 +98,24 @@ export function parseCapture(input: string, now: Date = new Date()): ParsedCaptu
     return _m; // 未识别的 @ 保留原样(可能是 @提及)
   });
 
-  let dueAt: number | undefined;
+  let startAt: number | undefined, dueAt: number | undefined;
   if (day() || timeHHMM()) {
     const base = day() ?? startOfDay(now);
     if (timeHHMM()) base.setHours(timeHHMM()!.h, timeHHMM()!.m, 0, 0);
     // 纯时刻且已过今天的该时刻 → 视为明天
     if (!day() && timeHHMM() && base.getTime() < now.getTime()) base.setDate(base.getDate() + 1);
+    startAt = startOfDay(base).getTime();
+    if (!timeHHMM()) base.setHours(23, 59, 0, 0);
     dueAt = base.getTime();
   }
 
-  const title = text.replace(/\s+/g, ' ').trim();
+  let title = text.replace(/\s+/g, ' ').trim();
+  links.forEach((link, index) => { title = title.replaceAll(`${marker}${index}${marker}`, link); });
   return {
     title: title || dayKeyOf(now),
     tags: [...new Set(tags)],
     priority,
+    startAt,
     dueAt,
     estimateMin,
   };

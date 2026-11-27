@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router';
+import { Link, useNavigate, useSearchParams } from 'react-router';
 import { Check, LogIn, UserPlus, HardDrive } from 'lucide-react';
 import { Button, Input, Badge, Spinner } from '@nexus/ui';
 import { useAuth } from '@/app/auth';
@@ -7,6 +7,7 @@ import { useAuth } from '@/app/auth';
 export default function LoginPage() {
   const auth = useAuth();
   const navigate = useNavigate();
+  const [params] = useSearchParams();
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -52,6 +53,8 @@ export default function LoginPage() {
         </div>
 
         <div className="glass-raised rounded-2xl p-5">
+          {(params.has('add') || auth.user) && <h2 className="mb-3 text-sm font-semibold">添加账号</h2>}
+          {auth.accounts.length > 0 && <Link to="/settings#accounts" className="mb-4 block text-xs text-muted underline underline-offset-4">切换到已登录账号</Link>}
           {firstUser && (
             <div className="mb-3 rounded-xl border border-[var(--accent-from)]/30 bg-[color-mix(in_srgb,var(--accent-from)_8%,transparent)] px-3 py-2 text-xs text-muted">
               首次部署:创建的第一个账号是管理员,之后注册需要邀请码
@@ -96,7 +99,7 @@ export default function LoginPage() {
           <div className="mt-4 flex items-center justify-between text-[11px] text-muted">
             {auth.serverReachable ? <Badge variant="success">服务器在线</Badge> : <Badge variant="danger">服务器不可达</Badge>}
             <button className="inline-flex items-center gap-1 hover:text-foreground" onClick={() => navigate('/')}>
-              <HardDrive className="h-3 w-3" /> 先用本地模式
+              <HardDrive className="h-3 w-3" /> {auth.user ? `返回 ${auth.user.username}` : '先用本地模式'}
             </button>
           </div>
         </div>

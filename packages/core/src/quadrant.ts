@@ -1,5 +1,5 @@
 import { Task, Priority } from './types';
-import { activeTasks, isStructural } from './tree';
+import { activeTasks, buildChildrenMap, isStructural, sortSiblings } from './tree';
 
 export type QuadrantKey = 'do' | 'plan' | 'delegate' | 'eliminate';
 
@@ -8,7 +8,7 @@ export const PRIORITY_META: Record<Priority, { label: string; important: boolean
   P0: { label: 'P0 · 重要且紧急', important: true, urgent: true },
   P1: { label: 'P1 · 重要', important: true, urgent: false },
   P2: { label: 'P2 · 紧急', important: false, urgent: true },
-  P3: { label: 'P3 · 都可稍后', important: false, urgent: false },
+  P3: { label: 'P3 · 普通', important: false, urgent: false },
 };
 
 export const PRIORITY_ORDER: Priority[] = ['P0', 'P1', 'P2', 'P3'];
@@ -20,6 +20,36 @@ export function priorityOf(task: Task): Priority {
   if (task.important) return 'P1';
   if (task.urgent) return 'P2';
   return 'P3';
+}
+
+/** An implicit ordinary priority still needs a deliberate choice, including P3. */
+export function needsPriorityReview(task: Task): boolean {
+  return !isStructural(task) && task.priority == null && !task.important && !task.urgent;
+}
+
+/** Unfinished tasks come first, then P0–P3, deadline and manual order. */
+export function compareTaskPriority(a: Task, b: Task): number {
+  return Number(a.status === 'done') - Number(b.status === 'done')
+    || PRIORITY_ORDER.indexOf(priorityOf(a)) - PRIORITY_ORDER.indexOf(priorityOf(b))
+    || (a.dueAt ?? Infinity) - (b.dueAt ?? Infinity)
+    || sortSiblings(a, b);
+}
+
+/** Promote branches containing high-priority work while keeping every parent above its children. */
+export function prioritySortedChildren(tasks: Task[]): Map<string | null, Task[]> {
+  const children = buildChildrenMap(tasks);
+  const ranks = new Map<string, number>();
+  const traversal = [...(children.get(null) ?? [])];
+  for (let index = 0; index < traversal.length; index++) {
+    for (const child of children.get(traversal[index]!.id) ?? []) traversal.push(child);
+  }
+  for (const task of traversal.reverse()) {
+    let value = isStructural(task) ? 4 : task.status === 'done' ? 4 : PRIORITY_ORDER.indexOf(priorityOf(task));
+    for (const child of children.get(task.id) ?? []) value = Math.min(value, ranks.get(child.id)!);
+    ranks.set(task.id, value);
+  }
+  for (const siblings of children.values()) siblings.sort((a, b) => ranks.get(a.id)! - ranks.get(b.id)! || compareTaskPriority(a, b));
+  return children;
 }
 
 /** 优先级 → 重要/紧急(写数据时同时落两处,四象限与优先级不会漂移) */

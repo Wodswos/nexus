@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 test.use({ serviceWorkers: 'block', viewport: { width: 1440, height: 1000 } });
 const detail = (page: Page) => page.locator('[data-inspector]');
 const workspace = (page: Page) =>
-  detail(page).getByRole('region', { name: '任务工作区', exact: true });
+  detail(page).getByRole('region', { name: '相关资源', exact: true });
 const resources = (page: Page) => workspace(page).locator('[data-workspace-resource]');
 const task = (id: string) => ({
   id,
@@ -66,6 +66,7 @@ test('workspace resources keep names, order, pins and PR identity across reload 
   await workspace(page).getByRole('button', { name: '取消添加资源' }).click();
   await expect(resources(page)).toHaveCount(0);
   await add(page, '网页', 'https://example.com/docs', '接口文档');
+  await expect(detail(page).getByRole('navigation', { name: '资源快捷入口' })).toHaveCount(0);
   await add(page, '网页', 'https://github.com/org/repo/pull/128');
   await expect(resources(page).nth(1)).toHaveAttribute('data-resource-type', 'github-pr');
   await add(page, 'GitHub PR', 'https://github.com/ORG/REPO/pull/128/files#diff');
@@ -85,7 +86,7 @@ test('workspace resources keep names, order, pins and PR identity across reload 
   await expect(resources(page).first()).toHaveAttribute('data-pinned', 'true');
   await expect(
     detail(page)
-      .getByRole('navigation', { name: '工作区快捷入口' })
+      .getByRole('navigation', { name: '资源快捷入口' })
       .getByRole('link', { name: '打开置顶资源 org/repo #128', exact: true }),
   ).toHaveAttribute('href', 'https://github.com/org/repo/pull/128');
   const ids = await resources(page).evaluateAll((nodes) =>

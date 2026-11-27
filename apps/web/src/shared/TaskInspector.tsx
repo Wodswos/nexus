@@ -1,22 +1,30 @@
 import React, { forwardRef, useImperativeHandle, useLayoutEffect, useRef, useState } from 'react';
-import { Plus, X, MoreHorizontal, ChevronRight, CalendarDays, Flag, Folder } from 'lucide-react';
+import { Plus, X, MoreHorizontal, ChevronRight, Folder, FileText, Settings2 } from 'lucide-react';
 import { cn, SheetTitle, SelectField } from '@nexus/ui';
 import {
   type Task,
   ancestorsOf,
   isStructural,
   isProject,
+  isTextNode,
   priorityOf,
+  needsPriorityReview,
   type Priority,
 } from '@nexus/core';
 import { useNexus, useNexusData } from '@nexus/crdt';
 import { useUI } from '@/state/ui';
-import { TaskCheckbox, DateTimeField, StatusBadge } from './components';
+import { TaskCheckbox, DateTimeField } from './components';
 import { isComposing } from './ime';
 import { TaskWorkspace, TaskWorkspaceShortcuts } from './TaskWorkspace';
 import { useTaskTextDraft } from './useTaskTextDraft';
 import { TaskViewLinks } from './TaskViewLinks';
 import { TaskAdvancedSettings } from './TaskAdvancedSettings';
+import { NodeWorkspace } from './NodeWorkspace';
+import { TaskDescription } from './TaskDescription';
+import { WorkspaceConfiguration } from './WorkspaceConfiguration';
+import { TaskTitle, TaskTitleButton } from './TaskTitle';
+import { parseTaskTitle } from '@nexus/core';
+import { pasteTaskTitle } from './taskTitlePaste';
 
 export interface TaskInspectorHandle {
   commit: () => Promise<void>;
@@ -51,16 +59,18 @@ export const TaskInspector = forwardRef<TaskInspectorHandle, Props>(function Tas
   const activeId = useRef(task?.id);
   activeId.current = task?.id;
   const [advanced, setAdvanced] = useState(false),
-    [addingChild, setAddingChild] = useState(false);
+    [addingChild, setAddingChild] = useState(false),
+    [workspaceConfigOpen, setWorkspaceConfigOpen] = useState(false);
   const [subInput, setSubInput] = useState(''),
     [chainDue, setChainDue] = useState(0);
   useLayoutEffect(() => {
     if (body.current) body.current.scrollTop = 0;
     setAdvanced(false);
     setAddingChild(false);
+    setWorkspaceConfigOpen(false);
     setSubInput('');
     setChainDue(0);
-  }, [task?.id]);
+  }, [task?.id, store.userId]);
   useLayoutEffect(() => {
     if (advanced) advancedRef.current?.scrollIntoView({ block: 'nearest' });
   }, [advanced]);
@@ -74,10 +84,18 @@ export const TaskInspector = forwardRef<TaskInspectorHandle, Props>(function Tas
     .sort((a, b) => a.order - b.order);
   const node = isStructural(task),
     Title = embedded ? SheetTitle : 'span';
+  const text = isTextNode(task);
+  const NodeIcon = isProject(task) ? Folder : FileText;
   const dismiss = () => {
     const id = task.id;
     draft.close(() => {
       if (activeId.current === id) onClose();
+    });
+  };
+  const configureWorkspace = () => {
+    const id = task.id;
+    draft.close(() => {
+      if (activeId.current === id) setWorkspaceConfigOpen(true);
     });
   };
   const style =
@@ -111,7 +129,7 @@ export const TaskInspector = forwardRef<TaskInspectorHandle, Props>(function Tas
     >
       <header className="flex h-12 shrink-0 items-center justify-between border-b border-[var(--border)] px-5">
         <Title className="text-xs font-normal text-muted">
-          {isProject(task) ? '项目详情' : node ? '分组详情' : '任务详情'}
+          {isProject(task) ? '项目详情' : text ? '文本节点详情' : '任务详情'}
         </Title>
         <span
           role="status"
@@ -120,6 +138,16 @@ export const TaskInspector = forwardRef<TaskInspectorHandle, Props>(function Tas
         >
           {draft.status}
         </span>
+        <button
+          type="button"
+          aria-label="打开 Workspace 配置"
+          aria-haspopup="dialog"
+          onClick={configureWorkspace}
+          className="mr-2 flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1.5 text-xs text-muted hover:bg-[var(--surface)] hover:text-foreground"
+        >
+          <Settings2 size={14} />
+          Workspace
+        </button>
         <button
           aria-label="关闭任务详情"
           onClick={dismiss}
@@ -148,7 +176,7 @@ export const TaskInspector = forwardRef<TaskInspectorHandle, Props>(function Tas
         )}
         <div className="mb-5 flex items-start gap-2">
           {node ? (
-            <Folder size={18} className="mt-1 shrink-0 text-muted" />
+            <NodeIcon size={18} className="mt-1 shrink-0 text-muted" />
           ) : (
             <TaskCheckbox
               className="-ml-1 -mt-0.5"
@@ -156,13 +184,15 @@ export const TaskInspector = forwardRef<TaskInspectorHandle, Props>(function Tas
               onChange={() => store.toggleTaskDone(task.id)}
             />
           )}
+          <div className="min-w-0 flex-1">
           <input
             aria-label="任务标题"
             className={cn(
-              'min-w-0 flex-1 bg-transparent text-[15px] font-medium leading-6 outline-none',
-              task.status === 'done' && 'text-muted line-through',
+              'w-full min-w-0 bg-transparent text-[15px] font-medium leading-6 outline-none',
+              !node && task.status === 'done' && 'text-muted line-through',
             )}
             value={draft.value('title')}
+            onPaste={event => pasteTaskTitle(event, value => draft.change('title', value))}
             onChange={(event) => draft.change('title', event.target.value)}
             onBlur={draft.commit}
             onCompositionStart={draft.compositionStart}
@@ -171,15 +201,17 @@ export const TaskInspector = forwardRef<TaskInspectorHandle, Props>(function Tas
               if (!isComposing(event) && event.key === 'Enter') event.currentTarget.blur();
             }}
           />
+          {parseTaskTitle(draft.value('title')).some(part => part.href) && <div aria-label="标题链接预览" className="mt-2 break-words text-xs leading-6 text-muted"><TaskTitle title={draft.value('title')} /></div>}
+          </div>
         </div>
         {!node && (
-          <div className="mb-5 space-y-4 border-b border-[var(--border)] pb-5 text-xs">
-            <div className="flex items-center justify-between gap-2">
-              <span className="flex shrink-0 items-center gap-2 text-muted">
-                <CalendarDays size={14} />
+          <div aria-label="任务日期与优先级" role="group" className="mb-4 grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,.85fr)] items-start gap-2 text-xs">
+            <div className="min-w-0 space-y-1.5">
+              <span className="block text-[11px] text-muted">
                 开始日期
               </span>
               <DateTimeField
+                compact
                 key={`${task.id}:start`}
                 title="开始时间"
                 value={task.startAt}
@@ -189,12 +221,12 @@ export const TaskInspector = forwardRef<TaskInspectorHandle, Props>(function Tas
                 }}
               />
             </div>
-            <div className="flex items-center justify-between gap-2">
-              <span className="flex shrink-0 items-center gap-2 text-muted">
-                <CalendarDays size={14} />
+            <div className="min-w-0 space-y-1.5">
+              <span className="block text-[11px] text-muted">
                 截止日期
               </span>
               <DateTimeField
+                compact
                 key={`${task.id}:due`}
                 title="截止时间"
                 value={task.dueAt}
@@ -202,53 +234,31 @@ export const TaskInspector = forwardRef<TaskInspectorHandle, Props>(function Tas
                 onChange={(value) => store.updateTask(task.id, { dueAt: value })}
               />
             </div>
-            <div className="flex items-center justify-between gap-2">
-              <span className="flex items-center gap-2 text-muted">
-                <Flag size={14} />
+            <div className="min-w-0 space-y-1.5">
+              <span className="block text-[11px] text-muted">
                 优先级
               </span>
               <SelectField
                 aria-label="优先级"
-                value={priorityOf(task)}
+                value={needsPriorityReview(task) ? 'unreviewed' : priorityOf(task)}
                 onValueChange={(value) => store.setTaskPriority(task.id, value as Priority)}
-                className="h-8 min-w-[112px]"
+                className="h-8 w-full gap-1 px-2 [&>span:first-child]:gap-1.5"
+                triggerLabel={needsPriorityReview(task) ? '待分级' : priorityOf(task)}
+                title={needsPriorityReview(task) ? '待分级 · 默认 P3' : `优先级 ${priorityOf(task)}`}
                 options={[
-                  { value: 'P0', label: '高优先级', description: '重要且紧急', color: 'var(--p0)' },
-                  { value: 'P1', label: '重要', description: '重要、不紧急', color: 'var(--p1)' },
-                  { value: 'P2', label: '紧急', description: '紧急、不重要', color: 'var(--p2)' },
-                  { value: 'P3', label: '普通', description: '按常规安排', color: 'var(--p3)' },
+                  ...(needsPriorityReview(task) ? [{ value: 'unreviewed', label: '待分级 · 默认 P3', description: '选择优先级完成分级', color: 'var(--p3)', disabled: true }] : []),
+                  { value: 'P0', label: 'P0 · 重要且紧急', description: '立即处理', color: 'var(--p0)' },
+                  { value: 'P1', label: 'P1 · 重要', description: '优先投入时间', color: 'var(--p1)' },
+                  { value: 'P2', label: 'P2 · 紧急', description: '尽快处理或委托', color: 'var(--p2)' },
+                  { value: 'P3', label: 'P3 · 普通', description: '按常规安排', color: 'var(--p3)' },
                 ]}
               />
             </div>
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <StatusBadge task={task} />
-              <button
-                className="text-muted hover:text-[var(--accent-solid)]"
-                onClick={() =>
-                  store.setTaskStatus(task.id, task.status === 'doing' ? 'todo' : 'doing')
-                }
-              >
-                {task.status === 'doing' ? '正在进行 · 改为待办' : '标为进行中'}
-              </button>
-            </div>
           </div>
         )}
+        <NodeWorkspace key={`workspace:${store.userId}:${task.id}`} taskId={task.id} beforeAction={draft.commit} />
         <div className="mb-5"><TaskWorkspace key={task.id} taskId={task.id} /></div>
-        <label className="mb-2 block text-xs text-muted" htmlFor={`notes-${task.id}`}>
-          描述
-        </label>
-        <textarea
-          id={`notes-${task.id}`}
-          aria-label="任务备注"
-          value={draft.value('notes')}
-          placeholder="添加描述或记录下一步…"
-          rows={6}
-          className="w-full resize-y bg-transparent text-[13px] leading-6 outline-none placeholder:text-muted/60"
-          onChange={(event) => draft.change('notes', event.target.value)}
-          onBlur={draft.commit}
-          onCompositionStart={draft.compositionStart}
-          onCompositionEnd={draft.compositionEnd}
-        />
+        <TaskDescription key={`description:${store.userId}:${task.id}`} task={task} draft={draft} textNode={text} />
         {(children.length > 0 || addingChild) && (
           <div className="mt-5 border-t border-[var(--border)] pt-4">
             <div className="mb-3 flex items-center justify-between text-xs text-muted">
@@ -277,15 +287,15 @@ export const TaskInspector = forwardRef<TaskInspectorHandle, Props>(function Tas
                     onChange={() => store.toggleTaskDone(item.id)}
                   />
                 )}
-                <button
+                <TaskTitleButton taskTitle={item.title}
                   onClick={() => selectTask(item.id)}
                   className={cn(
                     'truncate text-left text-xs',
-                    item.status === 'done' && 'text-muted line-through',
+                    !isStructural(item) && item.status === 'done' && 'text-muted line-through',
                   )}
                 >
-                  {item.title || '未命名任务'}
-                </button>
+                  <TaskTitle title={item.title} />
+                </TaskTitleButton>
               </div>
             ))}
             {addingChild && (
@@ -293,6 +303,7 @@ export const TaskInspector = forwardRef<TaskInspectorHandle, Props>(function Tas
                 ref={subRef}
                 aria-label="新子任务标题"
                 value={subInput}
+                onPaste={event => pasteTaskTitle(event, setSubInput)}
                 onChange={(event) => setSubInput(event.target.value)}
                 placeholder="添加子任务，回车确认"
                 className="mt-2 w-full bg-transparent py-2 text-xs outline-none"
@@ -350,6 +361,9 @@ export const TaskInspector = forwardRef<TaskInspectorHandle, Props>(function Tas
           更多设置
         </button>
       </footer>
+      {workspaceConfigOpen && (
+        <WorkspaceConfiguration key={`configuration:${store.userId}:${task.id}`} taskId={task.id} onClose={() => setWorkspaceConfigOpen(false)} />
+      )}
     </section>
   );
 });

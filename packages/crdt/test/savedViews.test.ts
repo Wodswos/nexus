@@ -26,7 +26,7 @@ describe('account workspace presets', () => {
       expect(() => store.importJSON({ tasks: [{ id: 'unexpected', title: 'must not import' }], settings: { savedViews: [{ ...matrix, scope: 'custom', from: 'bad', to: 'bad' }] } })).toThrow();
       expect(store.getData().tasks).toHaveLength(0);
       expect(() => store.updateSettings({ savedViews: [{ ...matrix, name: '' }] })).toThrow();
-      expect(store.getData().settings.savedViews[0]?.id).toBe('calendar-month');
+      expect(store.getData().settings.savedViews.map((view) => view.id)).toEqual(['week-work', 'calendar-month']);
     } finally { store.destroy(); }
   });
 });

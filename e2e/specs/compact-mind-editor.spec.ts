@@ -17,7 +17,7 @@ test('time and emphasis share one compact desktop row, no helper paragraph, acco
   const time = filters.getByRole('combobox', { name: '任务时间范围', exact: true });
   const focus = filters.getByRole('region', { name: '工作概览', exact: true });
   expect(Math.abs((await time.boundingBox())!.y - (await focus.boundingBox())!.y)).toBeLessThan(6);
-  for (const label of ['逾期', '全部', '当前工作']) {
+  for (const label of ['逾期', '全部', '推进与逾期']) {
     await focus.getByRole('button', { name: label, exact: typeof label === 'string' }).click();
     await expect(page.getByText('查看全部分支；切换上方强调项，查看当前工作在全图中的位置。', { exact: true })).toHaveCount(0);
     await expect(page.locator('.react-flow__edge-path')).toHaveCount(2);

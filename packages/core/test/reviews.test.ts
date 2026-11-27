@@ -36,7 +36,7 @@ describe('review calendar and facts', () => {
     const facts = reviewFacts({ ...EMPTY_DATA, tasks, sessions: [session, { ...session, id: 'break', mode: 'short-break' }] }, reviewPeriod('daily', start), now);
     expect(facts.completed.map(task => task.id)).toEqual(['done']);
     expect(facts.completed[0]!.project).toBe('project');
-    expect(facts.pending.map(task => task.id)).toEqual(['due']);
+    expect(facts.pending.map(task => task.id)).toEqual(['due', 'upcoming']);
     expect(facts.focusMin).toBe(20);
     expect(facts.projects).toEqual([{ id: 'project', title: 'project', done: 1, total: 2 }]);
   });
@@ -49,6 +49,48 @@ describe('review calendar and facts', () => {
       const facts = reviewFacts({ ...EMPTY_DATA, sessions: [{ id: 'dst', taskId: null, startedAt: start, endedAt: end, actualMin: 60, plannedMin: 60, mode: 'focus', completed: true, ownerId: 'u' }] }, reviewPeriod('daily', start), end);
       expect(facts.focusMin).toBe(60);
     } finally { if (previous === undefined) delete process.env.TZ; else process.env.TZ = previous; }
+  });
+  it('fills the daily plan from date ranges and carries unfinished earlier work forward', () => {
+    const start = new Date(2026, 9, 25).getTime(), end = new Date(2026, 9, 26).getTime(), now = start + 10 * 3600000;
+    const tasks = [
+      task('today', { dueAt: end - 1, priority: 'P1' }),
+      task('started', { startAt: start + 1000 }),
+      task('spanning', { startAt: start - 86400000, dueAt: end + 86400000 }),
+      task('overdue', { dueAt: start - 1, priority: 'P0' }),
+      task('old-start', { startAt: start - 86400000 }),
+      task('tomorrow', { dueAt: end }),
+      task('done-now', { status: 'done', completedAt: now, dueAt: now }),
+      task('unscheduled'), task('text', { kind: 'node', dueAt: start }),
+      task('inbox', { status: 'inbox', dueAt: start }),
+      task('archived', { status: 'archived', dueAt: start }),
+      task('deleted', { dueAt: start, deletedAt: start }),
+      task('hidden-project', { project: true, status: 'archived' }),
+      task('hidden-child', { parentId: 'hidden-project', dueAt: start }),
+    ];
+    const facts = reviewFacts({ ...EMPTY_DATA, tasks }, reviewPeriod('daily', start), now);
+    expect(facts.completed.map(task => task.id)).toEqual(['done-now']);
+    expect(facts.planned?.map(task => task.id)).toEqual(['today', 'spanning', 'started', 'done-now']);
+    expect(facts.planned?.find(task => task.id === 'done-now')?.done).toBe(true);
+    expect(facts.pending.map(task => task.id)).toEqual(['overdue', 'today', 'spanning', 'old-start', 'started']);
+  });
+  it('includes the full week in the plan and caps pending work at today in the caller timezone', () => {
+    const start = Date.parse('2026-11-15T16:00:00Z'), end = Date.parse('2026-11-22T16:00:00Z');
+    const now = Date.parse('2026-11-17T16:30:00Z'), todayEnd = Date.parse('2026-11-18T16:00:00Z');
+    const tasks = [task('last-week', { dueAt: start - 1 }),
+      task('tonight', { dueAt: todayEnd - 1 }), task('later-this-week', { dueAt: todayEnd }),
+      task('next-week', { dueAt: end })];
+    const facts = reviewFacts({ ...EMPTY_DATA, tasks }, { kind: 'weekly', start: '2026-11-16', end: '2026-11-23' }, now, { start, end, todayEnd });
+    expect(facts.planned?.map(task => task.id)).toEqual(['tonight', 'later-this-week']);
+    expect(facts.pending.map(task => task.id)).toEqual(['last-week', 'tonight']);
+  });
+  it('keeps completions on their actual day and uses the selected past day for pending work', () => {
+    const start = new Date(2026, 9, 25).getTime(), end = new Date(2026, 9, 26).getTime();
+    const tasks = [task('due-then', { dueAt: end - 1 }), task('due-later', { dueAt: end }),
+      task('finished-later', { dueAt: start, status: 'done', completedAt: end + 1000 })];
+    const facts = reviewFacts({ ...EMPTY_DATA, tasks }, reviewPeriod('daily', start), end + 3600000);
+    expect(facts.pending.map(task => task.id)).toEqual(['due-then']);
+    expect(facts.completed).toEqual([]);
+    expect(facts.planned?.find(task => task.id === 'finished-later')?.done).toBe(true);
   });
 });
 
@@ -83,9 +125,25 @@ describe('review reminders and validation', () => {
     expect(() => validateNexusData({ reviews: [{ ...legacy, resolution: null }] })).toThrow();
     expect(() => validateNexusData({ reviews: [{ ...legacy, resolution: 7 }] })).toThrow();
     expect(() => validateNexusData({ reviews: [{ ...legacy, resolution: 'x'.repeat(100001) }] })).toThrow();
-    const review: Review = { ...legacy, kind: 'daily', resolution: 'Review together before implementation', facts: null, completedAt: null, ownerId: 'u', createdAt: 1, updatedAt: 1 };
+    const review: Review = { ...legacy, kind: 'daily', plan: '', resolution: 'Review together before implementation', facts: null, completedAt: null, ownerId: 'u', createdAt: 1, updatedAt: 1 };
     expect(() => validateNexusData({ reviews: [review] })).not.toThrow();
     const facts = { capturedAt: 1, completed: [], pending: [], focusMin: 0, projects: [] };
     expect(reviewMarkdown(review, facts)).toContain('## 阻碍与反思\nLate feedback\n\n### 如何解决？\nReview together before implementation\n\n## 下一步');
+  });
+  it('validates optional planning data and exports plans, progress and pending checklists separately', () => {
+    const review: Review = { id: 'daily_2026-10-25', kind: 'daily', periodStart: '2026-10-25', periodEnd: '2026-10-26',
+      highlights: 'Validated the first milestone', plan: 'Focus on feedback', friction: '', resolution: '', nextSteps: '', facts: null, completedAt: null, ownerId: 'u', createdAt: 1, updatedAt: 1 };
+    const facts = { capturedAt: 1, completed: [{ id: 'done', title: 'Shipped', project: 'A' }],
+      planned: [{ id: 'done', title: 'Shipped', project: 'A', done: true }, { id: 'todo', title: 'Gather feedback', project: 'A', done: false }],
+      pending: [{ id: 'todo', title: 'Gather feedback', project: 'A' }], focusMin: 0, projects: [] };
+    expect(() => validateNexusData({ reviews: [{ ...review, facts }] })).not.toThrow();
+    for (const plan of [null, 3, 'x'.repeat(100001)]) expect(() => validateNexusData({ reviews: [{ ...review, plan }] })).toThrow();
+    expect(() => validateNexusData({ reviews: [{ ...review, facts: { ...facts, planned: 'invalid' } }] })).toThrow();
+    expect(() => validateNexusData({ reviews: [{ ...review, facts: { ...facts, planned: [{ ...facts.planned[0], done: 'yes' }] } }] })).toThrow();
+    const markdown = reviewMarkdown(review, facts);
+    expect(markdown).toContain('## 今天真正推进了什么？\n- [x] Shipped（A）');
+    expect(markdown).toContain('## 今天需要推进什么？\n- [x] Shipped（A）\n- [ ] Gather feedback（A）');
+    expect(markdown).toContain('Focus on feedback');
+    expect(markdown).toContain('## 尚未完成\n- [ ] Gather feedback（A）');
   });
 });

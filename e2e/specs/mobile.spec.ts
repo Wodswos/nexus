@@ -29,6 +29,7 @@ test('mobile drawer covers the app frame and keeps its contents inside safe area
   // Desktop browser emulation has zero safe-area insets. Exercise the same
   // shared inset values that an iPhone supplies to both the frame and drawer.
   await page.goto('/tasks');
+  await expect(page).toHaveURL(/view=list/); // Wait for initial route normalization before opening navigation.
   await page.evaluate(() => {
     document.documentElement.style.setProperty('--app-safe-area-top', '59px');
     document.documentElement.style.setProperty('--app-safe-area-bottom', '34px');

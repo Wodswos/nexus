@@ -50,7 +50,7 @@ test('sidebar resizing follows the pointer, persists, supports keyboard and rese
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole('button', { name: '打开导航', exact: true }).click();
   await expect(sidebar).toHaveCSS('position', 'fixed');
-  expect((await sidebar.boundingBox())!.width).toBeLessThanOrEqual(342);
+  expect((await sidebar.boundingBox())!.width).toBeLessThanOrEqual(342.01); // Chromium can report subpixel rounding during the slide transition.
   await expect(separator).toBeHidden();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.getByRole('button', { name: '关闭导航', exact: true }).click({ position: { x: 385, y: 100 } });
@@ -114,7 +114,7 @@ test('mind-map Ctrl/Cmd+A selects only visible real nodes, preserves text editin
   await node(page, 'alpha').getByText('Alpha title', { exact: true }).click({ modifiers: ['ControlOrMeta'] });
   await node(page, 'beta').getByText('Beta title', { exact: true }).click({ modifiers: ['ControlOrMeta'] });
   await expect(selected(page)).toHaveCount(2);
-  await page.getByRole('region', { name: '工作概览', exact: true }).getByRole('button', { name: /^当前工作/ }).click();
+  await page.getByRole('region', { name: '工作概览', exact: true }).getByRole('button', { name: /^推进与逾期/ }).click();
   await page.keyboard.press('Control+a');
   await expect(selected(page)).toHaveCount(3); // focus dims context without removing it
   await expect(node(page, 'beta')).toBeVisible();

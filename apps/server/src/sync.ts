@@ -9,9 +9,10 @@ import { DB } from './db';
 import { decodeFrame, encodeFrame } from '../../../packages/crdt/src/framing';
 import { socketOriginAllowed, upgradeUrl, type WsIdentity } from './security';
 import { NexusStore } from '../../../packages/crdt/src/store';
+import type { RevisionMeta, TaskText } from './taskRevisions';
 
 export const DOC_NAMES = ['root', 'tasks', 'events', 'links', 'sessions', 'habits', 'habitLogs'] as const;
-interface Room { doc: Y.Doc; conns: Set<WebSocket>; dirty: boolean }
+interface Room { doc: Y.Doc; conns: Set<WebSocket>; dirty: boolean; history?: Map<string, { before?: TaskText; after: TaskText }>; historyTimer?: ReturnType<typeof setTimeout>; historySince?: number }
 
 export function setupSync(server: ServerType, db: DB, verifyTicket: (ticket: string) => WsIdentity | null) {
   const rooms = new Map<string, Room>();
@@ -47,6 +48,7 @@ export function setupSync(server: ServerType, db: DB, verifyTicket: (ticket: str
             const snapshot = db.loadDocSnapshot(identity.userId, docId);
             if (snapshot?.length) Y.applyUpdate(doc, snapshot);
             const created: Room = { doc, conns: new Set(), dirty: false };
+            if (docId === 'tasks') watchTaskText(identity.userId, key, created);
             doc.on('update', (update: Uint8Array, origin: unknown) => {
               created.dirty = true;
               const message = encodeFrame(docId, writeUpdate(update));
@@ -83,10 +85,46 @@ export function setupSync(server: ServerType, db: DB, verifyTicket: (ticket: str
       });
     });
   });
+  function watchTaskText(userId: string, key: string, room: Room) {
+    const items = room.doc.getMap<Y.Map<unknown>>('items');
+    const textOf = (id: string): TaskText | undefined => {
+      const item = items.get(id);
+      return item instanceof Y.Map && typeof item.get('title') === 'string'
+        ? { id, title: String(item.get('title')), notes: typeof item.get('notes') === 'string' ? String(item.get('notes')) : '' } : undefined;
+    };
+    const observed = new Map<string, TaskText>();
+    for (const id of items.keys()) { const value = textOf(id); if (value) observed.set(id, value); }
+    room.history = new Map();
+    items.observeDeep((events, transaction) => {
+      const ids = new Set<string>();
+      for (const event of events) {
+        if (event.path.length) ids.add(String(event.path[0]));
+        else if (event instanceof Y.YMapEvent) for (const id of event.keysChanged) ids.add(id);
+      }
+      for (const id of ids) {
+        const before = observed.get(id), after = textOf(id);
+        if (after) observed.set(id, after); else observed.delete(id);
+        if (!after || transaction.origin === 'rest-api' || before?.title === after.title && (before.notes ?? '') === after.notes) continue;
+        const pending = room.history!.get(id);
+        room.history!.set(id, { before: pending?.before ?? before, after });
+      }
+      if (!room.history!.size) return;
+      room.historySince ??= Date.now();
+      clearTimeout(room.historyTimer);
+      // Immutable checkpoints after typing pauses, at least once per 20 seconds.
+      room.historyTimer = setTimeout(() => flush(key, room), Math.min(2000, Math.max(0, 20000 - (Date.now() - room.historySince))));
+      room.historyTimer.unref();
+    });
+  }
   function flush(key: string, room: Room) {
-    if (!room.dirty) return;
+    if (!room.dirty && !room.history?.size) return;
     const [userId, docId] = key.split(':');
-    db.saveDocSnapshot(userId!, docId!, Y.encodeStateAsUpdate(room.doc));
+    clearTimeout(room.historyTimer);
+    db.transaction(() => {
+      db.saveDocSnapshot(userId!, docId!, Y.encodeStateAsUpdate(room.doc));
+      for (const { before, after } of room.history?.values() ?? []) db.taskRevisions.transition(userId!, before, after, { source: 'user' });
+    });
+    room.history?.clear(); room.historySince = undefined;
     room.dirty = false;
   }
   const timer = setInterval(() => { for (const [key, room] of rooms) flush(key, room); }, 5000);
@@ -101,7 +139,9 @@ export function setupSync(server: ServerType, db: DB, verifyTicket: (ticket: str
   return {
     /** Stage against live rooms, persist all changes atomically, then broadcast.
      * No async work is allowed between the snapshot and commit. */
-    withStore<T>(userId: string, write: boolean, operation: (store: NexusStore) => T, commit?: (result: T) => void): T {
+    withStore<T>(userId: string, write: boolean, operation: (store: NexusStore) => T, commit?: (result: T) => void, revisionMeta: RevisionMeta = { source: 'api' }): T {
+      const taskRoom = rooms.get(`${userId}:tasks`);
+      if (taskRoom?.history?.size) flush(`${userId}:tasks`, taskRoom);
       const store = new NexusStore(userId);
       try {
         const vectors = new Map<string, Uint8Array>();
@@ -111,11 +151,13 @@ export function setupSync(server: ServerType, db: DB, verifyTicket: (ticket: str
           if (snapshot?.length) Y.applyUpdate(store.docs[name], snapshot, 'server-load');
           vectors.set(name, Y.encodeStateVector(store.docs[name]));
         }
+        const beforeTasks = write ? new Map(store.getData().tasks.map(task => [task.id, { id: task.id, title: task.title, notes: task.notes }])) : null;
         const result = operation(store);
         if (write) {
           const changed = DOC_NAMES.filter(name => !Buffer.from(vectors.get(name)!).equals(Buffer.from(Y.encodeStateVector(store.docs[name]))) || Y.encodeStateAsUpdate(store.docs[name], vectors.get(name)).length > 2);
           db.transaction(() => {
             for (const name of changed) db.saveDocSnapshot(userId, name, Y.encodeStateAsUpdate(store.docs[name]));
+            if (changed.includes('tasks')) for (const task of store.getData().tasks) db.taskRevisions.transition(userId, beforeTasks!.get(task.id), task, revisionMeta);
             commit?.(result);
           });
           for (const name of changed) {

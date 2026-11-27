@@ -82,7 +82,7 @@ test('short pulls rebound and edits, text selection, controls, sideways movement
   const title = sheet.getByLabel('任务标题', { exact: true });
   await pull(title);
   await expect(title).toHaveValue('下拉详情任务');
-  await pull(sheet.getByRole('button').first());
+  await pull(sheet.getByRole('button', { name: '关闭任务详情', exact: true }));
   await expect(sheet).toBeVisible();
   await body.evaluate(element => { element.scrollTop = 0; });
   await pull(sheet.getByLabel('任务备注', { exact: true }));
@@ -111,7 +111,7 @@ test('short pulls rebound and edits, text selection, controls, sideways movement
   });
   await touch(body, 'touchend', 12, 390);
   await expect(sheet).toBeVisible();
-  await sheet.getByRole('button').first().click();
+  await sheet.getByRole('button', { name: '关闭任务详情', exact: true }).click();
   await expect(sheet).toHaveCount(0);
 });
 
@@ -166,6 +166,6 @@ test('desktop side drawers keep their existing close and scrolling behavior', as
   await expect(sheet).toBeVisible();
   expect(await sheet.boundingBox()).toEqual(before);
   await expect(sheet).not.toHaveAttribute('data-pull-state');
-  await sheet.getByRole('button').first().click();
+  await sheet.getByRole('button', { name: '关闭任务详情', exact: true }).click();
   await expect(sheet).toHaveCount(0);
 });

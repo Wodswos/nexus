@@ -67,7 +67,7 @@ test('workspace precedes notes; date drafts, keyboard calendar navigation and pr
   await seed(page);
   await openTask(page);
   const workspace = await panel(page)
-    .getByRole('region', { name: '任务工作区', exact: true })
+    .getByRole('region', { name: '相关资源', exact: true })
     .boundingBox();
   const notes = await panel(page).getByLabel('任务备注', { exact: true }).boundingBox();
   expect(workspace!.y + workspace!.height).toBeLessThan(notes!.y);
@@ -112,7 +112,8 @@ test('workspace precedes notes; date drafts, keyboard calendar navigation and pr
   await expect(panel(page).getByRole('button', { name: '开始时间', exact: true })).toContainText(
     '11/13 · 09:30',
   );
-  await panel(page).getByRole('button', { name: '清除开始时间', exact: true }).click();
+  await panel(page).getByRole('button', { name: '开始时间', exact: true }).click();
+  await page.locator('[data-date-editor]').getByRole('button', { name: '清除日期', exact: true }).click();
   await expect(panel(page).getByRole('button', { name: '开始时间', exact: true })).toHaveText(
     '设置日期',
   );

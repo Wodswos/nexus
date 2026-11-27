@@ -12,7 +12,7 @@ const rows = (page: Page) => page.locator('[data-row]');
 async function seed(page: Page) {
   await page.clock.setFixedTime(new Date('2026-11-04T12:00:00+08:00'));
   await page.goto('/settings');
-  const tasks = [task('project', { parentId: null, kind: 'node', project: true }), task('other_project', { parentId: null, kind: 'node', project: true }), task('old_overdue', { dueAt: date('2026-10-20'), priority: 'P1', tags: ['tag'] }), task('doing_dated', { status: 'doing', dueAt: date('2026-11-04'), priority: 'P1', tags: ['tag'] }), task('doing_undated', { status: 'doing' }), task('week_plan', { dueAt: date('2026-11-06') }), task('future', { dueAt: date('2026-12-01') }), task('finished', { status: 'done', dueAt: date('2026-10-20') }), task('foreign', { parentId: 'other_project', status: 'doing' }), task('start_only', { startAt: date('2026-11-05') })];
+  const tasks = [task('project', { parentId: null, kind: 'node', project: true }), task('other_project', { parentId: null, kind: 'node', project: true }), task('old_overdue', { dueAt: date('2026-10-20'), priority: 'P1', tags: ['tag'] }), task('doing_dated', { status: 'doing', dueAt: date('2026-11-04') + 3600000, priority: 'P1', tags: ['tag'] }), task('doing_undated', { status: 'doing' }), task('week_plan', { dueAt: date('2026-11-06') }), task('future', { dueAt: date('2026-12-01') }), task('finished', { status: 'done', dueAt: date('2026-10-20') }), task('foreign', { parentId: 'other_project', status: 'doing' }), task('start_only', { startAt: date('2026-11-05') })];
   await page.locator('input[type=file]').setInputFiles({ name: 'filters.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ tasks, tags: [{ id: 'tag', name: '重点', color: '#888888' }] })) });
   await expect(page.getByText(/已合并备份/)).toBeVisible();
   await page.goto('/tasks?project=project&view=list&scope=all');
@@ -20,8 +20,8 @@ async function seed(page: Page) {
 
 test('shared presets distinguish current work from week plans, clear stale constraints, and persist through all five views', async ({ page }) => {
   await seed(page);
-  await expect(overview(page).getByRole('button')).toHaveText(['全部', '当前工作', '本周', '逾期']);
-  await preset(page, '当前工作').click();
+  await expect(overview(page).getByRole('button')).toHaveText(['全部', '推进与逾期', '高优2', '待分级4', '本周', '逾期']);
+  await preset(page, '推进与逾期').click();
   for (const id of ['old_overdue', 'doing_dated', 'doing_undated']) await expect(rows(page).getByText(id, { exact: true })).toBeVisible();
   for (const id of ['week_plan', 'future', 'finished', 'foreign']) await expect(rows(page).getByText(id, { exact: true })).toHaveCount(0);
   await tab(page, '导图').click();
@@ -35,7 +35,7 @@ test('shared presets distinguish current work from week plans, clear stale const
   await expect(page.locator('.react-flow__node[data-id="week_plan"] [data-mind-muted]')).toHaveAttribute('data-mind-muted', 'true');
   await preset(page, '全部').click();
   expect(await page.locator('.react-flow__node').evaluateAll(nodes => nodes.map(node => ({ id: (node as HTMLElement).dataset.id, transform: (node as HTMLElement).style.transform })))).toEqual(positions);
-  await preset(page, '当前工作').click();
+  await preset(page, '推进与逾期').click();
   await tab(page, '四象限').click();
   await expect(page.getByText('old_overdue', { exact: true })).toBeVisible();
   await expect(page.getByText('week_plan', { exact: true })).toHaveCount(0);
@@ -50,7 +50,7 @@ test('shared presets distinguish current work from week plans, clear stale const
   await expect(page.getByRole('region', { name: '日历未排期任务', exact: true }).getByText('doing_undated', { exact: true })).toBeVisible();
   await expect(page.getByText('week_plan', { exact: true })).toHaveCount(0);
   await tab(page, '列表').click();
-  await expect(preset(page, '当前工作')).toHaveAttribute('aria-pressed', 'true');
+  await expect(preset(page, '推进与逾期')).toHaveAttribute('aria-pressed', 'true');
   await expectSelectValue(period(page), 'all');
   await preset(page, '本周').click();
   await expect(page.getByLabel('区间开始日期', { exact: true })).toHaveValue('2026-11-02');
@@ -66,7 +66,7 @@ test('shared presets distinguish current work from week plans, clear stale const
 
 test('advanced conditions are intersections, persist on view changes and saved shortcuts, and presets reset them', async ({ page }) => {
   await seed(page);
-  await preset(page, '当前工作').click();
+  await preset(page, '推进与逾期').click();
   const more = page.getByRole('button', { name: '更多任务筛选', exact: true });
   await more.click();
   await selectValue(page.getByRole('combobox', { name: '筛选任务状态', exact: true }), 'doing');
@@ -98,7 +98,7 @@ test('advanced conditions are intersections, persist on view changes and saved s
 
 test('empty results stay empty; new tasks inherit filters; mobile controls and dropdown fit', async ({ page }) => {
   await seed(page);
-  await preset(page, '当前工作').click();
+  await preset(page, '推进与逾期').click();
   await page.getByRole('textbox', { name: '添加任务', exact: true }).fill('new_current');
   await page.getByRole('textbox', { name: '添加任务', exact: true }).press('Enter');
   await expect(rows(page).getByText('new_current', { exact: true })).toBeVisible();

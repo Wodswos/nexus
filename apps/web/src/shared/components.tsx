@@ -1,5 +1,5 @@
 import React from 'react';
-import { Check, Folder, X } from 'lucide-react';
+import { Check, FileText, X } from 'lucide-react';
 import { cn, Badge } from '@nexus/ui';
 import {
   EventKind,
@@ -12,6 +12,7 @@ import {
   PRIORITY_META,
   PRIORITY_ORDER,
   priorityOf,
+  needsPriorityReview,
   taskViewStatus,
 } from '@nexus/core';
 
@@ -112,7 +113,7 @@ export const EVENT_KIND_STYLE: Record<EventKind, { label: string; color: string;
   routine: { label: '例行', color: '#9f845c', dim: 'rgba(159,132,92,0.10)' },
 };
 
-/** 优先级固定色(滴答清单惯例:红 P0 / 橙 P1 / 蓝 P2 / 灰 P3),不随 accent 主题变 */
+/** Priority colors stay consistent across accent themes. */
 export const PRIORITY_VAR: Record<Priority, string> = {
   P0: 'var(--p0)',
   P1: 'var(--p1)',
@@ -120,14 +121,16 @@ export const PRIORITY_VAR: Record<Priority, string> = {
   P3: 'var(--p3)',
 };
 
-export function PriorityDot({ task }: { task: Task }) {
+export function PriorityDot({ task, className }: { task: Task; className?: string }) {
   const p = priorityOf(task);
-  if (p === 'P3') return null;
+  const unreviewed = needsPriorityReview(task);
   return (
     <span
-      className="h-1.5 w-1.5 shrink-0 rounded-full"
-      style={{ background: PRIORITY_VAR[p] }}
-      title={PRIORITY_META[p].label}
+      data-priority={p}
+      data-priority-review={unreviewed ? 'pending' : 'confirmed'}
+      className={cn('h-2 w-2 shrink-0 rounded-full border', className)}
+      style={{ borderColor: PRIORITY_VAR[p], background: unreviewed ? undefined : PRIORITY_VAR[p], opacity: task.status === 'done' ? 0.45 : 1 }}
+      title={unreviewed ? '待分级 · 默认 P3' : PRIORITY_META[p].label}
     />
   );
 }
@@ -170,8 +173,7 @@ export function PriorityPicker({
   );
 }
 
-/** 节点类型切换:TODO 任务(可完成) ↔ 结构节点(分组/主题,无完成态)。
- *  右击菜单和详情面板共用;转换后各视图渲染随之不同(列表/甘特无勾选框等)。 */
+/** Shared type picker for executable TODO tasks and text content nodes. */
 export function KindToggle({
   value,
   onChange,
@@ -188,9 +190,9 @@ export function KindToggle({
     },
     {
       k: 'node',
-      label: '结构节点',
-      icon: <Folder className="h-3.5 w-3.5" />,
-      hint: '分组/主题容器,无完成态与排期',
+      label: '文本节点',
+      icon: <FileText className="h-3.5 w-3.5" />,
+      hint: '记录说明、结论或数据，可作为叶子或包含子节点',
     },
   ];
   return (

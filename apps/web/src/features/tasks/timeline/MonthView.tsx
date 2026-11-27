@@ -1,13 +1,14 @@
+import { TaskTitle, TaskTitleButton } from '@/shared/TaskTitle';
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { cn, Dropdown, DropdownContent, DropdownItem, DropdownTrigger } from '@nexus/ui';
-import { activeTasks, addDays, startOfWeek, dayKeyOf, WEEKDAY_ZH, isStructural, calendarDaysBetween } from '@nexus/core';
+import { activeTasks, addDays, startOfWeek, dayKeyOf, WEEKDAY_ZH, isStructural, calendarDaysBetween, priorityOf, PRIORITY_ORDER } from '@nexus/core';
 import { useNexus } from '@nexus/crdt';
 import { useTaskViewData } from '../useTaskViewData';
 import { useUI } from '@/state/ui';
-import { EVENT_KIND_STYLE } from '@/shared/components';
+import { EVENT_KIND_STYLE, PRIORITY_VAR } from '@/shared/components';
 
-type CalendarItem = { id: string; taskId?: string; type: 'task' | 'event'; title: string; done: boolean; color: string };
+type CalendarItem = { id: string; taskId?: string; type: 'task' | 'event'; title: string; done: boolean; color: string; priority: number; time: number; order: number };
 export function MonthView({
   date,
   onDateChange,
@@ -57,9 +58,11 @@ export function MonthView({
     data.settings.weekStartsOn === 0 ? [WEEKDAY_ZH[6], ...WEEKDAY_ZH.slice(0, 6)] : WEEKDAY_ZH;
   const items = useMemo(() => {
     const result = new Map<string, CalendarItem[]>();
+    const taskById = new Map(data.tasks.map(task => [task.id, task]));
     const append = (key: string, item: CalendarItem) => result.set(key, [...(result.get(key) ?? []), item]);
     for (const event of data.events) {
       if (event.deletedAt) continue;
+      const linked = event.taskId ? taskById.get(event.taskId) : undefined;
       for (const day of days)
         if (event.start < addDays(day, 1).getTime() && event.end > day.getTime())
           append(dayKeyOf(day), {
@@ -69,6 +72,9 @@ export function MonthView({
             title: event.title,
             done: !!event.completed,
             color: EVENT_KIND_STYLE[event.kind].color,
+            priority: linked ? PRIORITY_ORDER.indexOf(priorityOf(linked)) : 3,
+            time: event.start,
+            order: event.createdAt,
           });
     }
     for (const task of activeTasks(data.tasks)) {
@@ -87,7 +93,10 @@ export function MonthView({
         type: 'task',
         title: task.title || '未命名任务',
         done: task.status === 'done',
-        color: 'var(--accent-solid)',
+        color: task.status === 'done' ? 'var(--muted-foreground)' : PRIORITY_VAR[priorityOf(task)],
+        priority: PRIORITY_ORDER.indexOf(priorityOf(task)),
+        time: (task.dueAt ?? task.startAt)!,
+        order: task.order,
       });
     }
     return result;
@@ -133,7 +142,10 @@ export function MonthView({
         {days.map((day) => {
           const key = dayKeyOf(day),
             today = key === dayKeyOf(new Date());
-          const entries = [...(items.get(key) ?? [])].sort((a, b) => Number(b.taskId === data.focusedTaskId) - Number(a.taskId === data.focusedTaskId));
+          const entries = [...(items.get(key) ?? [])].sort((a, b) =>
+            Number(b.taskId === data.focusedTaskId) - Number(a.taskId === data.focusedTaskId)
+            || Number(a.done) - Number(b.done) || a.priority - b.priority || a.time - b.time || a.order - b.order || a.id.localeCompare(b.id),
+          );
           const visibleCount = entries.length > capacity.full ? capacity.overflow : capacity.full;
           return (
             <div
@@ -174,7 +186,7 @@ export function MonthView({
                 {day.getDate()}
               </button>
               {entries.slice(0, visibleCount).map((item) => (
-                <button
+                <TaskTitleButton taskTitle={item.type === 'task' ? item.title : ''}
                   key={`${item.type}:${item.id}`}
                   data-task-detail-trigger={item.type === 'task' || undefined}
                   data-calendar-task={item.taskId}
@@ -208,8 +220,8 @@ export function MonthView({
                     )}
                     style={{ background: item.done ? 'var(--muted-foreground)' : item.color }}
                   />
-                  <span className="truncate">{item.title}</span>
-                </button>
+                  <span className="truncate">{item.type === 'task' ? <TaskTitle title={item.title} /> : item.title}</span>
+                </TaskTitleButton>
               ))}
               {entries.length > visibleCount && (
                 <Dropdown open={expandedDay === key} onOpenChange={open => { if (open) openingTask.current = false; setExpandedDay(open ? key : null); }}>
@@ -238,7 +250,7 @@ export function MonthView({
                         else onDateChange(day);
                       }}>
                         <span className={cn('mt-1.5 h-1.5 w-1.5 shrink-0', item.type === 'task' ? 'rounded-full' : 'rounded-sm')} style={{ background: item.done ? 'var(--muted-foreground)' : item.color }} />
-                        <span className={cn('min-w-0 flex-1 break-words text-[13px] leading-5', item.done && 'text-muted line-through')}>{item.title}</span>
+                        <span className={cn('min-w-0 flex-1 break-words text-[13px] leading-5', item.done && 'text-muted line-through')}>{item.type === 'task' ? <TaskTitle title={item.title} /> : item.title}</span>
                         <span className="mt-0.5 shrink-0 text-[10px] leading-4 text-muted">{item.type === 'task' ? '任务' : '日程'}{item.done ? ' · 已完成' : ''}</span>
                       </DropdownItem>)}
                     </div>

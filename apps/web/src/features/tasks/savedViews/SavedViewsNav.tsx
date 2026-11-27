@@ -65,7 +65,7 @@ export function SavedViewsNav() {
         <nav aria-label="快捷视图" className="max-h-[25vh] space-y-0.5 overflow-y-auto">
           {settings.savedViews.map((item) => <SavedViewRow key={item.id} item={item} selected={params.get('saved') === item.id} onEdit={() => setEditing(item)} onRemove={() => {
             void update(store.getData().settings.savedViews.filter((view) => view.id !== item.id));
-            if (params.get('saved') === item.id) navigate('/tasks?scope=week');
+            if (params.get('saved') === item.id) navigate('/work');
           }} />)}
           {!settings.savedViews.length && <p className="px-3 py-2 text-xs text-muted">保存常用的视图与时间范围</p>}
         </nav>

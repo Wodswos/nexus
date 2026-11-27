@@ -107,6 +107,7 @@ describe('inbox/completedToday', () => {
     const tasks = [
       T({ id: 'a', status: 'done', completedAt: new Date(2026, 7, 29, 9).getTime() }),
       T({ id: 'b', status: 'done', completedAt: new Date(2026, 7, 28, 9).getTime() }),
+      T({ id: 'text', kind: 'node', project: false, status: 'done', completedAt: new Date(2026, 7, 29, 9).getTime() }),
     ];
     expect(completedToday(tasks, NOW).map((t) => t.id)).toEqual(['a']);
   });

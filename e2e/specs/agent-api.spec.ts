@@ -27,9 +27,10 @@ test('settings creates revocable tokens, Agent writes reach the live page, and S
   await expect(docs.getByRole('navigation', { name: 'API 文档导航', exact: true }).getByRole('link', { name: 'Agent 使用指南', exact: true })).toHaveAttribute('href', '/api/guide.md');
   await expect(docs.getByText(/Unable to render this definition|Failed to load API definition/)).toHaveCount(0);
   await docs.getByRole('button', { name: /^Authorize/ }).click();
-  await docs.locator('.auth-container input').fill(token);
-  await docs.locator('.dialog-ux').getByRole('button', { name: 'Apply credentials', exact: true }).click();
-  await docs.locator('.dialog-ux').getByRole('button', { name: 'Close', exact: true }).click();
+  const authorization = docs.locator('form').filter({ hasText: 'bearerAuth (http, Bearer)' });
+  await authorization.getByRole('textbox').fill(token);
+  await authorization.getByRole('button', { name: 'Apply credentials', exact: true }).click();
+  await authorization.getByRole('button', { name: 'Close', exact: true }).click();
   const operation = docs.locator('#operations-项目-get__api_v1_projects');
   await operation.locator('.opblock-summary').click();
   await operation.getByRole('button', { name: 'Try it out', exact: true }).click();
@@ -52,7 +53,7 @@ test('one public guide URL exposes the canonical Skill and same-origin OpenAPI w
   expect(await guide.text()).toBe(source);
   const spec = await request.get(new URL('/api/openapi.json', guideURL).href).then(response => response.json());
   expect(spec.openapi).toBe('3.0.3');
-  expect(Object.keys(spec.paths)).toHaveLength(13);
+  for (const path of ['/api/v1/tasks', '/api/workspace-profiles', '/api/tasks/{taskId}/workspace-launch', '/api/agent-context/{id}/reports']) expect(spec.paths[path]).toBeTruthy();
   expect((await request.get('/api/v1/tasks')).status()).toBe(401);
   await page.goto('/api/docs');
   const navigation = page.getByRole('navigation', { name: 'API 文档导航', exact: true });

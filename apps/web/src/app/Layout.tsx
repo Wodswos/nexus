@@ -30,6 +30,7 @@ import { TaskBatchEditor } from '../shared/TaskBatchEditor';
 import { TaskDeletionDialog } from '../shared/TaskDeletionDialog';
 import { isComposing } from '../shared/ime';
 import { ProjectList } from './ProjectList';
+import { AgentSidebar } from '../features/work/AgentSidebar';
 import { SidebarResize, useSidebarWidth } from './SidebarResize';
 import { ReviewReminder } from '../features/reviews/ReviewReminder';
 import { HabitReminder } from '../features/habits/HabitReminder';
@@ -83,7 +84,7 @@ function RunningTimer() {
   );
 }
 const primary = [
-  { to: '/tasks?scope=week', label: '当前任务', icon: ListTodo },
+  { to: '/work', label: '当前工作', icon: ListTodo },
   { to: '/inbox', label: '收集箱', icon: Inbox },
 ];
 const tools = [
@@ -97,6 +98,9 @@ export function Layout() {
   const data = useNexusData();
   const store = useNexus();
   const location = useLocation();
+  const agentView = /^\/work\/agents\/[^/]+\/?$/.test(location.pathname);
+  const [sidebarTab,setSidebarTab]=useState<'project'|'agent'>(agentView?'agent':'project');
+  useEffect(()=>setSidebarTab(agentView?'agent':'project'),[agentView]);
   const [navigationOpen, setNavigationOpen] = useState(false);
   const frameRef = useRef<HTMLDivElement>(null);
   const sidebar = useSidebarWidth();
@@ -129,7 +133,7 @@ export function Layout() {
     const onKey = (event: KeyboardEvent) => {
       if (isComposing(event)) return;
       const target = event.target as HTMLElement | null;
-      if (target?.closest('[data-destructive-dialog]')) return;
+      if (target?.closest('[data-destructive-dialog], [data-workspace-terminal]')) return;
       const input = !!target?.closest('input,textarea,select,[contenteditable="true"],.xterm');
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault();
@@ -219,16 +223,28 @@ export function Layout() {
               <Plus size={18} className="text-[var(--accent-solid)]" />
               添加任务<span className="ml-auto text-[10px] opacity-60">N</span>
             </button>
+            {agentView && (
+              <button
+                aria-label="搜索或执行命令"
+                onClick={() => setCommand(true)}
+                className="mb-3 hidden h-8 shrink-0 items-center gap-2 px-3 text-xs text-muted hover:text-foreground md:flex"
+              >
+                <Search size={14} />搜索任务
+                <kbd className="ml-auto text-[10px] opacity-70">⌘ K</kbd>
+              </button>
+            )}
             <div className="min-h-0 flex-1 overflow-y-auto">
               <nav aria-label="工作导航" className="space-y-0.5">
                 {nav(primary)}
               </nav>
+              {agentView && <div className="my-3 flex gap-4 px-3 text-xs"><button aria-pressed={sidebarTab==='project'} onClick={()=>setSidebarTab('project')}>项目</button><button aria-pressed={sidebarTab==='agent'} onClick={()=>setSidebarTab('agent')}>Agent</button></div>}
+              {agentView && sidebarTab==='agent' ? <AgentSidebar key={store.userId}/> : <>
               <SavedViewsNav key={store.userId} />
               <ProjectList key={store.userId} projects={projects} selectedId={params.has('saved') ? null : params.get('project')} />
               <div className="workspace-section">工具</div>
               <nav aria-label="工具" className="space-y-0.5">
                 {nav(tools)}
-              </nav>
+              </nav></>}
             </div>
             <div className="shrink-0 border-t border-[var(--border)] pt-3">
               <Link to="/trash" className="workspace-nav" aria-current={location.pathname === '/trash' ? 'page' : undefined}>
@@ -254,7 +270,7 @@ export function Layout() {
       )}
       <div className="flex min-w-0 flex-1 flex-col">
         {!immersive && (
-          <header className="flex h-10 shrink-0 items-center gap-3 border-b border-[var(--border)] px-3 md:h-12 md:px-4 lg:px-6">
+          <header className={cn("flex h-[52px] shrink-0 items-center gap-3 border-b border-[var(--border)] px-3 md:px-4 lg:px-6",agentView&&"md:hidden")}>
             <button
               aria-label="打开导航"
               aria-controls="workspace-sidebar"

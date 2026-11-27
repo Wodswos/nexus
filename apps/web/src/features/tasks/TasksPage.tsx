@@ -16,7 +16,7 @@ import { isTaskView, projectView, rememberProjectView, useProjectViewMemory } fr
 import { TaskWindowControls } from './TaskWindowControls';
 import { TASK_VIEWS } from './viewOptions';
 import { SaveViewButton } from './savedViews/SaveViewButton';
-import { MoreTaskFilters, TaskFilterControls } from './TaskFilterControls';
+import { MoreTaskFilters, TaskFilterControls, TaskSortControl } from './TaskFilterControls';
 import { isScheduledOnlyWorkspace } from './taskWindow';
 import { taskPath } from './taskNavigation';
 const ListView = lazy(() => import('./list/ListView').then((module) => ({ default: module.ListView })));
@@ -62,7 +62,7 @@ export default function TasksPage() {
   }, [store.userId, project?.id, saved?.id, view]);
   const progress = useMemo(() => workProgress(activeTasks(data.tasks)), [data.tasks]);
   const projectProgress = project ? progress.get(project.id) : null;
-  const title = saved?.name || project?.title || '当前任务';
+  const title = saved?.name || project?.title || '任务';
   const display = data.settings.completedDisplay ?? 'inline-gray';
   const ui = useUI();
   const setCompletedDisplay = (hidden: boolean) => {
@@ -86,7 +86,7 @@ export default function TasksPage() {
   if (projectId && !project) return (
     <div className="space-y-3 p-6 text-sm text-muted">
       <p>项目不存在或已归档。</p>
-      <Link to="/tasks?scope=week" className="text-[var(--accent-solid)]">返回当前任务</Link>
+      <Link to="/tasks?scope=week" className="text-[var(--accent-solid)]">返回本周任务</Link>
     </div>
   );
 
@@ -187,6 +187,7 @@ export default function TasksPage() {
         <div className="flex min-w-0 flex-1 items-center gap-1 md:contents">
           <div className="min-w-0 overflow-x-auto md:overflow-visible"><TaskFilterControls /></div>
           <div className="md:order-2"><MoreTaskFilters /></div>
+          {['list', 'gantt'].includes(view) && <div className="md:order-3"><TaskSortControl /></div>}
         </div>
         <div className="order-first min-w-0 w-full md:order-1 md:flex md:w-auto md:max-w-full md:flex-wrap md:items-center md:gap-2">
           <span className="hidden shrink-0 text-[11px] text-muted md:inline">时间</span>

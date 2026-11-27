@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useLocation } from 'react-router';
 import { CalendarDays, Flag } from 'lucide-react';
 import { Button, Dialog, DialogContent, SelectField, cn } from '@nexus/ui';
-import { dayKeyOf, isStructural, planTaskBatch, priorityOf, PRIORITY_META, PRIORITY_ORDER, type BatchDateEdit, type Priority, type Task, type TaskBatchChange } from '@nexus/core';
+import { dayKeyOf, isStructural, needsPriorityReview, planTaskBatch, priorityOf, PRIORITY_META, PRIORITY_ORDER, type BatchDateEdit, type Priority, type Task, type TaskBatchChange } from '@nexus/core';
 import { useNexus } from '@nexus/crdt';
 import { useUI } from '@/state/ui';
 
@@ -15,8 +15,8 @@ export function TaskBatchActions({ ids, onOpen }: { ids: string[]; onOpen?: () =
     useUI.getState().openTaskBatch(store.userId, ids, section);
   };
   return <>
-    <button type="button" aria-label="批量设置时间" disabled={disabled} title={disabled ? '项目和分组不设置任务时间' : undefined} onClick={() => open('time')} className="flex min-h-8 items-center gap-1 rounded-lg px-2 text-muted hover:bg-[var(--surface)] hover:text-foreground disabled:opacity-40"><CalendarDays size={14} />时间</button>
-    <button type="button" aria-label="批量设置优先级" disabled={disabled} title={disabled ? '项目和分组不设置任务优先级' : undefined} onClick={() => open('priority')} className="flex min-h-8 items-center gap-1 rounded-lg px-2 text-muted hover:bg-[var(--surface)] hover:text-foreground disabled:opacity-40"><Flag size={14} />优先级</button>
+    <button type="button" aria-label="批量设置时间" disabled={disabled} title={disabled ? '选择 TODO 任务设置时间' : undefined} onClick={() => open('time')} className="flex min-h-8 items-center gap-1 rounded-lg px-2 text-muted hover:bg-[var(--surface)] hover:text-foreground disabled:opacity-40"><CalendarDays size={14} />时间</button>
+    <button type="button" aria-label="批量设置优先级" disabled={disabled} title={disabled ? '选择 TODO 任务设置优先级' : undefined} onClick={() => open('priority')} className="flex min-h-8 items-center gap-1 rounded-lg px-2 text-muted hover:bg-[var(--surface)] hover:text-foreground disabled:opacity-40"><Flag size={14} />优先级</button>
   </>;
 }
 
@@ -27,9 +27,10 @@ const inputClass = 'h-9 min-w-0 rounded-lg border border-[var(--border)] bg-[var
 const dateEdit = (draft: DateDraft): BatchDateEdit | undefined => draft.action === 'keep' ? undefined : draft.action === 'clear' ? { action: 'clear' } : { action: 'set', date: draft.date, ...(draft.time ? { time: draft.time } : {}) };
 
 function summary(tasks: Task[], field: 'startAt' | 'dueAt' | 'priority') {
-  const values = [...new Set(tasks.map(task => field === 'priority' ? priorityOf(task) : task[field] ?? null))];
+  const values = [...new Set(tasks.map(task => field === 'priority' ? needsPriorityReview(task) ? 'unreviewed' : priorityOf(task) : task[field] ?? null))];
   if (values.length > 1) return '多个值';
   if (values[0] == null) return '未设置';
+  if (values[0] === 'unreviewed') return '待分级 · 默认 P3';
   return field === 'priority' ? PRIORITY_META[values[0] as Priority].label : new Date(Number(values[0])).toLocaleString([], { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
@@ -84,7 +85,7 @@ function Editor({ request }: { request: Request }) {
   };
   return <Dialog open onOpenChange={open => { if (!open) close(); }}>
     <DialogContent title={applied ? '批量设置完成' : '批量设置任务'} aria-describedby="task-batch-scope" data-task-batch-editor className="top-[max(16px,10%)] max-h-[calc(100dvh-32px)] overflow-y-auto" onEscapeKeyDown={event => { if (busy) event.preventDefault(); }} onInteractOutside={event => { if (busy) event.preventDefault(); }}>
-      <p id="task-batch-scope" className="mb-4 text-xs leading-5 text-muted">已选 {request.ids.length} 项；{eligible.length} 项任务可设置。{skipped > 0 && `${skipped} 项分组、项目、归档或无排期项不适用。`}仅修改选中任务，不包含未选中的子任务。</p>
+      <p id="task-batch-scope" className="mb-4 text-xs leading-5 text-muted">已选 {request.ids.length} 项，{eligible.length} 项 TODO 任务可设置。{skipped > 0 && `${skipped} 项文本节点、项目、归档或无排期项已跳过。`}修改范围为所选 TODO 任务。</p>
       {applied ? <p role="status" className="py-4 text-sm">{message}</p> : <>
         <div role="tablist" aria-label="批量设置属性" className="mb-5 flex gap-1 border-b border-[var(--border)] pb-2">
           {(['time', 'priority'] as const).map(key => <button key={key} role="tab" aria-selected={section === key} onClick={() => { setSection(key); setError(''); }} className={cn('rounded-lg px-3 py-1.5 text-xs', section === key ? 'bg-[var(--selection)] text-foreground' : 'text-muted hover:bg-[var(--surface)]')}>{key === 'time' ? '时间' : '优先级'}</button>)}

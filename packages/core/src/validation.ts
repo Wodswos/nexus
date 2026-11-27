@@ -4,10 +4,12 @@ import { MIND_APPEARANCE_FIELDS, validateMindAppearance } from './mindAppearance
 import { validateSavedViews } from './savedViews';
 import { validateHabitConfig } from './habitConfig';
 import { validateHabitOrder } from './habitOrder';
+import { validateNodeWorkspace } from './executionWorkspace';
+import { validateWorkspaceProfile } from './workspaceProfiles';
 
 const collections = ['tasks', 'events', 'links', 'sessions', 'habits', 'habitLogs', 'tags', 'reviews'] as const;
 const numeric = new Set(['order', 'createdAt', 'updatedAt', 'startAt', 'dueAt', 'completedAt', 'deletedAt', 'archivedAt', 'estimateMin', 'start', 'end', 'startedAt', 'endedAt', 'plannedMin', 'actualMin', 'distractions', 'count', 'targetPerDay']);
-const strings = new Set(['id', 'title', 'notes', 'ownerId', 'name', 'date', 'taskId', 'parentId', 'target', 'serverId', 'session', 'icon', 'color', 'reminderAt', 'linkedTaskTemplateId', 'habitId', 'periodStart', 'periodEnd', 'highlights', 'friction', 'resolution', 'nextSteps', 'deleteBatchId']);
+const strings = new Set(['id', 'title', 'notes', 'ownerId', 'name', 'date', 'taskId', 'parentId', 'target', 'serverId', 'session', 'icon', 'color', 'reminderAt', 'linkedTaskTemplateId', 'habitId', 'periodStart', 'periodEnd', 'highlights', 'plan', 'friction', 'resolution', 'nextSteps', 'deleteBatchId']);
 const nullable = new Set<string>(['parentId', 'taskId', 'linkedTaskTemplateId', 'startAt', 'dueAt', 'completedAt', 'deletedAt', 'archivedAt', 'priority', 'kind', 'facts', 'deleteBatchId', ...MIND_APPEARANCE_FIELDS]);
 const nonnegative = new Set(['estimateMin', 'plannedMin', 'actualMin', 'distractions', 'count', 'targetPerDay']);
 const enums: Record<string, readonly string[]> = {
@@ -21,7 +23,23 @@ function check(condition: boolean, field: string): asserts condition { if (!cond
 /** Validate the complete input before mutating any document. Supports older optional fields. */
 export function validateNexusData(value: unknown): Partial<NexusData> {
   check(record(value), 'data');
-  check(collections.some((key) => key in value) || 'settings' in value, '缺少数据集合');
+  check(collections.some((key) => key in value) || 'settings' in value || 'workspaces' in value || 'workspaceProfiles' in value, '缺少数据集合');
+  if (value.workspaceProfiles !== undefined) {
+    check(Array.isArray(value.workspaceProfiles) && value.workspaceProfiles.length <= 10000, 'workspaceProfiles');
+    const ids = new Set<string>();
+    for (const profile of value.workspaceProfiles) {
+      validateWorkspaceProfile(profile);
+      check(!ids.has(profile.id), 'workspaceProfiles.id'); ids.add(profile.id);
+    }
+  }
+  if (value.workspaces !== undefined) {
+    check(Array.isArray(value.workspaces) && value.workspaces.length <= 200000, 'workspaces');
+    const ids = new Set<string>();
+    for (const binding of value.workspaces) {
+      validateNodeWorkspace(binding);
+      check(!ids.has(binding.id), 'workspaces.id'); ids.add(binding.id);
+    }
+  }
   for (const name of collections) {
     const rows = value[name];
     if (rows === undefined) continue;
@@ -50,13 +68,14 @@ export function validateNexusData(value: unknown): Partial<NexusData> {
         const period = { kind: row.kind, start: row.periodStart, end: row.periodEnd } as import('./types').ReviewPeriod;
         check(validReviewPeriod(period) && row.id === reviewId(period), 'review.period');
         for (const field of ['highlights', 'friction', 'nextSteps']) check(typeof row[field] === 'string' && String(row[field]).length <= 100000, `review.${field}`);
-        // Older backups predate the separate solution field.
-        check(row.resolution === undefined || typeof row.resolution === 'string' && row.resolution.length <= 100000, 'review.resolution');
+        // Older backups predate separate planning and solution fields.
+        for (const field of ['plan', 'resolution']) check(row[field] === undefined || typeof row[field] === 'string' && String(row[field]).length <= 100000, `review.${field}`);
         if (row.facts != null) {
           const facts = row.facts;
           check(record(facts) && typeof facts.capturedAt === 'number' && Number.isFinite(facts.capturedAt)
             && typeof facts.focusMin === 'number' && Number.isFinite(facts.focusMin) && facts.focusMin >= 0, 'review.facts');
           for (const key of ['completed', 'pending']) check(Array.isArray(facts[key]) && facts[key].length <= 200000 && facts[key].every((task: unknown) => record(task) && typeof task.id === 'string' && typeof task.title === 'string' && typeof task.project === 'string'), `review.facts.${key}`);
+          if (facts.planned !== undefined) check(Array.isArray(facts.planned) && facts.planned.length <= 200000 && facts.planned.every((task: unknown) => record(task) && typeof task.id === 'string' && typeof task.title === 'string' && typeof task.project === 'string' && (task.done === undefined || typeof task.done === 'boolean')), 'review.facts.planned');
           check(Array.isArray(facts.projects) && facts.projects.every((project: unknown) => record(project) && typeof project.id === 'string' && typeof project.title === 'string' && Number.isInteger(project.done) && Number.isInteger(project.total) && Number(project.done) >= 0 && Number(project.total) >= Number(project.done)), 'review.facts.projects');
         }
         if (row.completedAt != null) check(row.facts != null, 'review.completedFacts');
@@ -77,6 +96,7 @@ export function validateNexusData(value: unknown): Partial<NexusData> {
   if (value.settings !== undefined) {
     check(record(value.settings), 'settings');
     const settings = value.settings;
+    if (settings.workNavigationVersion !== undefined) check(Number.isInteger(settings.workNavigationVersion) && Number(settings.workNavigationVersion) >= 0, 'settings.workNavigationVersion');
     if (settings.savedViews !== undefined) validateSavedViews(settings.savedViews);
     if (settings.habitOrder !== undefined) validateHabitOrder(settings.habitOrder);
     if (settings.habitSort !== undefined) check(settings.habitSort === 'time' || settings.habitSort === 'manual', 'settings.habitSort');

@@ -1,4 +1,4 @@
-import { isStructural, type MindFont, type Task } from '@nexus/core';
+import { taskTitleText, isStructural, type MindFont, type Task } from '@nexus/core';
 import { titleAppearance } from './appearance';
 
 export const VIRTUAL_ROOT_ID = '__cortex_all__';
@@ -7,7 +7,7 @@ export interface MindMetrics { width: number; height: number; padX: number; padY
 export interface MindPosition { x: number; y: number; depth: number; side: BranchSide; branch: number }
 let context: CanvasRenderingContext2D | null | undefined;
 
-export function mindMetrics(task: Task, depth: number, footer: boolean, inheritedFont?: MindFont | null): MindMetrics {
+export function mindMetrics(task: Task, depth: number, footer: boolean, inheritedFont?: MindFont | null, rawTitle = false): MindMetrics {
   const style = titleAppearance(task, depth, inheritedFont);
   const size = Number(style.fontSize);
   if (context === undefined && typeof document !== 'undefined') context = document.createElement('canvas').getContext('2d');
@@ -16,7 +16,7 @@ export function mindMetrics(task: Task, depth: number, footer: boolean, inherite
   const padX = depth === 0 ? 22 : depth === 1 ? 16 : 14;
   const padY = depth === 0 ? 14 : depth === 1 ? 11 : 8;
   const checkbox = !isStructural(task) && task.id !== VIRTUAL_ROOT_ID ? 24 : 0;
-  const text = task.title || '未命名';
+  const text = (rawTitle ? task.title : taskTitleText(task.title)) || '未命名';
   const widest = Math.max(...text.split('\n').map(measure));
   const titleWidth = Math.ceil(Math.min(depth === 0 ? 280 : depth === 1 ? 220 : 256, Math.max(depth === 0 ? 124 : 72, widest)));
   let lines = 0;

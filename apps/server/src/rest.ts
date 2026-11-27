@@ -9,7 +9,7 @@ import type { DB, ApiTokenRow } from './db';
 import type { setupSync } from './sync';
 import { RateLimit } from './security';
 import { openapi } from './restSchema';
-import { reviewDayStart } from './reviewZone';
+import { reviewDayEnd, reviewDayStart } from './reviewZone';
 
 type Sync = ReturnType<typeof setupSync>;
 type Result = { body: unknown; status: ContentfulStatusCode; etag?: string };
@@ -21,7 +21,7 @@ const tokenInfo = (row: ApiTokenRow) => ({ id: row.id, name: row.name, permissio
 const TASK_FIELDS = ['title', 'notes', 'status', 'kind', 'parentId', 'order', 'priority', 'important', 'urgent', 'tags', 'startAt', 'dueAt', 'estimateMin', ...MIND_APPEARANCE_FIELDS];
 const PROJECT_FIELDS = ['title', 'notes', 'status', 'order', ...MIND_APPEARANCE_FIELDS];
 const HABIT_FIELDS = ['name', 'icon', 'color', 'cadence', 'targetPerDay', 'reminderTimes', 'reminderAt', 'reminderEnabled'];
-const REVIEW_FIELDS = ['highlights', 'friction', 'resolution', 'nextSteps'];
+const REVIEW_FIELDS = ['highlights', 'plan', 'friction', 'resolution', 'nextSteps'];
 
 function fields(body: Record<string, unknown>, allowed: readonly string[]) {
   if (Object.keys(body).some(key => !allowed.includes(key))) fail(`不支持的字段；允许：${allowed.join(', ')}`);
@@ -176,7 +176,7 @@ export function setupRestApi(app: Hono, db: DB, getSync: () => Sync, currentUser
     route('post', base, (_c, store, body) => {
       fields(body, project ? PROJECT_FIELDS : TASK_FIELDS); title(body.title);
       if (project && body.status !== undefined && !['todo', 'archived'].includes(String(body.status))) fail('项目状态需为 todo 或 archived');
-      const task = project ? store.createProject(String(body.title)) : store.createTask({ ...body, project: false, status: (body.status ?? (body.parentId ? 'todo' : 'inbox')) as Task['status'] } as Partial<Task>);
+      const task = project ? store.createProject(String(body.title)) : store.createTask({ ...body, project: false, status: (body.status ?? (body.kind === 'node' || body.parentId ? 'todo' : 'inbox')) as Task['status'] } as Partial<Task>);
       const next = { ...task, ...body } as Task;
       validateTask(store, next);
       if (project) store.updateTask(task.id, body as Partial<Task>);
@@ -270,8 +270,8 @@ export function setupRestApi(app: Hono, db: DB, getSync: () => Sync, currentUser
     fields(body, ['timeZone']); period(c.req.param('id')!);
     const review = store.getData().reviews.find(review => review.id === c.req.param('id')) ?? fail('未找到该复盘', 404);
     if (typeof body.timeZone !== 'string' || !body.timeZone || body.timeZone.length > 100) fail('请明确提供 IANA timeZone，例如 Asia/Shanghai');
-    let bounds: { start: number; end: number };
-    try { bounds = { start: reviewDayStart(review.periodStart, body.timeZone), end: reviewDayStart(review.periodEnd, body.timeZone) }; }
+    let bounds: { start: number; end: number; todayEnd: number };
+    try { bounds = { start: reviewDayStart(review.periodStart, body.timeZone), end: reviewDayStart(review.periodEnd, body.timeZone), todayEnd: reviewDayEnd(Date.now(), body.timeZone) }; }
     catch { return fail('timeZone 无效或该时区不存在指定日期'); }
     checkMatch(c, review); return { data: review.completedAt != null ? review : store.completeReview(periodOfReview(review), bounds) };
   });

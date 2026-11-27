@@ -1,10 +1,15 @@
 import { describe, it, expect } from 'vitest';
 import { parseCapture } from '../src/parse';
-import { startOfDay, addDays, dayKeyOf, nextWeekday } from '../src/time';
+import { startOfDay, endOfDay, addDays, dayKeyOf, nextWeekday } from '../src/time';
 
 const NOW = new Date(2026, 7, 29, 10, 0); // 2026-08-29 周六 10:00
 
 describe('parseCapture', () => {
+  it('preserves title link labels and URL fragments while parsing metadata outside links', () => {
+    const link = '[修复 #123 @today !P0](https://example.com/issue(123)#discussion)';
+    const result = parseCapture(`${link} #work !P2`, NOW);
+    expect(result.title).toBe(link); expect(result.tags).toEqual(['work']); expect(result.priority).toBe('P2'); expect(result.dueAt).toBeUndefined();
+  });
   it('纯文本', () => {
     const r = parseCapture('买牛奶', NOW);
     expect(r.title).toBe('买牛奶');
@@ -32,7 +37,8 @@ describe('parseCapture', () => {
 
   it('@明天 中文', () => {
     const r = parseCapture('交报告 @明天', NOW);
-    expect(r.dueAt).toBe(startOfDay(addDays(NOW, 1)).getTime());
+    expect(r.startAt).toBe(startOfDay(addDays(NOW, 1)).getTime());
+    expect(r.dueAt).toBe(endOfDay(addDays(NOW, 1)).getTime() - 60000);
   });
 
   it('@mon 解析为下周一(从周六起)', () => {

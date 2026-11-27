@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ChevronRight, Plus, CircleDot, Info, Trash2, Shapes, CornerUpRight } from 'lucide-react';
+import { ChevronRight, Plus, CircleDot, Info, Trash2, Shapes, FileText, CornerUpRight } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { cn } from '@nexus/ui';
 import { addDays, dayKeyOf, endOfDay, newOrder, PRIORITY_META, PRIORITY_ORDER, isStructural, isProject } from '@nexus/core';
@@ -101,13 +101,13 @@ export function TaskMenu() {
   // 批量目标:右键时若已多选 → 操作作用于整批;否则仅当前任务
   const ids = [...new Set(menu.ids ?? [task.id])];
   const multi = ids.length > 1;
-  const structural = isStructural(task); // 结构节点:菜单里不给时间/优先级,给「转回 TODO」
+  const structural = isStructural(task);
   const project = isProject(task);
   const selectedIds = new Set(ids);
   const targets = data.tasks.filter(item => selectedIds.has(item.id) && item.deletedAt == null && item.status !== 'archived');
   const editableCount = targets.filter(item => !isStructural(item)).length;
   const convertible = targets.filter(item => !isProject(item));
-  const toGroupCount = convertible.filter(item => !isStructural(item)).length;
+  const toTextCount = convertible.filter(item => !isStructural(item)).length;
   const toTaskCount = convertible.filter(isStructural).length;
   const projectCount = targets.filter(isProject).length;
 
@@ -195,11 +195,11 @@ export function TaskMenu() {
           <MenuItem disabled={busy} onHover={el => openSub('views', el)} onSelect={el => openSub('views', el)}><CornerUpRight className="h-4 w-4 shrink-0" />跳转到视图<ChevronRight className="ml-auto h-3.5 w-3.5 text-muted" /></MenuItem>
           </>}
           {multi && <>
-            <MenuItem disabled={busy || toGroupCount === 0} onHover={clearSub} onSelect={() => { void persistAction(() => { store.setTaskKinds(ids, 'node'); }); }}>
-              <Shapes className="h-4 w-4 shrink-0" />转为分组<span className="ml-auto text-xs text-muted">{toGroupCount} 项</span>
+            <MenuItem disabled={busy || toTextCount === 0} onHover={clearSub} onSelect={() => { void persistAction(() => { store.setTaskKinds(ids, 'node'); }); }}>
+              <FileText className="h-4 w-4 shrink-0" />转为文本节点<span className="ml-auto text-xs text-muted">{toTextCount} 项</span>
             </MenuItem>
             <MenuItem disabled={busy || toTaskCount === 0} onHover={clearSub} onSelect={() => { void persistAction(() => { store.setTaskKinds(ids, 'todo'); }); }}>
-              <CircleDot className="h-4 w-4 shrink-0" />转为 Task<span className="ml-auto text-xs text-muted">{toTaskCount} 项</span>
+              <CircleDot className="h-4 w-4 shrink-0" />转为 TODO 任务<span className="ml-auto text-xs text-muted">{toTaskCount} 项</span>
             </MenuItem>
             {projectCount > 0 && <p className="px-2.5 py-1 text-[10px] text-muted">{projectCount} 个项目保留项目身份，不参与类型转换</p>}
           </>}
@@ -208,7 +208,10 @@ export function TaskMenu() {
             onSelect={() => { void persistAction(() => store.setTaskKind(task.id, structural ? 'todo' : 'node')); }}
           >
             <Shapes className="h-4 w-4 shrink-0" />
-            {structural ? '转为 TODO 任务' : task.parentId === null ? '转为项目' : '转为分组'}
+            {structural ? '转为 TODO 任务' : '转为文本节点'}
+          </MenuItem>}
+          {!multi && !project && task.parentId === null && <MenuItem disabled={busy} onHover={clearSub} onSelect={() => { void persistAction(() => store.updateTask(task.id, { kind: 'node', project: true })); }}>
+            <Shapes className="h-4 w-4 shrink-0" />转为项目
           </MenuItem>}
           {project && !multi && <MenuItem disabled={busy} onHover={clearSub} onSelect={() => { void persistAction(() => store.setTaskStatus(task.id, 'archived')); }}>归档项目</MenuItem>}
           {editableCount > 0 && (
@@ -269,7 +272,7 @@ export function TaskMenu() {
                   void persistAction(() => {
                     store.setTaskBatch(ids, value === null
                       ? { startAt: { action: 'clear' }, dueAt: { action: 'clear' } }
-                      : { dueAt: { action: 'set', date: dayKeyOf(value), ...(!multi ? { time: '23:59' } : {}) } });
+                      : { startAt: { action: 'set', date: dayKeyOf(value), time: '00:00' }, dueAt: { action: 'set', date: dayKeyOf(value), time: '23:59' } });
                   });
                 }}>
                   {o.label}
@@ -288,10 +291,6 @@ export function TaskMenu() {
                   {PRIORITY_META[p].label}
                 </MenuItem>
               ))}
-              <div className="my-1 h-px bg-[var(--border)]" />
-              <MenuItem disabled={busy} onSelect={() => { void persistAction(() => { store.setTaskBatch(ids, { priority: 'P3' }); }); }}>
-                清除优先级(P3)
-              </MenuItem>
             </div>
           )}
           {sub === 'views' && <div className="flex flex-col">
@@ -301,11 +300,11 @@ export function TaskMenu() {
               return <MenuItem key={key} disabled={busy || !href} onSelect={() => { if (href) void goTo(href); }}><Icon size={14} />{label}</MenuItem>;
             })}
             <div className="my-1 h-px bg-[var(--border)]" />
-            <MenuItem disabled={busy || !taskCurrentViewHref(data, task.id)} onSelect={() => { const href = taskCurrentViewHref(data, task.id); if (href) void goTo(href); }}>当前任务</MenuItem>
+            <MenuItem disabled={busy || !taskCurrentViewHref(data, task.id)} onSelect={() => { const href = taskCurrentViewHref(data, task.id); if (href) void goTo(href); }}>本周任务</MenuItem>
             {data.settings.savedViews.length > 0 && <><div className="my-1 h-px bg-[var(--border)]" /><p className="px-2.5 py-1.5 text-[11px] text-muted">快捷视图</p></>}
             {data.settings.savedViews.map(saved => {
               const href = taskSavedViewHref(data, task.id, saved);
-              return <MenuItem key={saved.id} disabled={busy || !href} onSelect={() => { if (href) void goTo(href); }}><span className="truncate" title={href ? saved.name : `${saved.name}：不包含此任务的项目，或不支持结构节点`}>{saved.name}</span></MenuItem>;
+              return <MenuItem key={saved.id} disabled={busy || !href} onSelect={() => { if (href) void goTo(href); }}><span className="truncate" title={href ? saved.name : `${saved.name}：不包含此节点的项目，或视图不支持文本节点`}>{saved.name}</span></MenuItem>;
             })}
           </div>}
         </div>

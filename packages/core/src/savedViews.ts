@@ -2,7 +2,8 @@ import { calendarDaysBetween, dayKeyOf } from './time';
 import { WORK_FOCUS, type WorkFocus } from './work';
 
 export const TASK_FILTER_STATUSES = ['all', 'unfinished', 'todo', 'doing', 'done'] as const;
-export const TASK_FILTER_PRIORITIES = ['all', 'high', 'P0', 'P1', 'P2', 'P3'] as const;
+export const TASK_FILTER_PRIORITIES = ['all', 'high', 'unreviewed', 'P0', 'P1', 'P2', 'P3'] as const;
+export const TASK_SORTS = ['manual', 'priority'] as const;
 
 export const TASK_VIEW_KEYS = ['list', 'mindmap', 'matrix', 'gantt', 'timeline'] as const;
 export type TaskViewKey = (typeof TASK_VIEW_KEYS)[number];
@@ -19,10 +20,13 @@ export interface SavedTaskView {
   work?: WorkFocus;
   taskStatus?: typeof TASK_FILTER_STATUSES[number];
   taskPriority?: typeof TASK_FILTER_PRIORITIES[number];
+  taskSort?: typeof TASK_SORTS[number];
   taskTag?: string;
 }
 export const MAX_SAVED_VIEWS = 50;
+export const WEEK_WORK_VIEW: SavedTaskView = { id: 'week-work', name: '本周工作', view: 'gantt', scope: 'week', projectId: null };
 export const DEFAULT_SAVED_VIEWS: SavedTaskView[] = [
+  WEEK_WORK_VIEW,
   { id: 'calendar-month', name: '本月日历', view: 'timeline', scope: 'month', projectId: null },
 ];
 export function normalizeTaskView(value: unknown): TaskViewKey | null {
@@ -43,6 +47,7 @@ export function isSavedTaskView(value: unknown): value is SavedTaskView {
   if (item.work != null && !WORK_FOCUS.includes(item.work as WorkFocus)) return false;
   if (item.taskStatus != null && !TASK_FILTER_STATUSES.includes(item.taskStatus as SavedTaskView['taskStatus'] & string)) return false;
   if (item.taskPriority != null && !TASK_FILTER_PRIORITIES.includes(item.taskPriority as SavedTaskView['taskPriority'] & string)) return false;
+  if (item.taskSort != null && !TASK_SORTS.includes(item.taskSort as SavedTaskView['taskSort'] & string)) return false;
   if (item.taskTag != null && (typeof item.taskTag !== 'string' || !idPattern.test(item.taskTag))) return false;
   if (item.scope === 'custom') {
     if (!validDay(item.from) || !validDay(item.to)) return false;
@@ -59,8 +64,14 @@ export function savedViewHref(view: SavedTaskView): string {
   const params = new URLSearchParams({ saved: view.id, view: view.view, scope: view.scope });
   if (view.projectId) params.set('project', view.projectId);
   if (view.scope === 'custom') { params.set('from', view.from!); params.set('to', view.to!); }
-  for (const key of ['work', 'taskStatus', 'taskPriority', 'taskTag'] as const) {
+  for (const key of ['work', 'taskStatus', 'taskPriority', 'taskTag', 'taskSort'] as const) {
     if (view[key] && view[key] !== 'all') params.set(key, view[key]);
   }
   return `/tasks?${params}`;
+}
+
+/** A one-time derived default; saving any view edit records the migration, so removal stays removed. */
+export function migrateWorkViews(views: SavedTaskView[], version = 0): SavedTaskView[] {
+  if (version >= 1 || views.length >= MAX_SAVED_VIEWS || views.some(view => view.id === WEEK_WORK_VIEW.id || (!view.projectId && view.view === 'gantt' && view.scope === 'week' && (!view.work || view.work === 'all') && (!view.taskStatus || view.taskStatus === 'all') && (!view.taskPriority || view.taskPriority === 'all') && !view.taskTag))) return views;
+  return [{ ...WEEK_WORK_VIEW }, ...views];
 }

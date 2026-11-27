@@ -45,6 +45,7 @@ import {
   fullyDoneIds,
   isProject,
   descendantsOf,
+  taskBranchIds,
   workSignals,
   workProgress,
   taskContextIds,
@@ -139,6 +140,7 @@ function MindMapInner({
   useMindGeometry();
   void onEdgesChange;
   const draggingId = useRef<string | null>(null);
+  const draggingTaskIds = useRef<string[]>([]);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const mapRegionRef = useRef<HTMLDivElement>(null);
   const nodesRef = useRef<Node<NodeData>[]>([]);
@@ -471,23 +473,31 @@ function MindMapInner({
 
   const onNodeDragStart = useCallback((_e: unknown, node: Node) => {
     draggingId.current = node.id;
-  }, []);
+    const selected = nodesRef.current.filter(item => item.selected);
+    const batch = selected.some(item => item.id === node.id) ? selected : [node];
+    draggingTaskIds.current = batch.filter(item =>
+      item.id !== VIRTUAL_ROOT_ID && item.id !== rootTaskId && item.draggable !== false,
+    ).map(item => item.id);
+    store.stopUndoCapture();
+  }, [rootTaskId, store]);
 
   /** 三段式落点判定(与列表一致):拖动节点中心落在目标节点
    *  上沿外=插它前面 · 下沿外=插它后面 · 中段=挂为它的子任务 */
   const computeDrop = useCallback((node: Node): { targetId: string | null; mode: 'child' | 'before' | 'after' } => {
-    const hits = getIntersectingNodes(node).filter((n) => n.id !== node.id);
+    const ids = draggingTaskIds.current.length ? draggingTaskIds.current : [node.id];
+    const excluded = taskBranchIds(tasks, ids);
+    const hits = getIntersectingNodes(node).filter((n) => !excluded.has(n.id));
     const t = hits[0];
     if (!t) return { targetId: null, mode: 'child' };
     const dh = node.measured?.height ?? 44;
     const th = t.measured?.height ?? 44;
     const rel = (node.position.y + dh / 2 - (t.position.y + th / 2)) / th;
-    if (rel < -0.35) return { targetId: t.id, mode: 'before' };
-    if (rel > 0.35) return { targetId: t.id, mode: 'after' };
-    if (!canReparent(node.id, t.id === VIRTUAL_ROOT_ID ? null : t.id, childrenMap))
+    const mode = t.id === VIRTUAL_ROOT_ID ? 'child' : rel < -0.35 ? 'before' : rel > 0.35 ? 'after' : 'child';
+    const parentId = t.id === VIRTUAL_ROOT_ID ? null : mode === 'child' ? t.id : byId.get(t.id)?.parentId ?? null;
+    if (ids.some(id => !canReparent(id, parentId, childrenMap)))
       return { targetId: null, mode: 'child' };
-    return { targetId: t.id, mode: 'child' };
-  }, [getIntersectingNodes, childrenMap]);
+    return { targetId: t.id, mode };
+  }, [getIntersectingNodes, childrenMap, tasks, byId]);
 
   // 拖拽中实时提示
   const onNodeDrag = useCallback((_e: unknown, node: Node) => {
@@ -510,74 +520,45 @@ function MindMapInner({
   const applyDragResult = useCallback((node: Node) => {
     const draggedTask = byId.get(node.id);
     if (!draggedTask) return;
+    const ids = draggingTaskIds.current;
+    if (!ids.length) return;
+    const moving = taskBranchIds(tasks, ids);
     const { targetId, mode } = computeDrop(node);
 
-    // 1) 非根节点拖到虚拟真根上 = 升为根任务(排末尾)
-    if (targetId === VIRTUAL_ROOT_ID && draggedTask.parentId != null) {
-      const roots = childrenMap.get(null) ?? [];
-      store.reparent(node.id, null, (roots.at(-1)?.order ?? 0) + 1);
+    if (targetId === VIRTUAL_ROOT_ID) {
+      store.reparentTasks(ids, null);
       return;
     }
 
-    // 2) 同级插前/插后:落到目标的上/下沿,插进它的兄弟队列(可跨分支平移)
-    if (targetId && targetId !== VIRTUAL_ROOT_ID && targetId !== node.id && mode !== 'child') {
+    if (targetId) {
       const targetTask = byId.get(targetId);
-      const parent = targetTask?.parentId ?? null;
-      if (targetTask && parent !== node.id && canReparent(node.id, parent, childrenMap)) {
-        const siblings = (childrenMap.get(parent) ?? []).filter((t) => t.id !== node.id);
-        const i = siblings.findIndex((t) => t.id === targetId);
-        if (i >= 0) {
-          const prev = mode === 'after' ? siblings[i] : siblings[i - 1];
-          const next = mode === 'after' ? siblings[i + 1] : siblings[i];
-          store.reparent(node.id, parent, newOrder(prev?.order, next?.order));
-          if (gapTooSmall(prev?.order, next?.order)) store.renumberParent(parent);
-          return;
-        }
+      if (!targetTask) return;
+      if (mode === 'child') {
+        if (store.reparentTasks(ids, targetId) && collapsed[targetId]) useUI.getState().toggleCollapsed(targetId);
+      } else {
+        const siblings = (childrenMap.get(targetTask.parentId) ?? []).filter(task => !moving.has(task.id));
+        const index = siblings.findIndex(task => task.id === targetId);
+        const before = mode === 'before' ? targetId : siblings[index + 1]?.id;
+        store.reparentTasks(ids, targetTask.parentId, before);
       }
+      return;
     }
 
-    // 3) 中段 = 挂为它的子任务(不能挂到自己/自己的后代上)
-    if (targetId && targetId !== VIRTUAL_ROOT_ID && targetId !== node.id && mode === 'child') {
-      const descendants = new Set<string>();
-      const stack = [node.id];
-      while (stack.length) {
-        const cur = stack.pop()!;
-        for (const c of childrenMap.get(cur) ?? []) {
-          descendants.add(c.id);
-          stack.push(c.id);
-        }
-      }
-      if (!descendants.has(targetId)) {
-        const siblings = childrenMap.get(targetId) ?? [];
-        store.reparent(node.id, targetId, (siblings.at(-1)?.order ?? 0) + 1);
-        return;
-      }
-    }
-
-    // 4) 空白处松手 = 在同父级的兄弟之间按上下位置调序
-    //    单根视图里拖"被查看的根"本身没有意义,忽略。
+    // Empty canvas reorders a batch only when its roots already share a parent.
     if (rootTaskId != null && draggedTask.parentId == null) return;
-    const siblings = (childrenMap.get(draggedTask.parentId) ?? []).filter((t) => t.id !== node.id);
+    const roots = ids.filter(id => !ids.some(other => other !== id && descendantsOf(other, childrenMap).has(id)));
+    if (roots.some(id => byId.get(id)?.parentId !== draggedTask.parentId)) return;
+    const siblings = (childrenMap.get(draggedTask.parentId) ?? []).filter(task => !moving.has(task.id));
     const yOf = (id: string) => nodesRef.current.find((n) => n.id === id)?.position.y;
-    const y = node.position.y;
-    let idx = siblings.length;
-    for (let i = 0; i < siblings.length; i++) {
-      const ry = yOf(siblings[i]!.id);
-      if (ry != null && ry > y) {
-        idx = i;
-        break;
-      }
-    }
-    const prev = idx > 0 ? siblings[idx - 1] : undefined;
-    const next = siblings[idx];
-    store.reparent(node.id, draggedTask.parentId, newOrder(prev?.order, next?.order));
-    if (gapTooSmall(prev?.order, next?.order)) store.renumberParent(draggedTask.parentId);
-  }, [byId, childrenMap, store, rootTaskId]);
+    const before = siblings.find(task => (yOf(task.id) ?? -Infinity) > node.position.y);
+    store.reparentTasks(ids, draggedTask.parentId, before?.id);
+  }, [byId, childrenMap, store, rootTaskId, tasks, computeDrop, collapsed]);
 
   /** 拖动只是"改变关系"的手势:不保留自由位移,松手后一律回到整洁布局 */
   const onNodeDragStop = useCallback((_e: unknown, node: Node) => {
     draggingId.current = null;
     applyDragResult(node);
+    draggingTaskIds.current = [];
     setDropHint(null);
     store.stopUndoCapture(); // 一次拖拽(挂靠 + 可能的重编号)= 一个撤销单元
     bumpRelayout();
@@ -585,14 +566,11 @@ function MindMapInner({
 
   const addChild = (parentId: string) => {
     const siblings = childrenMap.get(parentId) ?? [];
-    const parent = byId.get(parentId);
     const created = store.createTask({
       title: '',
       ...workspaceTaskDefaults(new URLSearchParams(window.location.search), undefined, windowDueAt(range)),
       parentId,
       order: (siblings.at(-1)?.order ?? 0) + 1,
-      important: parent?.important ?? false,
-      urgent: parent?.urgent ?? false,
     });
     if (created) {
       setNewTaskIds((ids) => [...ids, created.id]);
@@ -616,8 +594,6 @@ function MindMapInner({
       ...workspaceTaskDefaults(new URLSearchParams(window.location.search), undefined, windowDueAt(range)),
       parentId: task.parentId,
       order: newOrder(task.order, next?.order),
-      important: task.important ?? false,
-      urgent: task.urgent ?? false,
     });
     if (created) {
       setNewTaskIds((ids) => [...ids, created.id]);

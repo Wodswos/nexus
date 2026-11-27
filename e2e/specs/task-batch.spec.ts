@@ -42,6 +42,42 @@ async function exported(page: Page) {
   return JSON.parse(await readFile((await (await downloading).path())!, 'utf8')).data.tasks as any[];
 }
 
+test('dragging a selected MindMap node moves the complete batch and undo, redo and reload retain both tasks', async ({ page }) => {
+  await seed(page); await lasso(page);
+  const a = (await node(page, 'alpha').boundingBox())!;
+  const target = (await node(page, 'other').boundingBox())!;
+  await page.mouse.move(a.x + a.width / 2, a.y + a.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(target.x + target.width / 2, target.y + target.height / 2, { steps: 20 });
+  await expect(node(page, 'other')).toContainText('挂到它下面');
+  await page.mouse.up();
+  await expect(page.locator('.react-flow__node.selected')).toHaveCount(2);
+  let tasks = await exported(page);
+  for (const id of ['alpha', 'beta']) expect(tasks.find(task => task.id === id).parentId).toBe('other');
+  await page.getByRole('button', { name: '撤销 (⌘Z)', exact: true }).click();
+  tasks = await exported(page);
+  for (const id of ['alpha', 'beta']) expect(tasks.find(task => task.id === id).parentId).toBe('batch_project');
+  await page.getByRole('button', { name: '重做 (⌘⇧Z)', exact: true }).click();
+  tasks = await exported(page);
+  for (const id of ['alpha', 'beta']) expect(tasks.find(task => task.id === id).parentId).toBe('other');
+  await page.reload();
+  tasks = await exported(page);
+  for (const id of ['alpha', 'beta']) expect(tasks.find(task => task.id === id).parentId).toBe('other');
+});
+
+test('a selected batch inserts together after another branch and keeps source order', async ({ page }) => {
+  await seed(page); await lasso(page);
+  const a = (await node(page, 'alpha').boundingBox())!;
+  const target = (await node(page, 'other').boundingBox())!;
+  await page.mouse.move(a.x + a.width / 2, a.y + a.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(target.x + target.width / 2, target.y + target.height + 8, { steps: 20 });
+  await expect(node(page, 'other')).toContainText('插到它后面');
+  await page.mouse.up();
+  const tasks = await exported(page);
+  expect(tasks.filter(task => task.parentId === 'batch_project').sort((a, b) => a.order - b.order).map(task => task.id)).toEqual(['other', 'alpha', 'beta']);
+});
+
 test('lasso keeps only individual selection markers and selected-node context priority is one undo', async ({ page }) => {
   await seed(page); await lasso(page);
   await page.evaluate(() => { document.addEventListener('contextmenu', event => { document.body.dataset.contextPrevented = String(event.defaultPrevented); }); });
@@ -92,10 +128,10 @@ test('batch menu converts selected tasks and groups without offering single-item
   const menu = page.locator('[data-task-menu] div[aria-label="任务菜单"]');
   for (const name of ['创建子任务', '打开详情', '编辑项目', '跳转到视图']) await expect(menu.getByRole('button', { name, exact: true })).toHaveCount(0);
   await expect(menu).toContainText('1 个项目保留项目身份');
-  await menu.getByRole('button', { name: /^转为分组/ }).click();
+  await menu.getByRole('button', { name: /^转为文本节点/ }).click();
   await expect(node(page, 'alpha').getByRole('checkbox')).toHaveCount(0);
   await node(page, 'alpha').click({ button: 'right' });
-  await menu.getByRole('button', { name: /^转为 Task/ }).click();
+  await menu.getByRole('button', { name: /^转为 TODO 任务/ }).click();
   await expect(node(page, 'alpha').getByRole('checkbox')).toHaveCount(1);
   await page.getByRole('button', { name: '撤销 (⌘Z)', exact: true }).click();
   for (const id of ['alpha', 'beta', 'other']) await expect(node(page, id).getByRole('checkbox')).toHaveCount(0);
@@ -160,8 +196,8 @@ test('mixed structure selection skips the root and date conflicts block the enti
   await page.keyboard.press('ControlOrMeta+a');
   await expect(toolbar(page)).toContainText('已选 4 项');
   await toolbar(page).getByRole('button', { name: '批量设置时间', exact: true }).click();
-  await expect(editor(page)).toContainText('3 项任务可设置');
-  await expect(editor(page)).toContainText('1 项分组');
+  await expect(editor(page)).toContainText('3 项 TODO 任务可设置');
+  await expect(editor(page)).toContainText('1 项文本节点');
   await selectValue(editor(page).getByRole('combobox', { name: '截止操作', exact: true }), 'set');
   await editor(page).getByLabel('截止日期', { exact: true }).fill('2026-10-01');
   await expect(editor(page).getByRole('alert')).toContainText('截止早于开始');
@@ -174,4 +210,21 @@ test('mixed structure selection skips the root and date conflicts block the enti
   const tasks = await exported(page);
   expect(tasks.find(task => task.id === 'alpha').dueAt).toBe(stamp('2026-11-03', '18:30'));
   expect(tasks.find(task => task.id === 'beta').dueAt).toBe(stamp('2026-11-04', '20:00'));
+});
+
+
+test('today shortcut schedules the entire local day and undo restores both endpoints', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-11-24T12:00:00+08:00'));
+  await seed(page);
+  await node(page, 'beta').locator('[data-mind-title]').click({ button: 'right' });
+  await page.getByLabel('任务菜单', { exact: true }).getByRole('button', { name: '设定时间', exact: true }).click();
+  await page.getByRole('button', { name: '今天', exact: true }).click();
+  const changed = (await exported(page)).find(task => task.id === 'beta');
+  expect(changed).toMatchObject({ startAt: stamp('2026-11-24', '00:00'), dueAt: stamp('2026-11-24', '23:59') });
+  await page.goBack();
+  await expect(node(page, 'beta')).toBeVisible();
+  await page.getByRole('button', { name: '撤销 (⌘Z)', exact: true }).click();
+  const restored = (await exported(page)).find(task => task.id === 'beta');
+  expect(restored.startAt).toBeNull();
+  expect(restored.dueAt).toBe(stamp('2026-11-04', '20:00'));
 });

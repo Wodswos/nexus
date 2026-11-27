@@ -20,12 +20,14 @@ interface SelectFieldProps {
   disabled?: boolean;
   className?: string;
   placeholder?: string;
+  triggerLabel?: string;
+  title?: string;
   onCloseAutoFocus?: (event: Event) => void;
 }
 
 /** The same keyboard-accessible option surface in task, project and filter settings. */
 export const SelectField = React.forwardRef<HTMLButtonElement, SelectFieldProps>(
-  ({ value, onValueChange, options, className, placeholder, onCloseAutoFocus, ...props }, ref) => {
+  ({ value, onValueChange, options, className, placeholder, triggerLabel, onCloseAutoFocus, ...props }, ref) => {
     // Radix reserves the empty value for its placeholder; callers still use '' for “all”.
     const empty = React.useId();
     const selected = options.find((option) => option.value === value);
@@ -53,7 +55,7 @@ export const SelectField = React.forwardRef<HTMLButtonElement, SelectFieldProps>
               />
             )}
             <SelectPrimitive.Value placeholder={placeholder}>
-              <span className="block truncate">{selected?.label ?? placeholder}</span>
+              <span className="block truncate">{triggerLabel ?? selected?.label ?? placeholder}</span>
             </SelectPrimitive.Value>
           </span>
           <SelectPrimitive.Icon>
@@ -82,6 +84,8 @@ export const SelectField = React.forwardRef<HTMLButtonElement, SelectFieldProps>
                 <SelectPrimitive.Item
                   key={option.value}
                   value={option.value || empty}
+                  aria-label={option.label}
+                  aria-description={option.description}
                   disabled={option.disabled}
                   data-value={option.value}
                   className="relative flex min-h-10 cursor-default select-none items-center gap-2.5 rounded-lg py-2 pl-2.5 pr-8 outline-none data-[highlighted]:bg-[var(--surface)] data-[state=checked]:bg-[var(--selection)] data-[state=checked]:text-[var(--accent-solid)] data-[disabled]:pointer-events-none data-[disabled]:opacity-40"

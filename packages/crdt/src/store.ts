@@ -3,6 +3,7 @@ import { toBase64, fromBase64 } from 'lib0/buffer';
 import {
   NexusData,
   DEFAULT_SETTINGS,
+  migrateWorkViews,
   EMPTY_DATA,
   Habit,
   HabitLog,
@@ -24,6 +25,7 @@ import {
   normalizeTaskForest,
   buildChildrenMap,
   canReparent,
+  gapTooSmall,
   validateNexusData,
   validateSavedViews,
   validateHabitConfig,
@@ -44,6 +46,11 @@ import {
   workspaceLinkOrder,
   planTaskBatch,
   type TaskBatchChange,
+  type NodeWorkspace,
+  validateNodeWorkspace,
+  WORKSPACE_CONFIG_KEYS,
+  type WorkspaceProfile,
+  validateWorkspaceProfile,
 } from '@nexus/core';
 
 /**
@@ -271,37 +278,93 @@ export class NexusStore {
       // Y.Map 里写的数组会变成 Y.Array,读出来要转回普通数组
       (settings as unknown as Record<string, unknown>)[key] = v instanceof Y.Array ? v.toArray() : v;
     }
+    settings.savedViews = migrateWorkViews(settings.savedViews, settings.workNavigationVersion);
     if (settings.pomodoro == null) settings.pomodoro = DEFAULT_SETTINGS.pomodoro;
     else settings.pomodoro = { ...DEFAULT_SETTINGS.pomodoro, ...settings.pomodoro };
 
-    return { tasks, events, links, sessions, habits, habitLogs, tags, reviews, settings };
+    const workspaceRows = new Map<string, Record<string, unknown>>();
+    for (const [key, value] of this.docs.root.getMap('workspaceFields')) {
+      const split = key.lastIndexOf('/');
+      const id = key.slice(0, split), field = key.slice(split + 1);
+      if (split < 1 || !['mode', 'environmentId', 'workspaceId', ...WORKSPACE_CONFIG_KEYS].includes(field)) continue;
+      const row = workspaceRows.get(id) ?? { id, mode: 'inherit' };
+      row[field] = value; workspaceRows.set(id, row);
+    }
+    const workspaces = [...workspaceRows.keys()].sort().map(id => workspaceRows.get(id)!) as unknown as NodeWorkspace[];
+    const workspaceProfiles = [...this.docs.root.getMap<WorkspaceProfile>('workspaceProfiles').values()].flatMap(value => {
+      try { validateWorkspaceProfile(value); return [value]; } catch { return []; }
+    }).sort((a, b) => a.createdAt - b.createdAt || a.id.localeCompare(b.id));
+    return { tasks, events, links, sessions, habits, habitLogs, tags, reviews, workspaces, workspaceProfiles, settings };
+  }
+
+  saveWorkspaceProfile(profile: WorkspaceProfile, expectedUpdatedAt?: number): void {
+    validateWorkspaceProfile(profile);
+    const profiles = this.docs.root.getMap<WorkspaceProfile>('workspaceProfiles');
+    const current = profiles.get(profile.id);
+    if (expectedUpdatedAt !== undefined && current?.updatedAt !== expectedUpdatedAt)
+      throw new Error('Workspace 档案已在其他设备更新，请重新打开配置');
+    if (current?.deletedAt != null) throw new Error('Workspace 档案已删除');
+    this.stopUndoCapture();
+    this.docs.root.transact(() => profiles.set(profile.id, structuredClone(profile)));
+    this.stopUndoCapture();
+  }
+
+  deleteWorkspaceProfile(id: string, expectedUpdatedAt?: number): void {
+    const profile = this.getData().workspaceProfiles?.find(value => value.id === id);
+    if (!profile || profile.deletedAt != null) throw new Error('Workspace 档案不存在');
+    const data = this.getData(), liveTasks = new Set(data.tasks.filter(task => task.deletedAt == null).map(task => task.id));
+    if (data.workspaces.some(binding => binding.workspaceId === id && liveTasks.has(binding.id)))
+      throw new Error('Workspace 仍被节点引用，请先在节点配置中解除关联');
+    const time = Math.max(Date.now(), profile.updatedAt + 1);
+    this.saveWorkspaceProfile({ ...profile, deletedAt: time, updatedAt: time }, expectedUpdatedAt);
+  }
+
+  /** Deterministic field keys merge independent edits made on different devices. */
+  setWorkspace(id: string, patch: Partial<Omit<NodeWorkspace, 'id'>>, expected?: NodeWorkspace): void {
+    const task = this.get<Task>('tasks', id);
+    if (!task || task.deletedAt != null) throw new Error('Workspace 所属节点不存在');
+    const current = this.getData().workspaces.find(binding => binding.id === id) ?? { id, mode: 'inherit' as const };
+    validateNodeWorkspace({ ...current, ...patch, id });
+    const writes = Object.entries(patch).filter(([field, value]) => current[field as keyof NodeWorkspace] !== value);
+    if (expected && writes.some(([field]) => current[field as keyof NodeWorkspace] !== expected[field as keyof NodeWorkspace]))
+      throw new Error('Workspace 配置已在其他设备更新，请重新打开配置');
+    if (!writes.length) return;
+    this.stopUndoCapture();
+    this.docs.root.transact(() => {
+      const fields = this.docs.root.getMap('workspaceFields');
+      for (const [field, value] of writes) {
+        if (value === undefined) fields.delete(`${id}/${field}`);
+        else fields.set(`${id}/${field}`, value);
+      }
+    });
+    this.stopUndoCapture();
   }
 
   // Flat deterministic field keys let two devices start the same day's review concurrently
   // without racing to replace a nested Y.Map and losing one device's different fields.
   private collectReviews(): Review[] {
     const rows = new Map<string, Record<string, unknown>>();
-    const allowed = new Set(['kind', 'periodStart', 'periodEnd', 'ownerId', 'createdAt', 'updatedAt', 'highlights', 'friction', 'resolution', 'nextSteps', 'facts', 'completedAt']);
+    const allowed = new Set(['kind', 'periodStart', 'periodEnd', 'ownerId', 'createdAt', 'updatedAt', 'highlights', 'plan', 'friction', 'resolution', 'nextSteps', 'facts', 'completedAt']);
     for (const [key, value] of this.docs.root.getMap('reviewFields')) {
       const split = key.indexOf('/');
       if (split < 0) continue;
       const id = key.slice(0, split), field = key.slice(split + 1);
       if (!/^(daily|weekly)_\d{4}-\d{2}-\d{2}$/.test(id) || !allowed.has(field)) continue;
-      const row = rows.get(id) ?? { id, highlights: '', friction: '', resolution: '', nextSteps: '', facts: null, completedAt: null };
+      const row = rows.get(id) ?? { id, highlights: '', plan: '', friction: '', resolution: '', nextSteps: '', facts: null, completedAt: null };
       row[field] = value;
       rows.set(id, row);
     }
     return [...rows.values()].filter(row => row.kind && row.periodStart && row.periodEnd) as unknown as Review[];
   }
 
-  updateReview(period: ReviewPeriod, patch: Partial<Pick<Review, 'highlights' | 'friction' | 'resolution' | 'nextSteps'>> & { completedAt?: null }): Review {
+  updateReview(period: ReviewPeriod, patch: Partial<Pick<Review, 'highlights' | 'plan' | 'friction' | 'resolution' | 'nextSteps'>> & { completedAt?: null }): Review {
     if (!validReviewPeriod(period)) throw new Error('无效的复盘日期');
-    for (const field of ['highlights', 'friction', 'resolution', 'nextSteps'] as const) if (patch[field] !== undefined && (typeof patch[field] !== 'string' || patch[field]!.length > 100000)) throw new Error('复盘内容过长或格式无效');
+    for (const field of ['highlights', 'plan', 'friction', 'resolution', 'nextSteps'] as const) if (patch[field] !== undefined && (typeof patch[field] !== 'string' || patch[field]!.length > 100000)) throw new Error('复盘内容过长或格式无效');
     const id = reviewId(period), fields = this.docs.root.getMap('reviewFields'), timestamp = now();
     this.docs.root.transact(() => {
       const base = { kind: period.kind, periodStart: period.start, periodEnd: period.end, ownerId: this.userId, createdAt: timestamp };
       for (const [field, value] of Object.entries(base)) if (!fields.has(`${id}/${field}`)) fields.set(`${id}/${field}`, value);
-      for (const field of ['highlights', 'friction', 'resolution', 'nextSteps'] as const) if (patch[field] !== undefined) {
+      for (const field of ['highlights', 'plan', 'friction', 'resolution', 'nextSteps'] as const) if (patch[field] !== undefined) {
         fields.set(`${id}/${field}`, patch[field]);
         fields.set(`${id}/completedAt`, null);
       }
@@ -311,15 +374,18 @@ export class NexusStore {
     return this.getData().reviews.find(review => review.id === id)!;
   }
 
-  completeReview(period: ReviewPeriod, bounds?: { start: number; end: number }): Review {
+  completeReview(period: ReviewPeriod, bounds?: { start: number; end: number; todayEnd?: number }): Review {
     if (!validReviewPeriod(period)) throw new Error('无效的复盘日期');
     if (bounds && (!Number.isFinite(bounds.start) || !Number.isFinite(bounds.end) || bounds.end <= bounds.start)) throw new Error('无效的复盘时间范围');
+    if (bounds?.todayEnd !== undefined && !Number.isFinite(bounds.todayEnd)) throw new Error('无效的复盘时间范围');
     const id = reviewId(period);
     const review = this.getData().reviews.find(item => item.id === id);
-    if (!review || ![review.highlights, review.friction, review.resolution, review.nextSteps].some(value => value.trim())) throw new Error('写下一点收获、反思、解决办法或下一步，再完成复盘');
-    if (review.periodEnd !== period.end) throw new Error('复盘周期已经变化，请重新打开这份复盘');
+    if (review && review.periodEnd !== period.end) throw new Error('复盘周期已经变化，请重新打开这份复盘');
     const timestamp = now(), facts = reviewFacts(this.getData(), period, timestamp, bounds);
+    const hasText = review && [review.highlights, review.plan, review.friction, review.resolution, review.nextSteps].some(value => value.trim());
+    if (!hasText && !facts.completed.length && !facts.planned?.length && !facts.pending.length && !facts.focusMin) throw new Error('写下一点复盘内容，或添加本期任务记录后再完成复盘');
     this.docs.root.transact(() => {
+      if (!review) this.updateReview(period, {});
       const fields = this.docs.root.getMap('reviewFields');
       fields.set(`${id}/facts`, facts);
       fields.set(`${id}/completedAt`, timestamp);
@@ -377,9 +443,9 @@ export class NexusStore {
       id: newId(),
       title: patch.title?.trim() || 'Untitled',
       notes: patch.notes,
-      status: patch.status ?? 'inbox',
+      status: patch.status ?? (patch.kind === 'node' || patch.project ? 'todo' : 'inbox'),
       kind: patch.project ? 'node' : patch.kind ?? 'todo',
-      project: patch.project ?? (patch.kind === 'node' && patch.parentId == null),
+      project: patch.project ?? false,
       parentId: patch.project ? null : patch.parentId ?? null,
       order: patch.order ?? 0,
       important: patch.important ?? false,
@@ -412,10 +478,10 @@ export class NexusStore {
     const cur = this.get<Task>('tasks', id);
     if (!cur) return;
     if (isProject(cur) && (patch.parentId != null || patch.kind === 'todo' || patch.project === false)) return;
-    // Stamp legacy structural identity before moving it, so an internal group stays a group.
+    // Stamp legacy project identity before edits or moves.
     if (cur.kind === 'node' && cur.project === undefined) patch = { ...patch, project: isProject(cur) };
     if (patch.kind === 'node' && cur.kind !== 'node' && patch.project === undefined)
-      patch = { ...patch, project: cur.parentId === null };
+      patch = { ...patch, project: false };
     if (cur.project === true || patch.project === true) patch = { ...patch, kind: 'node', parentId: null };
     if (patch.parentId !== undefined && patch.parentId !== cur.parentId) {
       const tasks = this.getData().tasks;
@@ -478,11 +544,11 @@ export class NexusStore {
     this.updateTask(id, { priority, ...quadrantFields(priority) });
   }
 
-  /** 节点类型切换:todo(可完成) ↔ node(结构性容器,无完成态/状态/优先级/时间) */
+  /** Convert between a TODO task and a text node, including standalone leaves. */
   setTaskKind(id: string, kind: 'todo' | 'node'): void {
-    const cur = this.get<Task>('tasks', id);
-    if (!cur || cur.kind === kind) return;
-    this.updateTask(id, { kind });
+    const current = this.get<Task>('tasks', id);
+    if (!current || current.kind === kind) return;
+    this.updateTask(id, { kind, project: false });
   }
 
   /** Convert exactly the selected items, preserving task content and project identities. */
@@ -627,6 +693,50 @@ export class NexusStore {
 
   reparent(id: string, parentId: string | null, order: number): void {
     this.updateTask(id, { parentId, order, updatedAt: now() });
+  }
+
+  /** Move selected branches together, retaining descendants and source tree order. */
+  reparentTasks(ids: readonly string[], parentId: string | null, beforeId?: string): number {
+    const tasks = this.getData().tasks.filter(task => !task.deletedAt && task.status !== 'archived');
+    const children = buildChildrenMap(tasks);
+    const byId = new Map(tasks.map(task => [task.id, task]));
+    const selected = new Set(ids.filter(id => byId.has(id)));
+    const roots: Task[] = [];
+    const pending = [...(children.get(null) ?? [])].reverse();
+    while (pending.length) {
+      const task = pending.pop()!;
+      if (selected.has(task.id)) roots.push(task);
+      else {
+        const nested = children.get(task.id) ?? [];
+        for (let index = nested.length - 1; index >= 0; index--) pending.push(nested[index]!);
+      }
+    }
+    if (!roots.length || parentId !== null && !byId.has(parentId) ||
+      roots.some(task => !canReparent(task.id, parentId, children))) return 0;
+    const moving = new Set(roots.map(task => task.id));
+    const siblings = (children.get(parentId) ?? []).filter(task => !moving.has(task.id));
+    const index = beforeId === undefined ? siblings.length : siblings.findIndex(task => task.id === beforeId);
+    if (index < 0) return 0;
+    let order = siblings[index - 1]?.order;
+    const nextOrder = siblings[index]?.order;
+    let renumber = false;
+    let writes = roots.map(task => {
+      const next = newOrder(order, nextOrder);
+      if (!Number.isFinite(next) || order !== undefined && next <= order || nextOrder !== undefined && next >= nextOrder) renumber = true;
+      order = next;
+      return { task, order: next };
+    });
+    if (renumber || gapTooSmall(order, nextOrder)) {
+      writes = [...siblings.slice(0, index), ...roots, ...siblings.slice(index)].map((task, position) => ({ task, order: position * 1000 }));
+    }
+    writes = writes.filter(write => write.task.parentId !== parentId || write.task.order !== write.order);
+    if (!writes.length) return 0;
+    this.stopUndoCapture();
+    this.docs.tasks.transact(() => {
+      for (const write of writes) this.reparent(write.task.id, parentId, write.order);
+    });
+    this.stopUndoCapture();
+    return roots.length;
   }
 
   /** 兄弟间隙耗尽时重排 */
@@ -850,6 +960,7 @@ export class NexusStore {
     const map = this.docs.root.getMap<unknown>('settings');
     map.doc!.transact(() => {
       for (const [k, v] of Object.entries(patch)) map.set(k, v);
+      if (patch.savedViews !== undefined) map.set('workNavigationVersion', 1);
     });
   }
 
@@ -927,6 +1038,19 @@ export class NexusStore {
     importRows('habits', data.habits, defaultsHabit);
     importRows('habitLogs', data.habitLogs, defaultsLog);
     const reviewFields = this.docs.root.getMap('reviewFields');
+    const workspaceFields = this.docs.root.getMap('workspaceFields');
+    const workspaceIds = new Set(this.getData().workspaces.map(binding => binding.id));
+    this.docs.root.transact(() => {
+      const profiles = this.docs.root.getMap<WorkspaceProfile>('workspaceProfiles');
+      for (const profile of data.workspaceProfiles ?? []) if (!profiles.has(profile.id)) {
+        profiles.set(profile.id, structuredClone(profile));
+        count++;
+      }
+      for (const binding of data.workspaces ?? []) if (!workspaceIds.has(binding.id)) {
+        for (const [field, value] of Object.entries(binding)) if (field !== 'id' && value !== undefined) workspaceFields.set(`${binding.id}/${field}`, value);
+        count++;
+      }
+    });
     const reviewIds = new Set(this.getData().reviews.map(review => review.id));
     this.docs.root.transact(() => {
       for (const review of data.reviews ?? []) if (!reviewIds.has(review.id)) {
@@ -982,7 +1106,7 @@ export class NexusStore {
     if (meta.get('claimedBy') !== userId) return;
     this.withUndoSuspended(() => {
       for (const id of DOC_IDS) this.docs[id].transact(() => {
-        if (id === 'root') { this.docs.root.getMap('tags').clear(); this.docs.root.getMap('settings').clear(); this.docs.root.getMap('reviewFields').clear(); }
+        if (id === 'root') { this.docs.root.getMap('tags').clear(); this.docs.root.getMap('settings').clear(); this.docs.root.getMap('reviewFields').clear(); this.docs.root.getMap('workspaceFields').clear(); this.docs.root.getMap('workspaceProfiles').clear(); }
         else this.entityMap(id).clear();
       });
       meta.delete('claimedBy');

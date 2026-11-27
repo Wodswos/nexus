@@ -1,3 +1,4 @@
+import { TaskTitle, TaskTitleButton } from '@/shared/TaskTitle';
 import React, { useMemo, useEffect, useRef } from 'react';
 import { Clock } from 'lucide-react';
 import { cn } from '@nexus/ui';
@@ -11,6 +12,7 @@ import {
   weekdayOf,
   activeTasks,
   isStructural,
+  compareTaskPriority,
 } from '@nexus/core';
 import { useTaskViewData } from '../useTaskViewData';
 import { useUI } from '@/state/ui';
@@ -45,7 +47,7 @@ export function WeekView({
   /** 本周各日的到期任务(任意层级),以虚线 ⏰ 块标在截止时刻 */
   const dueByDay = useMemo(() => {
     const map = new Map<string, typeof data.tasks>();
-    for (const t of activeTasks(data.tasks)) {
+    for (const t of activeTasks(data.tasks).sort(compareTaskPriority)) {
       if (t.status === 'inbox' || t.status === 'done' && data.settings.completedDisplay === 'hidden' && t.id !== data.focusedTaskId || t.dueAt == null && t.startAt == null || isStructural(t)) continue; // 结构节点不排期
       const arr = map.get(dayKeyOf((t.dueAt ?? t.startAt)!)) ?? [];
       arr.push(t);
@@ -153,7 +155,7 @@ export function WeekView({
                   const color = t.status === 'done' ? 'var(--muted-foreground)' : 'var(--danger)';
                   if (m < 0 || m >= 1440) return null;
                   return (
-                    <button
+                    <TaskTitleButton taskTitle={t.title}
                       key={t.id}
                       data-calendar-task={t.id}
                       data-task-detail-trigger
@@ -170,8 +172,8 @@ export function WeekView({
                       title={`${t.dueAt != null ? '截止' : '开始'}:${fmtHM((t.dueAt ?? t.startAt)!)} · ${t.title || 'Untitled'}`}
                     >
                       <Clock className="h-2.5 w-2.5 shrink-0" style={{ color }} />
-                      <span className="truncate text-[9px] font-medium">{t.title || 'Untitled'}</span>
-                    </button>
+                      <span className="truncate text-[9px] font-medium"><TaskTitle title={t.title} /></span>
+                    </TaskTitleButton>
                   );
                 })}
               </div>

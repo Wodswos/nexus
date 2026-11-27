@@ -1,3 +1,11 @@
+import { workspacePaths, workspaceSchemas } from './workspaces/schema';
+import { workspaceProfilePaths, workspaceProfileSchemas } from './workspaces/profileSchema';
+import { workspaceLaunchPaths } from './workspaces/launchSchema';
+import { agentPaths, agentSchemas, agentSecuritySchemes } from './agents/schema';
+import { kubernetesPaths, kubernetesSchemas } from './workspaces/kubernetesSchema';
+import { taskRevisionPaths, taskRevisionSchemas } from './taskRevisionSchema';
+import { authPaths } from './authSchema';
+
 const ref = (name: string) => ({ $ref: `#/components/schemas/${name}` });
 const text = { type: 'string' }, timestamp = { type: 'number', nullable: true, description: 'UTC epoch 毫秒；null 表示未设置' };
 const appearance = {
@@ -7,7 +15,7 @@ const appearance = {
 };
 const task = {
   title: { type: 'string', minLength: 1, maxLength: 2000 }, notes: { type: 'string', maxLength: 100000 },
-  status: { type: 'string', enum: ['inbox', 'todo', 'doing', 'done', 'archived'] }, kind: { type: 'string', enum: ['todo', 'node'], nullable: true },
+  status: { type: 'string', enum: ['inbox', 'todo', 'doing', 'done', 'archived'] }, kind: { type: 'string', enum: ['todo', 'node'], nullable: true, description: 'todo 为 TODO 任务，node 为文本节点。文本节点支持标题、正文、标签和资源，可作为叶子或包含子节点。项目通过 /projects 创建。' },
   parentId: { type: 'string', nullable: true }, order: { type: 'number' }, priority: { type: 'string', enum: ['P0', 'P1', 'P2', 'P3'], nullable: true },
   important: { type: 'boolean' }, urgent: { type: 'boolean' }, tags: { type: 'array', maxItems: 100, items: text },
   startAt: timestamp, dueAt: timestamp, estimateMin: { type: 'number', minimum: 0 }, ...appearance,
@@ -25,7 +33,7 @@ const habit = {
   reminderTimes: { type: 'array', uniqueItems: true, maxItems: 24, items: { type: 'string', pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$' }, description: '本地 HH:mm；空数组清除。多时间按比例分配累计目标。' },
   reminderAt: { type: 'string', description: '旧单时间接口，请优先使用 reminderTimes，两个字段不能同时提交' },
 };
-const review = Object.fromEntries(['highlights', 'friction', 'resolution', 'nextSteps'].map(key => [key, { type: 'string', maxLength: 100000 }]));
+const review = Object.fromEntries(['highlights', 'plan', 'friction', 'resolution', 'nextSteps'].map(key => [key, { type: 'string', maxLength: 100000 }]));
 const entity = (properties: object) => ({ type: 'object', properties: { id: text, ownerId: text, createdAt: { type: 'number' }, ...properties } });
 const input = (properties: object, required: string[] = []) => ({ type: 'object', additionalProperties: false, properties, ...(required.length ? { required } : {}) });
 const query = (name: string, schema: object, description?: string) => ({ name, in: 'query', schema, description });
@@ -52,7 +60,7 @@ function operation(path: string, method: string, summary: string, tag: string, s
 for (const [collection, tag, schema, properties] of [['tasks', '任务', 'Task', task], ['projects', '项目', 'Project', project], ['habits', '习惯', 'Habit', habit]] as const) {
   const base = `/api/v1/${collection}`;
   operation(base, 'get', `查询${tag}列表`, tag, ref(schema), { list: true, parameters: [...paging, includeDeleted, ...(collection !== 'habits' ? [query('q', text, '标题与备注搜索'), query('status', task.status), ...(collection === 'tasks' ? [query('projectId', text, '项目 ID，包含所有层级的后代任务')] : [])] : [])] });
-  operation(base, 'post', `创建${tag}`, tag, ref(schema), { created: true, body: input(properties, [collection === 'habits' ? 'name' : 'title']), description: collection === 'tasks' ? '未指定状态时：有父节点默认 todo，无父节点默认 inbox。项目请使用 /projects。' : undefined });
+  operation(base, 'post', `创建${tag}`, tag, ref(schema), { created: true, body: input(properties, [collection === 'habits' ? 'name' : 'title']), description: collection === 'tasks' ? 'kind=node 创建文本节点，可独立记录内容或包含子节点。未指定状态时，文本节点和有父节点的 TODO 任务默认 todo，顶层 TODO 任务默认 inbox。项目请使用 /projects。' : undefined });
   operation(`${base}/{id}`, 'get', `读取${tag}`, tag, ref(schema), { parameters: [includeDeleted] });
   operation(`${base}/{id}`, 'patch', `修改${tag}的指定字段`, tag, ref(schema), { body: input(properties) });
   operation(`${base}/{id}`, 'delete', `软删除${tag}`, tag, ref('Deletion'), { description: collection === 'habits' ? '保留打卡历史，可恢复。' : '连同后代一起移入回收站，可恢复。' });
@@ -62,16 +70,21 @@ operation('/api/v1/habits/{id}/check-ins', 'get', '查询习惯每日有效打�
 operation('/api/v1/habits/{id}/check-ins', 'post', '增加或撤销打卡', '习惯', ref('CheckIn'), { body: input({ date: { type: 'string', format: 'date' }, delta: { type: 'integer', default: 1, minimum: -10000, maximum: 10000 } }, ['date']), description: 'date 是调用方本地日期，必须明确提供；delta 为非零整数，每次不超过目标三倍或 10000，负数撤销有效次数。返回累计数。请用 Idempotency-Key 避免重复打卡。' });
 operation('/api/v1/reviews', 'get', '查询日报与周报', '复盘', ref('Review'), { list: true, parameters: [...paging, query('kind', { type: 'string', enum: ['daily', 'weekly'] })] });
 operation('/api/v1/reviews/{id}', 'get', '读取复盘', '复盘', ref('Review'));
-for (const method of ['put', 'patch']) operation('/api/v1/reviews/{id}', method, method === 'put' ? '创建或更新复盘草稿' : '修改现有复盘', '复盘', ref('Review'), { body: input(review), description: 'ID 为 daily_YYYY-MM-DD 或 weekly_YYYY-MM-DD（周期首日，结束日不含）。只更新提供的字段。修改正文会恢复为草稿；resolution 为「如何解决」。' });
+for (const method of ['put', 'patch']) operation('/api/v1/reviews/{id}', method, method === 'put' ? '创建或更新复盘草稿' : '修改现有复盘', '复盘', ref('Review'), { body: input(review), description: 'ID 为 daily_YYYY-MM-DD 或 weekly_YYYY-MM-DD（周期首日，结束日不含）。只更新提供的字段。修改正文会恢复为草稿。plan 为推进计划，highlights 为实际进展，resolution 为「如何解决」。' });
 operation('/api/v1/reviews/{id}/complete', 'post', '完成复盘并保存汇总快照', '复盘', ref('Review'), { body: input({ timeZone: { type: 'string', example: 'Asia/Shanghai', description: '明确指定 IANA 时区，保证任务与专注统计的日期边界与网页一致，包含夏令时处理' } }, ['timeZone']) });
 operation('/api/v1/reviews/{id}', 'delete', '删除复盘正文', '复盘', ref('Deletion'), { description: '复盘没有回收站，此操作删除这份复盘的正文与汇总。任务、习惯和历史备份不受影响。' });
 
 export const openapi = {
   openapi: '3.0.3', info: { title: 'Nexus Agent API', version: '1.0.0', description: '接入流程见 [Agent 使用指南](/api/guide.md)，可直接将指南 URL 提供给 Agent。在设置 → Agent API 中创建 Bearer Token。只读 Token 仅可 GET；读写 Token 可修改当前账号的任务、项目、习惯与复盘。Token 不授予 SSH/tmux、账号管理或其他账号权限。写入持久化后实时同步到网页。时间戳使用 UTC 毫秒；打卡日期和复盘周期使用明确的 YYYY-MM-DD。每账号 240 请求/分钟，请求体最多 64 KiB。' },
-  servers: [{ url: '/' }], security: [{ bearerAuth: [] }], tags: ['任务', '项目', '习惯', '复盘'].map(name => ({ name })), paths,
+  servers: [{ url: '/' }], security: [{ bearerAuth: [] }], tags: ['任务', '项目', '习惯', '复盘', 'Workspace', 'Agents', 'Agent callbacks', '账号'].map(name => ({ name })), paths: { ...paths, ...workspacePaths, ...workspaceProfilePaths, ...workspaceLaunchPaths, ...agentPaths, ...kubernetesPaths, ...taskRevisionPaths, ...authPaths },
   components: {
-    securitySchemes: { bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'ctx_…' } },
+    securitySchemes: { ...agentSecuritySchemes, bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'ctx_…' }, browserSession: { type: 'apiKey', in: 'cookie', name: 'cortex_session', description: '浏览器当前登录会话' }, browserAccounts: { type: 'apiKey', in: 'cookie', name: 'nexus_accounts', description: '本浏览器已验证账号的切换凭据，HttpOnly；不作为业务 API 权限' } },
     schemas: {
+      ...workspaceSchemas,
+      ...workspaceProfileSchemas,
+      ...agentSchemas,
+      ...kubernetesSchemas,
+      ...taskRevisionSchemas,
       Error: { type: 'object', required: ['error'], properties: { error: text } },
       Task: entity({ ...task, project: { type: 'boolean' }, updatedAt: { type: 'number' }, completedAt: timestamp, deletedAt: timestamp }),
       Project: entity({ ...project, kind: { type: 'string', enum: ['node'] }, project: { type: 'boolean', enum: [true] }, parentId: { type: 'string', nullable: true }, updatedAt: { type: 'number' }, deletedAt: timestamp }),

@@ -1,4 +1,6 @@
-import { workspaceTaskDefaults } from '../taskFilters';
+import { pasteTaskTitle } from '@/shared/taskTitlePaste';
+import { TaskTitle, TaskTitleButton } from '@/shared/TaskTitle';
+import { readTaskSort, workspaceTaskDefaults } from '../taskFilters';
 import { focusedTaskPath } from '../taskNavigation';
 import { useTaskDomFocus } from '../useTaskDomFocus';
 import { TaskBatchActions } from '@/shared/TaskBatchEditor';
@@ -21,10 +23,12 @@ import {
   DragOverlay,
 } from '@dnd-kit/core';
 import { getEventCoordinates } from '@dnd-kit/utilities';
-import { ChevronRight, Play, Plus, MoreHorizontal, Folder, GripVertical } from 'lucide-react';
+import { ChevronRight, Play, Plus, MoreHorizontal, Folder, FileText, GripVertical } from 'lucide-react';
 import { cn, EmptyState, Badge } from '@nexus/ui';
 import {
   Task,
+  taskViewStatus,
+  startOfDay,
   activeTasks,
   buildChildrenMap,
   groupRoots,
@@ -39,7 +43,7 @@ import {
   isStructural,
   isProject,
   descendantsOf,
-  priorityOf,
+  prioritySortedChildren,
   workProgress,
 } from '@nexus/core';
 import { useNexus, useNexusData } from '@nexus/crdt';
@@ -100,6 +104,7 @@ export function ListView() {
   const [pickAttach, setPickAttach] = useState(false);
 
   const [params] = useSearchParams();
+  const prioritySort = readTaskSort(params) === 'priority';
   const scope = params.get('scope');
   const { range } = useTaskWindow();
   const { start: rangeStart, days: rangeDays } = range;
@@ -130,7 +135,7 @@ export function ListView() {
     [activeDragId, allChildren],
   );
   const visibleTasks = viewData.tasks;
-  const childrenMap = useMemo(() => buildChildrenMap(visibleTasks), [visibleTasks]);
+  const childrenMap = useMemo(() => prioritySort ? prioritySortedChildren(visibleTasks) : buildChildrenMap(visibleTasks), [visibleTasks, prioritySort]);
   const progressMap = useMemo(() => workProgress(active), [active]);
   // 隐藏模式:整棵子树都完成的行不再渲染(根级过滤在 groupRoots,子级在这里)
   const hiddenDone = useMemo(() => {
@@ -144,8 +149,10 @@ export function ListView() {
   const groups = useMemo(
     () => projectId
       ? [{ key: 'project', label: '项目内容', tasks: (childrenMap.get(projectId) ?? []).filter((task) => !hiddenDone?.has(task.id)) }]
-      : groupRoots(visibleTasks, now, undefined, { showDone: showDone || !!viewData.focusedTaskId }),
-    [projectId, childrenMap, hiddenDone, visibleTasks, now, showDone, viewData.focusedTaskId],
+      : prioritySort
+        ? [{ key: 'priority', label: '按优先级', tasks: (childrenMap.get(null) ?? []).filter(task => !hiddenDone?.has(task.id)) }]
+        : groupRoots(visibleTasks, now, undefined, { showDone: showDone || !!viewData.focusedTaskId }),
+    [projectId, childrenMap, hiddenDone, visibleTasks, now, showDone, viewData.focusedTaskId, prioritySort],
   );
 
   /** 每组展开后的可见行:从组内根任务 DFS(子树跟随父级,应用折叠状态) */
@@ -203,12 +210,12 @@ export function ListView() {
   ): { intent: TaskDrop | null; message?: string } => {
     const intent = projectTaskDrop(id, row, pointer, rect, allChildren, byId);
     // Root groups are date-based. Sorting cannot silently change a task's dates.
-    if (intent?.parentId === null && rootGroups.get(intent.anchorId) !== dragRootGroup) {
+    if (!prioritySort && intent?.parentId === null && rootGroups.get(intent.anchorId) !== dragRootGroup) {
       if (intent.anchorId !== row.task.id) intent.groupedRoot = true;
       else return { intent: null, message: '顶层按日期分组，同组内可排序；拖到行中部可关联' };
     }
     return { intent };
-  }, [allChildren, byId, rootGroups, dragRootGroup]);
+  }, [allChildren, byId, rootGroups, dragRootGroup, prioritySort]);
   const collisionDetection = useCallback<CollisionDetection>((args) => {
     const pointer = args.pointerCoordinates;
     pointerRef.current = pointer;
@@ -457,6 +464,7 @@ export function ListView() {
           <input
             ref={captureRef}
             value={newTitle}
+            onPaste={event => pasteTaskTitle(event, setNewTitle)}
             onChange={(event) => setNewTitle(event.target.value)}
             onCompositionStart={() => {
               composing.current = true;
@@ -511,7 +519,7 @@ export function ListView() {
                     const dt = data.tasks.find((t) => t.id === activeDragId);
                     return dt ? (
                       <div data-task-drag-preview className="pointer-events-none max-w-xs rounded-lg border border-[var(--border-strong)] bg-[var(--surface-solid)] px-3 py-2 text-sm text-foreground shadow-lg">
-                        <div className="truncate font-medium">{dt.title || 'Untitled'}</div>
+                        <div className="truncate font-medium"><TaskTitle title={dt.title} /></div>
                         <div role="status" aria-label="任务拖动提示" className="mt-1 text-[11px] text-muted">
                           {drop?.groupedRoot ? '移出至顶层（按日期分组）'
                             : drop ? `${drop.placement === 'inside' ? '挂为子任务 →' : drop.placement === 'before' ? '插到前面 →' : '插到后面 →'} ${byId.get(drop.anchorId)?.title || 'Untitled'}`
@@ -702,7 +710,7 @@ function TaskRow({
     setDragRef(element);
     setDropRef(element);
   }, [setDragRef, setDropRef]);
-  const titleRef = useRef<HTMLButtonElement>(null);
+  const titleRef = useRef<HTMLElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // 父级请求聚焦:进入编辑态并自动聚焦输入框,随后消费该信号
@@ -768,10 +776,10 @@ function TaskRow({
       store.setTaskPriority(task.id, PRIORITY_ORDER[idx]);
     } else if (e.key.toLowerCase() === 't') {
       if (node) return; // 结构节点不排期
-      store.updateTask(task.id, { dueAt: endOfDay(new Date()).getTime() - 60000 });
+      store.updateTask(task.id, { startAt: startOfDay(new Date()).getTime(), dueAt: endOfDay(new Date()).getTime() - 60000 });
     } else if (e.key.toLowerCase() === 'm') {
       if (node) return;
-      store.updateTask(task.id, { dueAt: endOfDay(addDays(new Date(), 1)).getTime() - 60000 });
+      store.updateTask(task.id, { startAt: startOfDay(addDays(new Date(), 1)).getTime(), dueAt: endOfDay(addDays(new Date(), 1)).getTime() - 60000 });
     } else if (e.key === 'Backspace') {
       e.preventDefault();
       if (selected) return; // 该行已选中 → 交父级整批删除
@@ -803,7 +811,7 @@ function TaskRow({
         pickAttach && 'cursor-copy hover:ring-2 hover:ring-[var(--accent-from)]',
         inDraggedBranch && 'opacity-35',
         (dropHint?.groupedRoot || dropHint?.placement === 'inside') && 'bg-[var(--selection)] ring-1 ring-inset ring-[var(--accent-solid)]',
-        task.status === 'done' && 'text-muted',
+        !node && task.status === 'done' && 'text-muted',
       )}
     >
       {dropHint && !dropHint.groupedRoot && dropHint.placement !== 'inside' && (
@@ -845,14 +853,14 @@ function TaskRow({
       {node ? (
         <span
           className="grid h-[22px] w-[22px] shrink-0 place-items-center text-muted/70"
-          title="结构节点(无完成态)"
+          title={isProject(task) ? '项目根节点' : '文本节点'}
         >
-          <Folder className="h-4 w-4" />
+          {isProject(task) ? <Folder className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
         </span>
       ) : (
         <>
           <TaskCheckbox done={task.status === 'done'} onChange={() => store.toggleTaskDone(task.id)} />
-          {priorityOf(task) !== 'P3' && <PriorityDot task={task} />}
+          <PriorityDot task={task} />
         </>
       )}
 
@@ -861,6 +869,7 @@ function TaskRow({
           ref={inputRef}
           autoFocus
           defaultValue={task.title}
+          onPaste={event => pasteTaskTitle(event)}
           onBlur={(e) => {
             store.updateTask(task.id, { title: e.target.value.trim() || 'Untitled' });
             setEditing(false);
@@ -876,7 +885,7 @@ function TaskRow({
           className="min-w-0 flex-1 bg-transparent text-[13px] outline-none"
         />
       ) : (
-        <button
+        <TaskTitleButton taskTitle={task.title}
           ref={titleRef}
           {...listeners}
           onDoubleClick={() => setEditing(true)}
@@ -885,19 +894,19 @@ function TaskRow({
           className={cn(
             'min-w-0 flex-1 touch-pan-y truncate text-left text-[13px] outline-none',
             node && 'font-medium',
-            task.status === 'done' && 'line-through',
+            !node && task.status === 'done' && 'line-through',
             task.title === '' && 'text-muted/50',
           )}
         >
-          {task.title || 'Untitled'}
-        </button>
+          <TaskTitle title={task.title} />
+        </TaskTitleButton>
       )}
 
       {tags.slice(0, 3).map((tag) => (
         <TagChip key={tag.id} tag={tag} />
       ))}
       {progress && progress.total > 0 && <SubtreeProgress {...progress} />}
-      {!node && task.status === 'doing' && <span className="shrink-0 text-[11px] text-muted">进行中</span>}
+      {!node && taskViewStatus(task).kind === 'running' && <span className="shrink-0 text-[11px] text-muted">进行中</span>}
       {!node && <DueBadge task={task} />}
       {task.estimateMin != null && task.estimateMin > 0 && (
         <Badge className="hidden md:inline-flex">{task.estimateMin}m</Badge>

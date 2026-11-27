@@ -2,7 +2,7 @@ import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import { useNexus, useNexusData } from '@nexus/crdt';
 import { reviewId, type Review, type ReviewPeriod } from '@nexus/core';
 
-export type ReviewTextField = 'highlights' | 'friction' | 'resolution' | 'nextSteps';
+export type ReviewTextField = 'highlights' | 'plan' | 'friction' | 'resolution' | 'nextSteps';
 type Patch = Partial<Pick<Review, ReviewTextField>>;
 
 export function useReviewDraft(period: ReviewPeriod) {

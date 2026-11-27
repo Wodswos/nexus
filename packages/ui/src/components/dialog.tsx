@@ -1,7 +1,7 @@
-import * as React from 'react';
-import * as DialogPrimitive from '@radix-ui/react-dialog';
-import { X } from 'lucide-react';
-import { cn } from '../utils';
+import * as React from "react";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
+import { X } from "lucide-react";
+import { cn } from "../utils";
 
 export const Dialog = DialogPrimitive.Root;
 export const DialogTrigger = DialogPrimitive.Trigger;
@@ -9,28 +9,52 @@ export const DialogClose = DialogPrimitive.Close;
 
 export const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & { title?: string; overlayClassName?: string }
->(({ className, children, title, overlayClassName, ...props }, ref) => (
-  <DialogPrimitive.Portal>
-    <DialogPrimitive.Overlay className={cn('fixed inset-0 z-40 bg-black/55 backdrop-blur-[2px]', overlayClassName)} />
-    <DialogPrimitive.Content
-      ref={ref}
-      className={cn(
-        'fixed left-1/2 top-[18%] z-50 w-[min(92vw,560px)] -translate-x-1/2 glass-raised rounded-2xl p-5 outline-none data-[state=open]:animate-fade-up',
-        className,
-      )}
-      {...props}
-    >
-      <div className="mb-3 flex items-center justify-between">
-        <DialogPrimitive.Title className="text-base font-semibold">
-          {title ?? ''}
-        </DialogPrimitive.Title>
-        <DialogPrimitive.Close aria-label="关闭面板" className="rounded-md p-1 text-muted transition-colors hover:text-foreground">
-          <X className="h-4 w-4" />
-        </DialogPrimitive.Close>
-      </div>
-      {children}
-    </DialogPrimitive.Content>
-  </DialogPrimitive.Portal>
-));
-DialogContent.displayName = 'DialogContent';
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & {
+    title?: string;
+    overlayClassName?: string;
+  }
+>(
+  (
+    { className, children, title, overlayClassName, onEscapeKeyDown, ...props },
+    ref,
+  ) => (
+    <DialogPrimitive.Portal>
+      <DialogPrimitive.Overlay
+        className={cn("fixed inset-0 z-40 bg-black/40", overlayClassName)}
+      />
+      <DialogPrimitive.Content
+        ref={ref}
+        className={cn(
+          "fixed left-1/2 top-[18%] z-50 w-[min(92vw,560px)] -translate-x-1/2 border border-[var(--border)] bg-[var(--background)] shadow-lg rounded-xl p-5 outline-none data-[state=open]:animate-fade-up",
+          className,
+        )}
+        {...props}
+        onEscapeKeyDown={(event) => {
+          if (
+            (event.target as HTMLElement | null)?.closest?.(
+              "[data-select-content]",
+            )
+          ) {
+            event.preventDefault();
+            return;
+          }
+          onEscapeKeyDown?.(event);
+        }}
+      >
+        <div className="mb-3 flex items-center justify-between">
+          <DialogPrimitive.Title className="text-base font-semibold">
+            {title ?? ""}
+          </DialogPrimitive.Title>
+          <DialogPrimitive.Close
+            aria-label="关闭面板"
+            className="rounded-md p-1 text-muted transition-colors hover:text-foreground"
+          >
+            <X className="h-4 w-4" />
+          </DialogPrimitive.Close>
+        </div>
+        {children}
+      </DialogPrimitive.Content>
+    </DialogPrimitive.Portal>
+  ),
+);
+DialogContent.displayName = "DialogContent";

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import * as Y from 'yjs';
 import { NexusStore, DOC_IDS } from '../src/store';
 import { reviewPeriod } from '@nexus/core';
@@ -15,10 +15,10 @@ describe('account review records', () => {
   it('merges different fields when devices independently start the same review offline', () => {
     const a = new NexusStore('u'), b = new NexusStore('u');
     a.updateReview(period, { highlights: 'Finished the prototype' });
-    b.updateReview(period, { friction: 'Waiting for feedback', resolution: 'Prealign with the reviewer', nextSteps: 'Ask for a decision' });
+    b.updateReview(period, { plan: 'Gather early feedback', friction: 'Waiting for feedback', resolution: 'Prealign with the reviewer', nextSteps: 'Ask for a decision' });
     sync(a, b);
     expect(a.getData().reviews).toHaveLength(1);
-    expect(a.getData().reviews[0]).toMatchObject({ highlights: 'Finished the prototype', friction: 'Waiting for feedback', resolution: 'Prealign with the reviewer', nextSteps: 'Ask for a decision' });
+    expect(a.getData().reviews[0]).toMatchObject({ highlights: 'Finished the prototype', plan: 'Gather early feedback', friction: 'Waiting for feedback', resolution: 'Prealign with the reviewer', nextSteps: 'Ask for a decision' });
     expect(b.getData().reviews).toEqual(a.getData().reviews);
   });
   it('keeps finalized facts unchanged when tasks change, supports reopen and undo', () => {
@@ -35,15 +35,17 @@ describe('account review records', () => {
   });
   it('restores reports from both backup formats and migrates anonymous reports once', () => {
     const local = new NexusStore('local');
-    local.updateReview(period, { highlights: 'Local reflection', resolution: 'Talk earlier' }); local.completeReview(period);
+    local.updateReview(period, { highlights: 'Local reflection', plan: 'Try a smaller scope', resolution: 'Talk earlier' }); local.completeReview(period);
     const restored = new NexusStore('restored'); restored.importJSON(local.exportSnapshot());
     expect(restored.getData().reviews).toEqual(local.getData().reviews);
     const legacy = new NexusStore('legacy'); legacy.importJSON({ reviews: local.exportJSON().reviews });
     expect(legacy.getData().reviews[0]!.ownerId).toBe('legacy');
     expect(legacy.getData().reviews[0]!.resolution).toBe('Talk earlier');
+    expect(legacy.getData().reviews[0]!.plan).toBe('Try a smaller scope');
     const account = new NexusStore('u'); account.absorbLocal(local); local.consumeLocal('u');
     expect(account.getData().reviews[0]!.highlights).toBe('Local reflection');
     expect(account.getData().reviews[0]!.resolution).toBe('Talk earlier');
+    expect(account.getData().reviews[0]!.plan).toBe('Try a smaller scope');
     expect(local.getData().reviews).toEqual([]);
     const other = new NexusStore('other'); other.absorbLocal(local);
     expect(other.getData().reviews).toEqual([]);
@@ -52,6 +54,8 @@ describe('account review records', () => {
   it('rejects invalid input without partial writes and refuses an empty completion', () => {
     const store = new NexusStore('u');
     expect(() => store.updateReview(period, { highlights: 'Valid', friction: 'x'.repeat(100001) })).toThrow();
+    expect(store.getData().reviews).toEqual([]);
+    expect(() => store.updateReview(period, { highlights: 'Valid', plan: 'x'.repeat(100001) })).toThrow();
     expect(store.getData().reviews).toEqual([]);
     expect(() => store.updateReview(period, { highlights: 'Valid', resolution: 'x'.repeat(100001) })).toThrow();
     expect(store.getData().reviews).toEqual([]);
@@ -66,9 +70,9 @@ describe('account review records', () => {
     const source = new NexusStore('u');
     source.updateReview(period, { friction: 'An earlier blocker' });
     const completed = source.completeReview(period);
-    const { resolution: _resolution, ...oldReview } = completed;
+    const { resolution: _resolution, plan: _plan, ...oldReview } = completed;
     const legacy = new NexusStore('u'); legacy.importJSON({ reviews: [oldReview] });
-    expect(legacy.getData().reviews[0]).toEqual({ ...completed, resolution: '' });
+    expect(legacy.getData().reviews[0]).toEqual({ ...completed, plan: '', resolution: '' });
     const snapshot = source.exportSnapshot();
     const restored = new NexusStore('u'); restored.importJSON(snapshot);
     expect(restored.getData().reviews[0]!.resolution).toBe('');
@@ -83,5 +87,38 @@ describe('account review records', () => {
     expect(store.getData().reviews[0]).toMatchObject({ resolution: 'Set a daily feedback slot', completedAt: null });
     store.undo();
     expect(store.getData().reviews[0]).toMatchObject({ resolution: 'Ask for help earlier', completedAt: completed.completedAt });
+  });
+  it('can complete a plan-only review and reopens it when the plan changes', () => {
+    const store = new NexusStore('u');
+    store.updateReview(period, { plan: 'Validate the milestone' });
+    store.stopUndoCapture();
+    const completed = store.completeReview(period); store.stopUndoCapture();
+    expect(completed.completedAt).not.toBeNull();
+    store.updateReview(period, { plan: 'Collect feedback first' }); store.stopUndoCapture();
+    expect(store.getData().reviews[0]).toMatchObject({ plan: 'Collect feedback first', completedAt: null });
+    store.undo();
+    expect(store.getData().reviews[0]).toMatchObject({ plan: 'Validate the milestone', completedAt: completed.completedAt });
+  });
+  it('finalizes automatic task lists with no manual text and freezes them through later task changes', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 9, 25, 10));
+    const store = new NexusStore('u');
+    try {
+      const overdue = store.createTask({ title: 'Carried work', status: 'todo', dueAt: new Date(2026, 9, 24, 20).getTime() });
+      const planned = store.createTask({ title: 'Planned work', status: 'todo', dueAt: new Date(2026, 9, 25, 20).getTime() });
+      store.setTaskStatus(overdue.id, 'done');
+      store.stopUndoCapture();
+      const completed = store.completeReview(period); store.stopUndoCapture();
+      expect(completed).toMatchObject({ highlights: '', plan: '', completedAt: Date.now() });
+      expect(completed.facts?.completed.map(task => task.id)).toEqual([overdue.id]);
+      expect(completed.facts?.planned?.map(task => task.id)).toEqual([planned.id]);
+      expect(completed.facts?.pending.map(task => task.id)).toEqual([planned.id]);
+      store.undo();
+      expect(store.getData().reviews).toEqual([]);
+      store.redo();
+      store.setTaskStatus(planned.id, 'done');
+      store.updateTask(overdue.id, { title: 'Later title' });
+      expect(store.getData().reviews[0]!.facts).toEqual(completed.facts);
+    } finally { store.destroy(); vi.useRealTimers(); }
   });
 });

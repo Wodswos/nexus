@@ -1,11 +1,32 @@
 import { describe, expect, it } from 'vitest';
 import * as Y from 'yjs';
-import { dayKeyOf, planTaskBatch } from '@nexus/core';
+import { buildChildrenMap, dayKeyOf, isProject, needsPriorityReview, planTaskBatch } from '@nexus/core';
 import { NexusStore } from '../src/store';
 
 const stamp = (day: string, time = '09:00') => new Date(`${day}T${time}:00`).getTime();
 
 describe('batch task settings', () => {
+  it('creates and converts standalone text leaves while preserving existing project identities', () => {
+    const store = new NexusStore('u');
+    const leaf = store.createTask({ title: 'Recorded result', kind: 'node', notes: '42' });
+    expect(leaf).toMatchObject({ kind: 'node', project: false, parentId: null, status: 'todo', notes: '42' });
+    const single = store.createTask({ title: 'single', status: 'done', completedAt: 100, dueAt: 200 });
+    store.setTaskKind(single.id, 'node');
+    expect(store.getData().tasks.find(task => task.id === single.id)).toMatchObject({ kind: 'node', project: false, status: 'done', completedAt: 100, dueAt: 200 });
+    const direct = store.createTask({ title: 'direct', status: 'todo' });
+    store.updateTask(direct.id, { kind: 'node' });
+    expect(isProject(store.getData().tasks.find(task => task.id === direct.id)!)).toBe(false);
+    const archived = store.createTask({ title: 'archived record', status: 'archived' });
+    store.setTaskKind(archived.id, 'node');
+    expect(store.getData().tasks.find(task => task.id === archived.id)).toMatchObject({ kind: 'node', project: false, status: 'archived' });
+    store.importJSON({ tasks: [{ id: 'legacy-project', title: 'legacy', kind: 'node', parentId: null }] });
+    store.setTaskKind('legacy-project', 'todo');
+    store.updateTask('legacy-project', { notes: 'retain project' });
+    expect(isProject(store.getData().tasks.find(task => task.id === 'legacy-project')!)).toBe(true);
+    expect(isProject(store.createProject('explicit project'))).toBe(true);
+    store.destroy();
+  });
+
   it('converts tasks and groups atomically without changing projects, descendants or task data', () => {
     const store = new NexusStore('u');
     const project = store.createProject('Project');
@@ -93,8 +114,12 @@ describe('batch task settings', () => {
     }
     const plan = store.setTaskBatch([a.id], { priority: 'P1' });
     expect(plan.writes).toHaveLength(0);
-    expect(store.setTaskBatch([b.id], { priority: 'P3' }).writes).toHaveLength(0);
     expect(updates).toBe(0);
+    expect(needsPriorityReview(store.getData().tasks.find(task => task.id === b.id)!)).toBe(true);
+    expect(store.setTaskBatch([b.id], { priority: 'P3' }).writes).toHaveLength(1);
+    expect(needsPriorityReview(store.getData().tasks.find(task => task.id === b.id)!)).toBe(false);
+    store.undo();
+    expect(needsPriorityReview(store.getData().tasks.find(task => task.id === b.id)!)).toBe(true);
     store.destroy();
   });
 
@@ -141,5 +166,47 @@ describe('batch task settings', () => {
     expect(() => local.setTaskBatch([a.id], { dueAt: { action: 'clear' } }, changed)).toThrow(/发生变化/);
     expect(local.getData().tasks[0]?.dueAt).toBe(456);
     local.destroy(); remote.destroy();
+  });
+});
+
+describe('moving selected task branches', () => {
+  it('moves the whole selection in source order in one transaction, retaining selected descendants and undo history', () => {
+    const store = new NexusStore('u');
+    const project = store.createProject('Project');
+    const a = store.createTask({ title: 'A', parentId: project.id, order: 0 });
+    const child = store.createTask({ title: 'child', parentId: a.id });
+    const b = store.createTask({ title: 'B', parentId: project.id, order: 1 });
+    const target = store.createTask({ title: 'target', parentId: project.id, order: 2 });
+    const existing = store.createTask({ title: 'existing', parentId: target.id });
+    const before = store.getData().tasks;
+    let updates = 0;
+    store.onDocUpdate = id => { if (id === 'tasks') updates++; };
+    expect(store.reparentTasks([b.id, child.id, a.id, b.id], target.id)).toBe(2);
+    expect(updates).toBe(1);
+    const moved = store.getData().tasks;
+    expect(buildChildrenMap(moved).get(target.id)!.map(task => task.id)).toEqual([existing.id, a.id, b.id]);
+    expect(moved.find(task => task.id === child.id)).toEqual(child);
+    store.undo(); expect(store.getData().tasks).toEqual(before);
+    store.redo(); expect(store.getData().tasks).toEqual(moved);
+    store.destroy();
+  });
+
+  it('rejects an invalid destination for the entire batch and preserves exact insertion with exhausted numeric gaps', () => {
+    const store = new NexusStore('u');
+    const a = store.createTask({ title: 'A', status: 'todo' });
+    const child = store.createTask({ title: 'child', parentId: a.id });
+    const b = store.createTask({ title: 'B', status: 'todo', order: 1 });
+    const before = store.exportJSON();
+    expect(store.reparentTasks([a.id, b.id], child.id)).toBe(0);
+    expect(store.reparentTasks([a.id, b.id], 'missing')).toBe(0);
+    expect(store.exportJSON()).toEqual(before);
+    const target = store.createTask({ title: 'target', status: 'todo' });
+    const first = store.createTask({ title: 'first', parentId: target.id, order: 1 });
+    const next = store.createTask({ title: 'next', parentId: target.id, order: 1 + Number.EPSILON });
+    const original = store.getData().tasks;
+    expect(store.reparentTasks([b.id, a.id], target.id, next.id)).toBe(2);
+    expect(buildChildrenMap(store.getData().tasks).get(target.id)!.map(task => task.id)).toEqual([first.id, a.id, b.id, next.id]);
+    store.undo(); expect(store.getData().tasks).toEqual(original);
+    store.destroy();
   });
 });

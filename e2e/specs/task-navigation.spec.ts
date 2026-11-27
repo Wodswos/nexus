@@ -110,7 +110,7 @@ test('a delayed close for one calendar task cannot dismiss a newly selected task
     } });
     (window as any).__restoreCompletions = () => { Object.defineProperty(IDBTransaction.prototype, 'oncomplete', original); for (const complete of (window as any).__pendingCompletions.splice(0)) complete(); };
   });
-  const heading = (await page.getByRole('heading', { name: '当前任务', exact: true }).boundingBox())!;
+  const heading = (await page.getByRole('heading', { name: '任务', exact: true, level: 1 }).boundingBox())!;
   await page.mouse.click(heading.x + 8, heading.y + 8);
   await page.locator('[data-calendar-task="beta"]').click();
   await expect(page.getByRole('textbox', { name: '任务标题', exact: true })).toHaveValue('beta');
@@ -198,7 +198,12 @@ test('all task workspaces share the compact inspector, navigation caption and ad
     else if (view === 'matrix') await page.locator('[data-matrix-task="target"]').click();
     else await page.locator('[data-calendar-task="target"]').click();
     await expect(page.locator('[data-inspector]')).toHaveCount(1);
-    await expect(inspector(page).getByText('跳转到', { exact: true })).toBeVisible();
+    await expect(inspector(page).getByText('View in', { exact: true })).toBeVisible();
+    const fields = inspector(page).getByRole('group', { name: '任务日期与优先级', exact: true });
+    const positions = await fields.locator('button').evaluateAll(buttons => buttons.map(button => button.getBoundingClientRect().top));
+    expect(positions).toHaveLength(3);
+    expect(Math.max(...positions) - Math.min(...positions)).toBeLessThan(1);
+    await expect(inspector(page).getByRole('button', { name: '标为进行中', exact: true })).toHaveCount(0);
     await expect(inspector(page).getByRole('navigation', { name: '任务定位', exact: true }).getByRole('link')).toHaveText(['列表', '导图', '四象限', '甘特图', '日历']);
     await expect(inspector(page).getByLabel('任务备注', { exact: true })).toBeVisible();
     await inspector(page).getByRole('button', { name: '更多任务设置', exact: true }).click();
@@ -212,7 +217,7 @@ test('task context menu reaches all project views, current tasks and valid short
     { id: 'mine', name: '项目清单', view: 'list', scope: 'all', projectId: 'p' },
     { id: 'foreign', name: '其他项目', view: 'mindmap', scope: 'all', projectId: 'foreign' },
   ] });
-  for (const [name, view] of [['列表', 'list'], ['导图', 'mindmap'], ['四象限', 'matrix'], ['甘特图', 'gantt'], ['日历', 'timeline'], ['当前任务', 'gantt'], ['全局月历', 'timeline'], ['项目清单', 'list']]) {
+  for (const [name, view] of [['列表', 'list'], ['导图', 'mindmap'], ['四象限', 'matrix'], ['甘特图', 'gantt'], ['日历', 'timeline'], ['本周任务', 'gantt'], ['全局月历', 'timeline'], ['项目清单', 'list']]) {
     await page.goto('/tasks?project=p&view=mindmap&scope=all');
     await node(page, 'target').locator('[data-mind-title]').click({ button: 'right' });
     await page.getByLabel('任务菜单', { exact: true }).getByRole('button', { name: '跳转到视图', exact: true }).click();
@@ -221,7 +226,7 @@ test('task context menu reaches all project views, current tasks and valid short
     await menu.getByRole('button', { name, exact: true }).click();
     await expect(page).toHaveURL(new RegExp(`view=${view}`));
     await expect(page).toHaveURL(/focusTask=target/);
-    if (name === '当前任务') await expect(page).not.toHaveURL(/project=/);
+    if (name === '本周任务') await expect(page).not.toHaveURL(/project=/);
     else if (name === '全局月历') await expect(page).toHaveURL(/saved=month/);
     else await expect(page).toHaveURL(/project=p/);
     const marker = view === 'list' ? page.locator('[data-row][data-task-id="target"]') : view === 'mindmap' ? node(page, 'target') : view === 'matrix' ? page.locator('[data-matrix-task="target"]') : view === 'gantt' ? page.locator('[data-gantt-bar="target"]') : page.locator('[data-calendar-task="target"]').first();
@@ -249,8 +254,8 @@ test('undated tasks remain reachable through current tasks without receiving a f
   await page.goto('/tasks?project=p&view=mindmap&scope=all');
   await node(page, 'target').locator('[data-mind-title]').click({ button: 'right' });
   await page.getByLabel('任务菜单', { exact: true }).getByRole('button', { name: '跳转到视图', exact: true }).click();
-  await page.getByLabel('跳转到视图', { exact: true }).getByRole('button', { name: '当前任务', exact: true }).click();
-  await expect(page.getByRole('heading', { name: '当前任务', exact: true })).toBeVisible();
+  await page.getByLabel('跳转到视图', { exact: true }).getByRole('button', { name: '本周任务', exact: true }).click();
+  await expect(page.getByRole('heading', { name: '任务', exact: true, level: 1 })).toBeVisible();
   await expect(page.locator('[data-row][data-task-id="target"]')).toBeInViewport();
   const target = (await exported(page)).tasks.find((task: any) => task.id === 'target');
   expect(target.startAt == null && target.dueAt == null).toBe(true);
@@ -266,6 +271,11 @@ test('narrow MindMap keeps its top settings accessible and uses the same mobile 
   const sheet = page.getByRole('dialog', { name: '任务详情', exact: true });
   await expect(sheet).toBeFocused();
   await expect(sheet.getByLabel('任务标题', { exact: true })).toHaveValue('target');
+  const fields = sheet.getByRole('group', { name: '任务日期与优先级', exact: true });
+  const boxes = await fields.locator('button').evaluateAll(buttons => buttons.map(button => ({ x: button.getBoundingClientRect().left, y: button.getBoundingClientRect().top, right: button.getBoundingClientRect().right })));
+  expect(boxes).toHaveLength(3);
+  expect(Math.max(...boxes.map(box => box.y)) - Math.min(...boxes.map(box => box.y))).toBeLessThan(1);
+  for (const box of boxes) { expect(box.x).toBeGreaterThanOrEqual(0); expect(box.right).toBeLessThanOrEqual(320); }
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: 'test-results/task-details-mobile.png' });
 });

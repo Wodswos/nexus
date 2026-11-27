@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isStructural } from '../src/tree';
+import { fullyDoneIds, isStructural, isTextNode } from '../src/tree';
 import { matrixTasks } from '../src/quadrant';
 import { Task } from '../src/types';
 
@@ -20,6 +20,16 @@ function T(partial: Partial<Task> & { id: string; parentId: string | null }): Ta
 }
 
 describe('节点类型 kind(todo | node)', () => {
+  it('recognizes independent text leaves and keeps their content visible with legacy completion metadata', () => {
+    const leaf = T({ id: 'text', parentId: null, kind: 'node', project: false, status: 'done', notes: 'a recorded result' });
+    const legacyProject = T({ id: 'legacy', parentId: null, kind: 'node' });
+    const parent = T({ id: 'parent', parentId: null, status: 'done' });
+    const child = { ...leaf, id: 'child', parentId: parent.id };
+    expect(isTextNode(leaf)).toBe(true);
+    expect(isTextNode(legacyProject)).toBe(false);
+    expect(fullyDoneIds([leaf, legacyProject, parent, child])).toEqual(new Set());
+  });
+
   it('isStructural:仅 kind=node 是结构节点;缺省/显式 todo/null 都不是(老数据免迁移)', () => {
     expect(isStructural(T({ id: 'a', parentId: null }))).toBe(false);
     expect(isStructural(T({ id: 'b', parentId: null, kind: undefined }))).toBe(false);

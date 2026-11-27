@@ -1,3 +1,4 @@
+import { TaskTitle, TaskTitleButton } from '@/shared/TaskTitle';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { GripHorizontal, Link2, Trash2, Unlink, Check, Clock } from 'lucide-react';
@@ -12,6 +13,7 @@ import {
   pad2,
   activeTasks,
   isStructural,
+  compareTaskPriority,
 } from '@nexus/core';
 import { useNexus, useNexusData } from '@nexus/crdt';
 import { useTaskViewData } from '../useTaskViewData';
@@ -110,6 +112,7 @@ export function DayView({
           !scheduledTaskIds.has(t.id) &&
           (t.dueAt == null || t.dueAt < dayEnd),
       )
+      .sort(compareTaskPriority)
       .slice(0, 12);
   }, [data.tasks, events, dayEnd]);
 
@@ -124,7 +127,7 @@ export function DayView({
           (t.dueAt ?? t.startAt) != null &&
           (t.dueAt ?? t.startAt)! >= dayStart &&
           (t.dueAt ?? t.startAt)! < dayEnd,
-      ),
+      ).sort(compareTaskPriority),
     [data.tasks, data.settings.completedDisplay, data.focusedTaskId, dayStart, dayEnd],
   );
 
@@ -346,7 +349,7 @@ export function DayView({
                 const m = ((t.dueAt ?? t.startAt)! - dayStart) / 60000;
                 const color = t.status === 'done' ? 'var(--muted-foreground)' : 'var(--danger)';
                 return (
-                  <button
+                  <TaskTitleButton taskTitle={t.title}
                     key={t.id}
                     data-calendar-task={t.id}
                     data-task-detail-trigger
@@ -364,11 +367,11 @@ export function DayView({
                     title={`${t.dueAt != null ? '截止' : '开始'}:${fmtHM((t.dueAt ?? t.startAt)!)} · ${t.title || 'Untitled'}`}
                   >
                     <Clock className="h-3 w-3 shrink-0" style={{ color }} />
-                    <span className="truncate text-[11px] font-medium">{t.title || 'Untitled'}</span>
+                    <span className="truncate text-[11px] font-medium"><TaskTitle title={t.title} /></span>
                     <span className="ml-auto shrink-0 text-[9px] tabular" style={{ color }}>
                       {fmtHM((t.dueAt ?? t.startAt)!)}
                     </span>
-                  </button>
+                  </TaskTitleButton>
                 );
               })}
 
@@ -520,7 +523,7 @@ export function DayView({
           <div className="px-1 py-6 text-center text-xs text-muted/60">今天都排完了 🎉</div>
         )}
         {unscheduled.map((t) => (
-          <button
+          <TaskTitleButton taskTitle={t.title}
             key={t.id}
             onPointerDown={(e) => onChipPointerDown(e, t.id, t.title)}
             onClick={() => ui.selectTask(t.id)}
@@ -528,9 +531,9 @@ export function DayView({
             className="touch-none rounded-lg glass px-2.5 py-2 text-left text-xs text-foreground transition-all hover:border-[var(--border-strong)] active:scale-95"
             title="拖到时间轴上安排"
           >
-            <div className="truncate">{t.title}</div>
+            <div className="truncate"><TaskTitle title={t.title} /></div>
             {t.estimateMin != null && <div className="mt-0.5 text-[10px] text-muted">{t.estimateMin}m</div>}
-          </button>
+          </TaskTitleButton>
         ))}
         {events.length > 0 && (
           <div className="mt-2 space-y-1">
@@ -553,13 +556,13 @@ export function DayView({
       <div className="fixed bottom-[72px] left-0 right-0 z-20 xl:hidden">
         <div className="no-scrollbar flex gap-2 overflow-x-auto px-4 py-2">
           {unscheduled.slice(0, 6).map((t) => (
-            <button
+            <TaskTitleButton taskTitle={t.title}
               key={t.id}
               onPointerDown={(e) => onChipPointerDown(e, t.id, t.title)}
               className="shrink-0 touch-none rounded-full glass px-3 py-1.5 text-xs active:scale-95"
             >
-              {t.title}
-            </button>
+              <TaskTitle title={t.title} />
+            </TaskTitleButton>
           ))}
         </div>
       </div>

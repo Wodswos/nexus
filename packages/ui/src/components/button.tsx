@@ -8,7 +8,7 @@ const buttonVariants = cva(
     variants: {
       variant: {
         primary: 'bg-[var(--accent-solid)] text-white hover:brightness-95',
-        secondary: 'glass text-foreground hover:border-[var(--border-strong)]',
+        secondary: 'border border-[var(--border)] bg-[var(--surface)] text-foreground hover:bg-[var(--surface-raised)]',
         ghost: 'text-muted hover:text-foreground hover:bg-[var(--surface)]',
         outline:
           'border border-[var(--border-strong)] text-foreground hover:border-[color-mix(in_srgb,var(--accent-from)_50%,transparent)]',
@@ -18,9 +18,9 @@ const buttonVariants = cva(
       },
       size: {
         sm: 'h-8 px-3 text-xs',
-        md: 'h-9 px-4 text-sm',
+        md: 'h-8 px-3 text-sm',
         lg: 'h-11 px-6 text-base',
-        icon: 'h-9 w-9',
+        icon: 'h-8 w-8',
         'icon-sm': 'h-7 w-7',
       },
     },

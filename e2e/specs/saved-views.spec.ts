@@ -54,8 +54,8 @@ test('saved workspaces support global matrix, weekly Gantt, editing, reset-on-op
   await expectSelectValue(period(page), 'all');
   for (const name of ['a_action', 'b_action']) await expect(page.getByText(name, { exact: true })).toBeVisible();
   await expect(shortcuts(page).getByRole('link', { name: '全局四象限', exact: true })).toHaveAttribute('aria-current', 'page');
-  await expect(page.getByRole('navigation', { name: '工作导航', exact: true }).getByRole('link', { name: '当前任务', exact: true })).not.toHaveAttribute('aria-current', 'page');
-  await page.getByRole('navigation', { name: '工作导航', exact: true }).getByRole('link', { name: '当前任务', exact: true }).click();
+  await expect(page.getByRole('navigation', { name: '工作导航', exact: true }).getByRole('link', { name: '当前工作', exact: true })).not.toHaveAttribute('aria-current', 'page');
+  await shortcuts(page).getByRole('link', { name: '本周工作', exact: true }).click();
   await page.getByRole('button', { name: '保存为快捷视图', exact: true }).click();
   dialog = page.getByRole('dialog', { name: '保存快捷视图', exact: true });
   await dialog.getByLabel('视图名称', { exact: true }).fill('本周甘特');
@@ -72,9 +72,9 @@ test('saved workspaces support global matrix, weekly Gantt, editing, reset-on-op
   await grip.press('ArrowUp');
   await expect(page.getByRole('status').filter({ hasText: '移到 本月日历 位置' })).toHaveCount(1);
   await grip.press('Space');
-  await expect(shortcuts(page).getByRole('link')).toHaveText(['全局四象限', '本月日历', '本周甘特']);
+  await expect(shortcuts(page).getByRole('link')).toHaveText(['本周工作', '全局四象限', '本月日历', '本周甘特']);
   await page.reload();
-  await expect(shortcuts(page).getByRole('link')).toHaveText(['全局四象限', '本月日历', '本周甘特']);
+  await expect(shortcuts(page).getByRole('link')).toHaveText(['本周工作', '全局四象限', '本月日历', '本周甘特']);
   await menu(page, '本周甘特');
   await page.getByRole('menuitem', { name: '编辑快捷视图', exact: true }).click();
   dialog = page.getByRole('dialog', { name: '编辑快捷视图', exact: true });
@@ -133,7 +133,7 @@ test('shared selection panels preserve selection and saved-view configuration fi
   await page.screenshot({ path: '../.preview.local/saved-views-mobile.png' });
   await dialog.getByRole('button', { name: '取消', exact: true }).click();
   await page.getByRole('button', { name: '打开导航', exact: true }).click();
-  await expect(shortcuts(page).getByRole('link')).toHaveCount(1); // cancelling writes no preset
+  await expect(shortcuts(page).getByRole('link')).toHaveText(['本周工作', '本月日历']); // cancelling writes no preset
 });
 
 async function account(context: BrowserContext, prefix: string) {

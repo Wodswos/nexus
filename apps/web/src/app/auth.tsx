@@ -1,8 +1,10 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { api, ApiError, setApiUserId, type AuthUser, attachPersistence, type PersistenceHandle, NexusStore, currentStore, setNexusStore, SyncClient, type SyncStatus, DOC_IDS } from '@nexus/crdt';
 import { bindTimer, unbindTimer } from '@/focus/timer';
+import { useUI } from '@/state/ui';
 
 const PROFILE_KEY = 'cortex-active-user';
+const ACCOUNTS_EVENT = 'nexus-accounts-changed';
 function remembered(): AuthUser | null {
   try {
     const value = JSON.parse(localStorage.getItem(PROFILE_KEY) ?? 'null');
@@ -15,7 +17,9 @@ interface AuthCtx {
   initialized: boolean | null; error: string | null;
   login(u: string, p: string): Promise<void>;
   register(u: string, p: string, invite?: string): Promise<void>;
-  logout(): Promise<void>; refreshStatus(): Promise<void>;
+  accounts: AuthUser[]; refreshAccounts(): Promise<void>;
+  selectAccount(id: string): Promise<void>; forgetAccount(id: string): Promise<void>;
+  logout(all?: boolean): Promise<void>; refreshStatus(): Promise<void>;
 }
 const Ctx = createContext<AuthCtx | null>(null);
 export function useAuth(): AuthCtx { const ctx = useContext(Ctx); if (!ctx) throw new Error('AuthProvider missing'); return ctx; }
@@ -27,6 +31,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [initialized, setInitialized] = useState<boolean | null>(null);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('offline');
   const [error, setError] = useState<string | null>(null);
+  const [accounts, setAccounts] = useState<AuthUser[]>([]);
+  const changing = useRef(false);
   const client = useRef<SyncClient | null>(null);
   const persistence = useRef<PersistenceHandle | null>(null);
   const queue = useRef<Promise<void>>(Promise.resolve());
@@ -45,6 +51,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       unbindTimer();
       setApiUserId(nextUser?.id ?? null);
       const previous = currentStore();
+      if (previous?.userId !== (nextUser?.id ?? 'local')) {
+        useUI.setState({ selectedTaskId: null, taskMenu: null, taskBatch: null, taskDeletion: null, tmuxView: null, quickCaptureOpen: false, commandOpen: false, collapsed: {}, filter: { kind: 'all' } });
+      }
       if (absorb && previous?.userId === 'local' && !persistence.current) persistence.current = await attachPersistence(previous);
       const id = nextUser?.id ?? 'local';
       const store = previous?.userId === id ? previous : new NexusStore(id);
@@ -57,7 +66,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await persistence.current?.flush();
       }
       if (!mounted.current || epoch !== authEpoch.current) { if (handle !== persistence.current) await handle.destroy(); return; }
-      if (handle !== persistence.current) await persistence.current?.destroy();
+      if (handle !== persistence.current) { await persistence.current?.flush(); await persistence.current?.destroy(); }
       if (!mounted.current || epoch !== authEpoch.current) { if (handle !== persistence.current) await handle.destroy(); persistence.current = null; return; }
       persistence.current = handle;
       setNexusStore(store);
@@ -87,7 +96,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             return await api.ticket(nextUser.id);
           }
           catch (failure) {
-            if (active() && failure instanceof ApiError && failure.status === 409) {
+            if (active() && failure instanceof ApiError && (failure.status === 409 || failure.status === 401)) {
               sync.destroy();
               void reconcile();
             }
@@ -107,8 +116,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try { const status = await api.status(); setInitialized(status.initialized); setServerReachable(true); }
     catch { setServerReachable(false); }
   };
+  const refreshAccounts = async () => {
+    const epoch = authEpoch.current;
+    const result = await api.accounts();
+    if (mounted.current && epoch === authEpoch.current) setAccounts(result.accounts);
+  };
   const reconcile = async () => {
     const epoch = ++authEpoch.current;
+    stopSync(); setPhase('loading');
     let me: AuthUser | null;
     try {
       me = await api.me();
@@ -121,13 +136,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       me = remembered();
     }
     await switchUser(me);
+    if (epoch === authEpoch.current) await refreshAccounts().catch(() => {});
   };
   useEffect(() => {
     mounted.current = true;
     void refreshStatus();
     void reconcile().catch((failure) => setError((failure as Error).message));
     const storage = (event: StorageEvent) => {
-      if (event.key !== PROFILE_KEY) return;
+      if (event.key !== PROFILE_KEY && event.key !== ACCOUNTS_EVENT) return;
       stopSync(); // stop before awaiting the server or local persistence
       void reconcile().catch((failure) => setError((failure as Error).message));
     };
@@ -140,18 +156,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  const login = async (username: string, password: string) => { const epoch = ++authEpoch.current; stopSync(); const me = await api.login(username, password); if (epoch === authEpoch.current) await switchUser(me, true); };
-  const register = async (username: string, password: string, invite?: string) => { const epoch = ++authEpoch.current; stopSync(); const me = await api.register(username, password, invite); if (epoch === authEpoch.current) await switchUser(me, true); };
-  const logout = async () => {
-    ++authEpoch.current;
-    stopSync();
-    try { await api.logout(); } catch (failure) {
-      if (failure instanceof ApiError && failure.status === 409) { await reconcile(); return; }
-      // Offline logout clears the local active identity; its documents remain in its namespace.
-    }
-    await switchUser(null);
-    await refreshStatus();
+  const notifyAccounts = () => {
+    try { localStorage.setItem(ACCOUNTS_EVENT, `${Date.now()}:${Math.random()}`); } catch { /* private storage may be unavailable */ }
   };
-  return <Ctx.Provider value={{ phase, user, serverReachable, syncStatus, initialized, error, login, register, logout, refreshStatus }}>{children}</Ctx.Provider>;
+  const changeAccount = async (request: () => Promise<AuthUser | null>, absorb = false) => {
+    if (changing.current) throw new Error('正在切换账号，请稍候');
+    changing.current = true;
+    const epoch = ++authEpoch.current;
+    stopSync(); setPhase('loading');
+    try {
+      await persistence.current?.flush();
+      const me = await request();
+      notifyAccounts();
+      // Cookie identity is authoritative, including simultaneous changes in another tab.
+      if (epoch === authEpoch.current) await switchUser(me, absorb);
+      else await reconcile();
+      await refreshAccounts();
+    } catch (failure) {
+      // A rejected password or failed request must not leave the original account disconnected.
+      await reconcile().catch(() => {});
+      setError((failure as Error).message);
+      throw failure;
+    } finally { changing.current = false; }
+  };
+  const login = (username: string, password: string) => changeAccount(() => api.login(username, password), true);
+  const register = (username: string, password: string, invite?: string) => changeAccount(() => api.register(username, password, invite), true);
+  const selectAccount = (id: string) => changeAccount(() => api.switchAccount(id));
+  const forgetAccount = async (id: string) => { await api.forgetAccount(id); notifyAccounts(); await refreshAccounts(); };
+  const logout = async (all = false) => { await changeAccount(async () => { await api.logout(all); return null; }); await refreshStatus(); };
+  return <Ctx.Provider value={{ phase, user, serverReachable, syncStatus, initialized, error, accounts, refreshAccounts, selectAccount, forgetAccount, login, register, logout, refreshStatus }}>{children}</Ctx.Provider>;
 }
 export function useStore(): NexusStore { const store = currentStore(); if (!store) throw new Error('NexusStore not initialized'); return store; }

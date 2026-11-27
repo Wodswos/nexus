@@ -5,7 +5,7 @@ import { Button, cn, Segmented, SegmentedList, SegmentedTrigger } from '@nexus/u
 import { useNexus, useNexusData } from '@nexus/crdt';
 import {
   addDays, dateFromDayKey, dayKeyOf, fmtDuration, periodOfReview, reviewFacts, reviewId,
-  reviewMarkdown, reviewPeriod, validDayKey, type Review, type ReviewFacts, type ReviewKind,
+  isStructural, reviewMarkdown, reviewPeriod, validDayKey, type Review, type ReviewKind,
   type ReviewPeriod, type ReviewTaskFact, type Settings,
 } from '@nexus/core';
 import { useUI } from '@/state/ui';
@@ -14,6 +14,13 @@ import { useReviewClock } from './ReviewReminder';
 import { ReviewTimeline } from './ReviewTimeline';
 
 const labelOf = (kind: ReviewKind) => kind === 'daily' ? '日报' : '周报';
+interface ReviewQuestion {
+  field: ReviewTextField;
+  title: string;
+  prompt: string;
+  list?: { tasks: ReviewTaskFact[]; label: string; hint: string; empty: string; done?: boolean };
+}
+
 function periodLabel(period: ReviewPeriod) {
   return period.kind === 'daily' ? period.start : `${period.start} ～ ${dayKeyOf(addDays(dateFromDayKey(period.end), -1))}`;
 }
@@ -73,16 +80,58 @@ function ReviewEditor({ period, now }: { period: ReviewPeriod; now: number }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const completed = draft.review?.completedAt != null && !draft.dirty;
-  const liveFacts = useMemo(() => reviewFacts(data, period, now), [data.tasks, data.sessions, period.kind, period.start, period.end, now]);
+  const liveFacts = useMemo(() => reviewFacts(data, period, Date.now()), [data.tasks, data.sessions, period.kind, period.start, period.end, now]);
   const facts = completed && draft.review?.facts ? draft.review.facts : liveFacts;
   const weekly = period.kind === 'weekly';
-  const questions: { field: ReviewTextField; number?: string; title: string; prompt: string }[] = [
-    { field: 'highlights', number: '01', title: weekly ? '本周真正推进了什么？' : '今天需要推进什么／真正推进了什么？', prompt: weekly ? '哪些成果最有价值？哪件事比上周更进一步？' : '先写今天最想推进的 1–3 件事，之后再补充实际进展和收获。' },
-    { field: 'friction', number: '02', title: '哪里卡住了，为什么？', prompt: '是依赖、目标不清，还是投入方式？写下具体的阻碍和原因。' },
+  const pendingThrough = dayKeyOf(Math.min(completed ? facts.capturedAt : now, addDays(dateFromDayKey(period.end), -1).getTime()));
+  const questions: ReviewQuestion[] = [
+    {
+      field: 'highlights',
+      title: weekly ? '本周真正推进了什么？' : '今天真正推进了什么？',
+      prompt: '补充尚未完成任务的阶段进展、成果和收获。',
+      list: {
+        tasks: facts.completed, label: '实际推进的任务', done: true,
+        hint: '自动带入本期完成的任务，阶段进展可以在下面补充。',
+        empty: '本期还没有已完成的任务。',
+      },
+    },
+    {
+      field: 'plan',
+      title: weekly ? '本周需要推进什么？' : '今天需要推进什么？',
+      prompt: '补充本期的推进目标，或写下最想聚焦的 1–3 件事。',
+      list: {
+        tasks: facts.planned ?? [], label: '计划推进的任务',
+        hint: `按开始／截止日期自动带入${weekly ? '本周' : '今天'}的任务，优先级高的排在前面。`,
+        empty: completed && !facts.planned ? '这份旧复盘未保存计划任务列表。' : '本期还没有已排期的任务。',
+      },
+    },
+    {
+      field: 'friction', title: '哪里卡住了，为什么？',
+      prompt: '写下这些任务遇到的具体阻碍、依赖和原因。',
+      list: {
+        tasks: facts.pending, label: '待检查的未完成任务',
+        hint: `截至 ${pendingThrough} 尚未完成的已排期任务。${completed ? '这里保留完成复盘时的记录。' : '勾选后按实际完成日期归入进展。'}`,
+        empty: '截至当天的已排期任务都已完成。',
+      },
+    },
     { field: 'resolution', title: '如何解决？', prompt: '针对上面的阻碍，可以采取什么办法？需要谁的帮助，准备怎样验证？' },
-    { field: 'nextSteps', number: '03', title: weekly ? '下周最重要的是什么？' : '明天最重要的一步是什么？', prompt: '写下 1–3 个具体行动，让下一次开始更轻松。' },
+    { field: 'nextSteps', title: weekly ? '下周最重要的是什么？' : '明天最重要的一步是什么？', prompt: '写下 1–3 个具体行动，让下一次开始更轻松。' },
   ];
   const hasText = questions.some(question => draft.value(question.field).trim());
+  const hasContent = hasText || facts.completed.length > 0 || (facts.planned?.length ?? 0) > 0 || facts.pending.length > 0 || facts.focusMin > 0;
+  const setTaskDone = async (id: string, done: boolean) => {
+    const task = store.getData().tasks.find(task => task.id === id);
+    if (busy || completed || !task || task.deletedAt || isStructural(task) || task.status === 'archived') return;
+    setBusy(true);
+    setError('');
+    try {
+      store.stopUndoCapture();
+      store.setTaskStatus(id, done ? 'done' : 'todo');
+      store.stopUndoCapture();
+      await store.flushPersistence();
+    } catch { setError('任务状态保存失败，请保留页面并导出备份'); }
+    finally { setBusy(false); }
+  };
   const finish = async () => {
     setBusy(true); setError('');
     try {
@@ -96,8 +145,8 @@ function ReviewEditor({ period, now }: { period: ReviewPeriod; now: number }) {
     setError('');
     try {
       await draft.commit();
-      const review = store.getData().reviews.find(item => item.id === reviewId(period));
-      if (!review) return;
+      const review = store.getData().reviews.find(item => item.id === reviewId(period)) ?? store.updateReview(period, {});
+      await store.flushPersistence();
       const snapshot = review.completedAt != null && review.facts ? review.facts : reviewFacts(store.getData(), period);
       const url = URL.createObjectURL(new Blob([reviewMarkdown(review, snapshot)], { type: 'text/markdown;charset=utf-8' }));
       const anchor = document.createElement('a'); anchor.href = url; anchor.download = `nexus-${period.kind}-${period.start}.md`; anchor.click();
@@ -120,9 +169,14 @@ function ReviewEditor({ period, now }: { period: ReviewPeriod; now: number }) {
         </div>
         <div className="space-y-8 px-5 py-6 sm:px-7">
           {questions.map(question => (
-            <label key={question.field} className={cn('block', !question.number && 'pl-6')}>
-              <span className="mb-3 flex items-center gap-2.5 text-sm font-medium">{question.number && <span className="text-[11px] font-normal tabular-nums text-muted">{question.number}</span>}{question.title}</span>
+            <section key={question.field} aria-label={question.title} className={cn(question.field === 'resolution' && 'border-l-2 border-[var(--border)] pl-4')}>
+              <label htmlFor={`review-${question.field}`} className="mb-3 block text-sm font-medium">{question.title}</label>
+              {question.list && <>
+                <p className="mb-2 text-xs leading-5 text-muted">{question.list.hint}</p>
+                <ReviewTaskList label={question.list.label} tasks={question.list.tasks} empty={question.list.empty} done={question.list.done} readOnly={completed} busy={busy} onChange={setTaskDone} />
+              </>}
               <textarea
+                id={`review-${question.field}`}
                 aria-label={question.title}
                 value={draft.value(question.field)}
                 onChange={event => draft.change(question.field, event.target.value)}
@@ -131,18 +185,18 @@ function ReviewEditor({ period, now }: { period: ReviewPeriod; now: number }) {
                 onCompositionEnd={draft.compositionEnd}
                 readOnly={completed} disabled={busy} maxLength={100000}
                 placeholder={question.prompt}
-                className="min-h-28 w-full resize-y rounded-lg border border-[var(--border)] bg-[var(--background)] px-3.5 py-3 text-sm leading-7 text-foreground outline-none transition-colors placeholder:text-muted/65 focus:border-[var(--accent-solid)] read-only:border-transparent read-only:bg-[var(--surface)] disabled:opacity-70"
+                className="min-h-24 w-full resize-y rounded-lg border border-[var(--border)] bg-[var(--background)] px-3.5 py-3 text-sm leading-7 text-foreground outline-none transition-colors placeholder:text-muted/65 focus:border-[var(--accent-solid)] read-only:border-transparent read-only:bg-[var(--surface)] disabled:opacity-70"
               />
-            </label>
+            </section>
           ))}
         </div>
         <footer className="flex flex-wrap items-center gap-3 border-t border-[var(--border)] px-5 py-4 sm:px-7">
           <span role="status" aria-label="复盘保存状态" className="mr-auto text-[11px] text-muted">{draft.status || (draft.review ? '已保存' : '填写后自动保存')}</span>
-          <button aria-label="导出复盘 Markdown" disabled={!hasText || busy} onClick={() => void download()} title="导出 Markdown" className="grid h-8 w-8 place-items-center rounded-md text-muted hover:bg-[var(--surface)] disabled:opacity-30"><Download size={15} /></button>
+          <button aria-label="导出复盘 Markdown" disabled={!hasContent || busy} onClick={() => void download()} title="导出 Markdown" className="grid h-8 w-8 place-items-center rounded-md text-muted hover:bg-[var(--surface)] disabled:opacity-30"><Download size={15} /></button>
           {completed ? <Button variant="outline" size="sm" onClick={async () => {
             store.stopUndoCapture(); store.updateReview(period, { completedAt: null }); store.stopUndoCapture();
             try { await store.flushPersistence(); } catch { setError('本地保存失败，请保留页面'); }
-          }}>继续编辑</Button> : <Button variant="primary" size="sm" disabled={!hasText || busy} onClick={() => void finish()}><Check size={14} />{busy ? '正在保存…' : '完成复盘'}</Button>}
+          }}>继续编辑</Button> : <Button variant="primary" size="sm" disabled={!hasContent || busy} onClick={() => void finish()}><Check size={14} />{busy ? '正在保存…' : '完成复盘'}</Button>}
           {error && <p role="alert" className="w-full text-xs text-[var(--danger)]">{error}</p>}
         </footer>
       </article>
@@ -154,8 +208,7 @@ function ReviewEditor({ period, now }: { period: ReviewPeriod; now: number }) {
             <div><div className="text-xl font-medium tabular-nums" data-testid="review-completed-count">{facts.completed.length}<span className="ml-1 text-xs font-normal text-muted">项</span></div><div className="mt-1 text-[11px] text-muted">完成任务</div></div>
             <div><div className="text-xl font-medium tabular-nums" data-testid="review-focus-duration">{fmtDuration(facts.focusMin)}</div><div className="mt-1 text-[11px] text-muted">专注时间</div></div>
           </div>
-          <FactList title="已完成" tasks={facts.completed} empty="这段时间还没有已完成的任务记录。" />
-          <FactList title="到期未完成" tasks={facts.pending} empty="这段时间没有到期未完成的任务。" />
+          <p className="mt-3 text-xs text-muted">计划 {facts.planned?.length ?? '—'} 项<span className="mx-2">·</span>尚未完成 {facts.pending.length} 项</p>
           {facts.projects.length > 0 && <details className="mt-4 border-t border-[var(--border)] pt-3">
             <summary className="cursor-pointer text-xs text-muted">{completed ? '归档时项目进度' : '相关项目当前进度'}</summary>
             <div className="mt-3 space-y-3">{facts.projects.map(project => <div key={project.id}>
@@ -166,7 +219,7 @@ function ReviewEditor({ period, now }: { period: ReviewPeriod; now: number }) {
         </section>
         {weekly && <section aria-label="本周日报" className="px-1">
           <h2 className="text-xs font-medium">这一周的日报 <span className="ml-1 text-muted">{dailyEntries.filter(review => review.completedAt != null).length} 篇已复盘</span></h2>
-          {dailyEntries.length ? <div className="mt-3 space-y-2">{dailyEntries.map(review => <Link key={review.id} to={`/reviews?kind=daily&date=${review.periodStart}`} className="block rounded-md px-2 py-2 hover:bg-[var(--surface)]"><span className="flex justify-between text-xs"><span>{review.periodStart}</span><span className="text-muted">{review.completedAt != null ? '已复盘' : '草稿'}</span></span><span className="mt-1 block truncate text-xs text-muted">{review.highlights || review.friction || review.resolution || review.nextSteps}</span></Link>)}</div> : <p className="mt-3 text-xs leading-5 text-muted">写下的日报会汇集在这里，帮你回想这一周。</p>}
+          {dailyEntries.length ? <div className="mt-3 space-y-2">{dailyEntries.map(review => <Link key={review.id} to={`/reviews?kind=daily&date=${review.periodStart}`} className="block rounded-md px-2 py-2 hover:bg-[var(--surface)]"><span className="flex justify-between text-xs"><span>{review.periodStart}</span><span className="text-muted">{review.completedAt != null ? '已复盘' : '草稿'}</span></span><span className="mt-1 block truncate text-xs text-muted">{review.highlights || review.facts?.completed.map(task => task.title).join('、') || review.plan || review.friction || review.resolution || review.nextSteps}</span></Link>)}</div> : <p className="mt-3 text-xs leading-5 text-muted">写下的日报会汇集在这里，帮你回想这一周。</p>}
         </section>}
         <ReviewHistory reviews={data.reviews} selectedId={reviewId(period)} />
         <ReminderSettings settings={data.settings} />
@@ -175,17 +228,35 @@ function ReviewEditor({ period, now }: { period: ReviewPeriod; now: number }) {
   );
 }
 
-function FactList({ title, tasks, empty }: { title: string; tasks: ReviewTaskFact[]; empty: string }) {
+function ReviewTaskList({ label, tasks, empty, done = false, readOnly, busy, onChange }: {
+  label: string;
+  tasks: ReviewTaskFact[];
+  empty: string;
+  done?: boolean;
+  readOnly: boolean;
+  busy: boolean;
+  onChange: (id: string, done: boolean) => Promise<void>;
+}) {
   const selectTask = useUI(state => state.selectTask);
-  return <details open className="mt-4">
-    <summary className="cursor-pointer text-xs font-medium">{title}<span className="ml-1.5 font-normal text-muted">{tasks.length}</span></summary>
-    {tasks.length ? <ul className="mt-2 max-h-52 space-y-2 overflow-y-auto">{tasks.map(task => <li key={task.id}><button onClick={() => selectTask(task.id)} className="w-full rounded px-1 py-1 text-left text-xs leading-5 hover:bg-[var(--background)]"><span className="block break-words">{task.title}</span><span className="block truncate text-[10px] text-muted">{task.project}</span></button></li>)}</ul> : <p className="mt-2 text-[11px] leading-5 text-muted">{empty}</p>}
-  </details>;
+  return tasks.length ? <ul aria-label={label} className="mb-3 max-h-80 space-y-1 overflow-y-auto rounded-lg border border-[var(--border)] p-2">
+    {tasks.map(task => {
+      const checked = done || task.done === true;
+      return <li key={task.id} className="flex items-start gap-1 rounded-md hover:bg-[var(--surface)]">
+        <button role="checkbox" aria-checked={checked} aria-label={`${checked ? '标记未完成' : '完成'} ${task.title}`} disabled={readOnly || busy} onClick={() => void onChange(task.id, !checked)} className="task-check mt-1 shrink-0 disabled:cursor-default">
+          <span className="task-check-mark">{checked && <Check size={11} strokeWidth={1.8} />}</span>
+        </button>
+        <button onClick={() => selectTask(task.id)} className="min-w-0 flex-1 rounded px-1 py-2 text-left text-sm leading-5">
+          <span className={cn('block break-words', checked && 'text-muted')}>{task.title}</span>
+          <span className="mt-0.5 block truncate text-[10px] text-muted">{task.project}</span>
+        </button>
+      </li>;
+    })}
+  </ul> : <p className="mb-3 rounded-lg bg-[var(--surface)] px-3 py-2.5 text-xs leading-5 text-muted">{empty}</p>;
 }
 
 function ReviewHistory({ reviews, selectedId }: { reviews: Review[]; selectedId: string }) {
   const [search, setSearch] = useState('');
-  const sorted = [...reviews].filter(review => `${review.periodStart} ${review.highlights} ${review.friction} ${review.resolution} ${review.nextSteps}`.toLowerCase().includes(search.toLowerCase())).sort((a, b) => b.periodStart.localeCompare(a.periodStart) || a.kind.localeCompare(b.kind));
+  const sorted = [...reviews].filter(review => `${review.periodStart} ${review.highlights} ${review.plan} ${review.friction} ${review.resolution} ${review.nextSteps}`.toLowerCase().includes(search.toLowerCase())).sort((a, b) => b.periodStart.localeCompare(a.periodStart) || a.kind.localeCompare(b.kind));
   return <section aria-label="复盘历史" className="px-1">
     <h2 className="flex items-center gap-2 text-xs font-medium"><BookOpen size={13} />复盘记录<span className="font-normal text-muted">{reviews.length}</span></h2>
     <Link to="/reviews?view=timeline" className="mt-2 inline-flex items-center gap-1 text-xs text-[var(--accent-solid)]">查看全部时间线<ArrowRight size={12} /></Link>
