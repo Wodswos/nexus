@@ -61,7 +61,7 @@ export function DueBadge({ task, now = new Date() }: { task: Task; now?: Date })
   return (
     <span
       className={cn(
-        'shrink-0 text-[11px]',
+        'shrink-0 text-micro',
         overdue ? 'text-[var(--danger)]' : key === todayKey ? 'text-[var(--accent-solid)]' : 'text-muted',
       )}
     >
@@ -79,7 +79,7 @@ export function TagChip({ tag, onClick }: { tag: Tag; onClick?: () => void }) {
         e.stopPropagation();
         onClick?.();
       }}
-      className="inline-flex items-center rounded-full border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-[11px] text-muted transition-colors hover:border-[var(--border-strong)]"
+      className="inline-flex items-center rounded-full border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-micro text-muted transition-colors hover:border-[var(--border-strong)]"
     >
       <span className="h-1.5 w-1.5 rounded-full" style={{ background: tag.color ?? 'var(--accent-from)' }} />
       <span className="ml-1">{tag.name}</span>
@@ -94,7 +94,7 @@ export function EstimateBadge({ min }: { min: number }) {
 export function SubtreeProgress({ done, total }: { done: number; total: number }) {
   if (total === 0) return null;
   return (
-    <span className="inline-flex items-center gap-1 text-[10px] text-muted">
+    <span className="inline-flex items-center gap-1 text-micro text-muted">
       <span className="relative h-1 w-8 overflow-hidden rounded-full bg-[var(--border)]">
         <span
           className="absolute inset-y-0 left-0 gradient-bg"
@@ -107,10 +107,10 @@ export function SubtreeProgress({ done, total }: { done: number; total: number }
 }
 
 export const EVENT_KIND_STYLE: Record<EventKind, { label: string; color: string; dim: string }> = {
-  focus: { label: '专注', color: '#5375b4', dim: 'rgba(83,117,180,0.10)' },
-  meeting: { label: '会议', color: '#8b76ab', dim: 'rgba(139,118,171,0.10)' },
-  personal: { label: '个人', color: '#618576', dim: 'rgba(97,133,118,0.10)' },
-  routine: { label: '例行', color: '#9f845c', dim: 'rgba(159,132,92,0.10)' },
+  focus: { label: '专注', color: 'var(--accent-primary)', dim: 'var(--accent-surface)' },
+  meeting: { label: '会议', color: 'var(--accent-primary)', dim: 'var(--accent-surface)' },
+  personal: { label: '个人', color: 'var(--accent-primary)', dim: 'var(--accent-surface)' },
+  routine: { label: '例行', color: 'var(--accent-primary)', dim: 'var(--accent-surface)' },
 };
 
 /** Priority colors stay consistent across accent themes. */
@@ -156,16 +156,16 @@ export function PriorityPicker({
             title={PRIORITY_META[p].label}
             onClick={() => onChange(p)}
             className={cn(
-              'flex flex-col items-center gap-1 rounded-lg border py-1.5 transition-all',
-              active ? 'border-transparent text-white shadow-sm' : 'text-muted hover:text-foreground',
+              'flex flex-col items-center gap-1 rounded-[var(--radius-md)] border py-1.5 transition-all',
+              active ? 'border-transparent text-inverse shadow-sm' : 'text-muted hover:text-foreground',
             )}
             style={active ? { background: color, borderColor: color } : { borderColor: 'var(--border)' }}
           >
             <span
               className="h-1.5 w-6 rounded-full"
-              style={{ background: active ? 'rgba(255,255,255,0.85)' : color }}
+              style={{ background: active ? 'var(--text-inverse)' : color }}
             />
-            <span className="text-[10px] font-medium leading-none">{p}</span>
+            <span className="text-micro font-medium leading-none">{p}</span>
           </button>
         );
       })}
@@ -206,9 +206,9 @@ export function KindToggle({
             title={hint}
             onClick={() => onChange(k)}
             className={cn(
-              'flex items-center justify-center gap-1.5 rounded-lg border py-1.5 text-[11px] transition-all',
+              'flex items-center justify-center gap-1.5 rounded-[var(--radius-md)] border py-1.5 text-micro transition-all',
               active
-                ? 'gradient-bg border-transparent text-white shadow-sm'
+                ? 'gradient-bg border-transparent text-inverse shadow-sm'
                 : 'text-muted hover:text-foreground',
             )}
             style={active ? undefined : { borderColor: 'var(--border)' }}
@@ -245,7 +245,7 @@ export function StatusBadge({ task }: { task: Task }) {
   };
   return (
     <span
-      className={cn('inline-flex shrink-0 items-center gap-1 text-[10px]', text[s.tone])}
+      className={cn('inline-flex shrink-0 items-center gap-1 text-micro', text[s.tone])}
       title={`状态:${s.label}(按完成/开始/截止自动判断)`}
     >
       <span className={cn('h-1.5 w-1.5 rounded-full', dot[s.tone])} />
@@ -257,10 +257,10 @@ export function StatusBadge({ task }: { task: Task }) {
 /** 统计小方块 */
 export function StatTile({ label, value, sub }: { label: string; value: React.ReactNode; sub?: string }) {
   return (
-    <div className="glass rounded-xl px-3.5 py-3">
-      <div className="text-[11px] text-muted">{label}</div>
+    <div className="glass rounded-[var(--radius-lg)] px-3.5 py-3">
+      <div className="text-micro text-muted">{label}</div>
       <div className="mt-1 text-xl font-semibold tabular">{value}</div>
-      {sub && <div className="text-[10px] text-muted/70">{sub}</div>}
+      {sub && <div className="text-micro text-muted/70">{sub}</div>}
     </div>
   );
 }

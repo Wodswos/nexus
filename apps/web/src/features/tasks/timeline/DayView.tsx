@@ -271,7 +271,7 @@ export function DayView({
               {Array.from({ length: Math.ceil(dayMinutes / 60) }, (_, h) => (
                 <div
                   key={h}
-                  className="absolute -translate-y-1/2 text-right pr-2 text-[10px] text-muted/70 tabular"
+                  className="absolute -translate-y-1/2 text-right pr-2 text-micro text-muted/70 tabular"
                   style={{ top: minToPx(h * 60) }}
                 >
                   {fmtHM(dayStart + h * 3600000)}
@@ -283,7 +283,7 @@ export function DayView({
               data-calendar-day-date={dayKey(date)}
               data-sidebar-swipe-ignore
               className={cn(
-                'relative rounded-xl border border-[var(--border)] bg-[var(--surface)]',
+                'relative rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)]',
                 drag || selectRect ? 'cursor-grabbing' : 'cursor-copy',
               )}
               style={{ height: minToPx(dayMinutes) }}
@@ -327,7 +327,7 @@ export function DayView({
                   style={{ top: minToPx((Date.now() - dayStart) / 60000) }}
                 >
                   <div className="h-[2px] bg-gradient-to-r from-[var(--accent-from)] to-transparent" />
-                  <span className="absolute -top-2.5 left-0 rounded-full gradient-bg px-1.5 text-[9px] font-bold text-white tabular">
+                  <span className="absolute -top-2.5 left-0 rounded-full gradient-bg px-1.5 text-[9px] font-bold text-inverse tabular">
                     {fmtHM(Date.now())}
                   </span>
                 </div>
@@ -336,7 +336,7 @@ export function DayView({
               {/* 拖划创建选区 */}
               {selectRect && (
                 <div
-                  className="absolute inset-x-2 rounded-lg border border-dashed border-[var(--accent-from)] bg-[color-mix(in_srgb,var(--accent-from)_12%,transparent)]"
+                  className="absolute inset-x-2 rounded-[var(--radius-md)] border border-dashed border-[var(--accent-from)] bg-[color-mix(in_srgb,var(--accent-from)_12%,transparent)]"
                   style={{
                     top: minToPx(Math.min(selectRect.from, selectRect.to)),
                     height: minToPx(Math.abs(selectRect.to - selectRect.from)),
@@ -357,7 +357,7 @@ export function DayView({
                     onClick={() => ui.selectTask(t.id)}
                     onContextMenu={event => { event.preventDefault(); event.stopPropagation(); ui.openTaskMenu(t.id, event.clientX, event.clientY); }}
                     onPointerDown={(e) => e.stopPropagation()}
-                    className={cn('absolute left-1 right-1 z-[5] flex items-center gap-1 overflow-hidden rounded-lg border border-dashed px-2 text-left data-[focused]:ring-2 data-[focused]:ring-[var(--accent-solid)]', t.status === 'done' && 'text-muted opacity-60 line-through')}
+                    className={cn('absolute left-1 right-1 z-[5] flex items-center gap-1 overflow-hidden rounded-[var(--radius-md)] border border-dashed px-2 text-left data-[focused]:ring-2 data-[focused]:ring-[var(--accent-solid)]', t.status === 'done' && 'text-muted opacity-60 line-through')}
                     style={{
                       top: minToPx(m) - 9,
                       height: 18,
@@ -367,7 +367,7 @@ export function DayView({
                     title={`${t.dueAt != null ? '截止' : '开始'}:${fmtHM((t.dueAt ?? t.startAt)!)} · ${t.title || 'Untitled'}`}
                   >
                     <Clock className="h-3 w-3 shrink-0" style={{ color }} />
-                    <span className="truncate text-[11px] font-medium"><TaskTitle title={t.title} /></span>
+                    <span className="truncate text-micro font-medium"><TaskTitle title={t.title} /></span>
                     <span className="ml-auto shrink-0 text-[9px] tabular" style={{ color }}>
                       {fmtHM((t.dueAt ?? t.startAt)!)}
                     </span>
@@ -388,7 +388,7 @@ export function DayView({
                     onContextMenu={event => { if (ev.taskId) { event.preventDefault(); event.stopPropagation(); ui.openTaskMenu(ev.taskId, event.clientX, event.clientY); } }}
                     data-focused={ev.taskId === data.focusedTaskId || undefined}
                     className={cn(
-                      'group absolute left-1 right-1 overflow-hidden rounded-lg border px-2 py-1 backdrop-blur-sm transition-shadow data-[focused]:ring-2 data-[focused]:ring-[var(--accent-solid)]',
+                      'group absolute left-1 right-1 overflow-hidden rounded-[var(--radius-md)] border px-2 py-1 backdrop-blur-sm transition-shadow data-[focused]:ring-2 data-[focused]:ring-[var(--accent-solid)]',
                       selectedEvent === ev.id && 'ring-2 ring-[var(--ring)] z-10',
                       ev.completed && 'opacity-50',
                     )}
@@ -402,7 +402,7 @@ export function DayView({
                     onDoubleClick={() => linked && ui.selectTask(linked.id)}
                   >
                     <div
-                      className="flex items-center gap-1 text-[11px] font-medium leading-tight"
+                      className="flex items-center gap-1 text-micro font-medium leading-tight"
                       style={{ color: style.color }}
                     >
                       {linked && <Link2 className="h-3 w-3 shrink-0" />}
@@ -422,7 +422,7 @@ export function DayView({
                       className="absolute inset-x-0 bottom-0 h-2 cursor-ns-resize opacity-0 transition-opacity group-hover:opacity-100"
                       onPointerDown={(e) => beginDrag(e, ev, 'resize-end')}
                     >
-                      <GripHorizontal className="mx-auto h-2 w-4 text-white/60" />
+                      <GripHorizontal className="mx-auto h-2 w-4 text-inverse/60" />
                     </div>
                   </div>
                 );
@@ -431,7 +431,7 @@ export function DayView({
               {/* 创建气泡 */}
               {draft && (
                 <div
-                  className="absolute left-1 right-1 z-20 rounded-xl glass-raised p-2"
+                  className="absolute left-1 right-1 z-20 rounded-[var(--radius-lg)] glass-raised p-2"
                   style={{
                     top: minToPx(draft.startMin),
                     height: minToPx(draft.endMin - draft.startMin),
@@ -457,12 +457,12 @@ export function DayView({
               {/* 选中事件操作条 */}
               {selected && !drag && (
                 <div
-                  className="absolute right-1 z-30 flex -translate-y-full items-center gap-1 rounded-xl glass-raised px-1.5 py-1"
+                  className="absolute right-1 z-30 flex -translate-y-full items-center gap-1 rounded-[var(--radius-lg)] glass-raised px-1.5 py-1"
                   style={{ top: minToPx(localMin(selected).start) }}
                   onPointerDown={(e) => e.stopPropagation()}
                 >
                   <button
-                    className="rounded-lg p-1.5 text-muted hover:text-foreground"
+                    className="rounded-[var(--radius-md)] p-1.5 text-muted hover:text-foreground"
                     title="完成"
                     onClick={() => store.updateEvent(selected.id, { completed: !selected.completed })}
                   >
@@ -470,7 +470,7 @@ export function DayView({
                   </button>
                   {selected.taskId ? (
                     <button
-                      className="rounded-lg p-1.5 text-muted hover:text-foreground"
+                      className="rounded-[var(--radius-md)] p-1.5 text-muted hover:text-foreground"
                       title="解除任务关联"
                       onClick={() => store.updateEvent(selected.id, { taskId: null })}
                     >
@@ -478,7 +478,7 @@ export function DayView({
                     </button>
                   ) : null}
                   <button
-                    className="rounded-lg p-1.5 text-[var(--accent-from)] hover:brightness-125"
+                    className="rounded-[var(--radius-md)] p-1.5 text-[var(--accent-from)] hover:brightness-125"
                     title="开始专注"
                     onClick={() => {
                       timerStart({ mode: 'focus', taskId: selected.taskId });
@@ -488,7 +488,7 @@ export function DayView({
                     ▶
                   </button>
                   <button
-                    className="rounded-lg p-1.5 text-muted hover:text-[var(--danger)]"
+                    className="rounded-[var(--radius-md)] p-1.5 text-muted hover:text-[var(--danger)]"
                     title="删除"
                     onClick={() => {
                       store.softDeleteEvent(selected.id);
@@ -515,7 +515,7 @@ export function DayView({
       <aside className="hidden w-64 shrink-0 flex-col gap-2 overflow-y-auto border-l border-[var(--border)] p-3 xl:flex">
         <div className="flex items-center justify-between px-1">
           <span className="text-xs font-semibold text-muted">今日待排</span>
-          <span className="text-[10px] text-muted/60">
+          <span className="text-micro text-muted/60">
             {events.length - doneCount} 块 · 完成 {doneCount}
           </span>
         </div>
@@ -528,11 +528,11 @@ export function DayView({
             onPointerDown={(e) => onChipPointerDown(e, t.id, t.title)}
             onClick={() => ui.selectTask(t.id)}
                     onContextMenu={event => { event.preventDefault(); event.stopPropagation(); ui.openTaskMenu(t.id, event.clientX, event.clientY); }}
-            className="touch-none rounded-lg glass px-2.5 py-2 text-left text-xs text-foreground transition-all hover:border-[var(--border-strong)] active:scale-95"
+            className="touch-none rounded-[var(--radius-md)] glass px-2.5 py-2 text-left text-xs text-foreground transition-all hover:border-[var(--border-strong)] active:scale-95"
             title="拖到时间轴上安排"
           >
             <div className="truncate"><TaskTitle title={t.title} /></div>
-            {t.estimateMin != null && <div className="mt-0.5 text-[10px] text-muted">{t.estimateMin}m</div>}
+            {t.estimateMin != null && <div className="mt-0.5 text-micro text-muted">{t.estimateMin}m</div>}
           </TaskTitleButton>
         ))}
         {events.length > 0 && (
@@ -570,7 +570,7 @@ export function DayView({
       {/* 拖拽 ghost */}
       {dragTask && (
         <div
-          className="pointer-events-none fixed z-50 rounded-lg glass-raised px-3 py-1.5 text-xs gradient-text"
+          className="pointer-events-none fixed z-50 rounded-[var(--radius-md)] glass-raised px-3 py-1.5 text-xs gradient-text"
           style={{ left: dragTask.x + 10, top: dragTask.y - 12 }}
         >
           {dragTask.title}

@@ -47,7 +47,7 @@ export function SavedViewsNav() {
   return <>
     <div className="workspace-section flex items-center justify-between">
       <button aria-label={collapsed ? '展开快捷视图' : '收起快捷视图'} aria-expanded={!collapsed} aria-controls="sidebar-saved-views" onClick={() => collapse(!collapsed)} className="-ml-1 flex min-h-7 flex-1 items-center gap-1 text-left hover:text-foreground">
-        <ChevronRight size={13} className={cn('shrink-0 transition-transform', !collapsed && 'rotate-90')} /><span>快捷视图</span>{collapsed && <span className="ml-1 text-[10px] tabular-nums opacity-60">{settings.savedViews.length}</span>}
+        <ChevronRight size={13} className={cn('shrink-0 transition-transform', !collapsed && 'rotate-90')} /><span>快捷视图</span>{collapsed && <span className="ml-1 text-micro tabular-nums opacity-60">{settings.savedViews.length}</span>}
       </button>
       <button aria-label="添加快捷视图" title="添加快捷视图" onClick={() => setAdding(true)} className="grid h-6 w-6 place-items-center rounded text-muted hover:bg-[var(--surface)] hover:text-foreground"><Plus size={14} /></button>
     </div>
@@ -81,7 +81,7 @@ export function SavedViewsNav() {
 function SavedViewRow({ item, selected, onEdit, onRemove }: { item: SavedTaskView; selected: boolean; onEdit: () => void; onRemove: () => void }) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
   const Icon = TASK_VIEWS.find((view) => view.key === item.view)!.icon;
-  return <div ref={setNodeRef} data-saved-view={item.id} data-selected={selected || undefined} style={{ transform: CSS.Transform.toString(transform), transition }} className={cn('workspace-project-row group flex items-center rounded-md', isDragging && 'relative z-10 bg-[var(--background)] shadow-sm')}>
+  return <div ref={setNodeRef} data-saved-view={item.id} data-selected={selected || undefined} style={{ transform: CSS.Transform.toString(transform), transition }} className={cn('workspace-project-row group flex items-center rounded-[var(--radius-sm)]', isDragging && 'relative z-10 bg-[var(--background)] shadow-sm')}>
     <button ref={setActivatorNodeRef} {...attributes} {...listeners} aria-label={`拖动快捷视图 ${item.name} 排序`} title="拖动排序；按空格后可用上下键移动" className="workspace-project-action ml-1 grid h-8 w-5 shrink-0 touch-none place-items-center text-muted/50 hover:text-foreground"><GripVertical size={14} /></button>
     <Link to={savedViewHref(item)} className="workspace-nav min-w-0 flex-1 !pl-1.5" aria-current={selected ? 'page' : undefined} title={item.name}><Icon /><span className="truncate">{item.name}</span></Link>
     <Dropdown><DropdownTrigger asChild><button aria-label={`快捷视图 ${item.name} 菜单`} className="workspace-project-action mr-1 grid h-8 w-6 shrink-0 place-items-center rounded text-muted hover:bg-[var(--surface)] hover:text-foreground"><MoreHorizontal size={15} /></button></DropdownTrigger><DropdownContent align="start" collisionPadding={12}>

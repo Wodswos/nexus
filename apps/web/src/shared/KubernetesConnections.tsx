@@ -51,23 +51,23 @@ export function KubernetesConnections({ value = '', onChange, manage = false }: 
     } catch (reason) { if (active()) setError(reason instanceof Error ? reason.message : '连接删除失败'); }
     finally { if (active()) setBusy(false); }
   };
-  const field = 'w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-2 text-xs outline-none focus:border-[var(--accent-solid)]';
+  const field = 'w-full rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-2 text-xs outline-none focus:border-[var(--accent-solid)]';
   return <div className="space-y-2">
     {manage ? <div className="space-y-2">
-      {connections.map(connection => <div key={connection.id} className="flex items-center justify-between gap-3 rounded-lg border border-[var(--border)] px-3 py-2">
-        <div className="min-w-0"><p className="truncate text-xs font-medium">{connection.name}</p><p className="break-all text-[11px] text-muted">{connection.server} · {connection.namespace}</p></div>
+      {connections.map(connection => <div key={connection.id} className="flex items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--border)] px-3 py-2">
+        <div className="min-w-0"><p className="truncate text-xs font-medium">{connection.name}</p><p className="break-all text-micro text-muted">{connection.server} · {connection.namespace}</p></div>
         <Button type="button" size="sm" variant="ghost" disabled={busy} onClick={() => edit(connection)}>编辑<span className="sr-only"> {connection.name}</span></Button>
       </div>)}
       {!connections.length && <p className="text-xs text-muted">暂无 Kubernetes 集群</p>}
     </div> : <><SelectField aria-label="Kubernetes API 连接" value={value} onValueChange={(id) => { if (id) onChange?.(id, connections.find(row => row.id === id)); }} className="w-full" options={[
       { value: '', label: '选择 Kubernetes 连接', disabled: true }, ...connections.map((row) => ({ value: row.id, label: row.name })),
     ]} />
-    {selected && <p className="break-all text-[10px] text-muted">{selected.server} · {selected.namespace}</p>}</> }
-    <div className="flex gap-3 text-[11px] text-muted">
+    {selected && <p className="break-all text-micro text-muted">{selected.server} · {selected.namespace}</p>}</> }
+    <div className="flex gap-3 text-micro text-muted">
       <button type="button" className="min-h-7 underline underline-offset-2" disabled={busy} onClick={() => edit()}>{manage ? '添加 Kubernetes 集群' : '添加连接'}</button>
       {!manage && selected && <button type="button" className="min-h-7 underline underline-offset-2" onClick={() => edit(selected)}>编辑连接</button>}
     </div>
-    {editing !== null && <div className="space-y-3 rounded-lg border border-[var(--border)] p-3">
+    {editing !== null && <div className="space-y-3 rounded-[var(--radius-md)] border border-[var(--border)] p-3">
       <p className="text-xs font-medium">{editing ? '编辑 Kubernetes 连接' : '添加 Kubernetes 连接'}</p>
       <label className="block space-y-1 text-xs"><span>连接名称</span><input aria-label="Kubernetes 连接名称" value={name} onChange={(event) => setName(event.target.value)} className={field} disabled={busy} /></label>
       <label className="block space-y-1 text-xs"><span>API Server</span><input aria-label="Kubernetes API Server" value={server} onChange={(event) => setServer(event.target.value)} placeholder="https://cluster.example.com:6443" className={field} disabled={busy} /></label>
@@ -81,7 +81,7 @@ export function KubernetesConnections({ value = '', onChange, manage = false }: 
         <label className="block space-y-1 text-xs"><span>客户端证书</span><textarea aria-label="Kubernetes 客户端证书" value={cert} onChange={(event) => setCert(event.target.value)} rows={3} placeholder={editing ? '留空保留已保存的证书' : 'PEM 格式'} className={`${field} font-mono`} disabled={busy} /></label>
         <label className="block space-y-1 text-xs"><span>客户端私钥</span><textarea aria-label="Kubernetes 客户端私钥" value={key} onChange={(event) => setKey(event.target.value)} rows={3} placeholder={editing ? '留空保留已保存的私钥' : 'PEM 格式'} className={`${field} font-mono`} disabled={busy} spellCheck={false} /></label>
       </>}
-      <p className="text-[10px] leading-5 text-muted">凭据加密保存在服务端，仅当前账号可使用。需要目标 Namespace 的 Pod 查询、创建、删除与 exec 权限。</p>
+      <p className="text-micro leading-5 text-muted">凭据加密保存在服务端，仅当前账号可使用。需要目标 Namespace 的 Pod 查询、创建、删除与 exec 权限。</p>
       {deleting && <p className="text-xs leading-5 text-[var(--danger)]">删除后，引用此连接的环境将无法继续连接。确认删除此连接？</p>}
       <div className="flex justify-between gap-2">
         {editing ? <Button type="button" size="sm" variant="ghost" disabled={busy} onClick={() => deleting ? void remove() : setDeleting(true)}>{deleting ? '确认删除连接' : '删除连接'}</Button> : <span />}

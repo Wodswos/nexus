@@ -100,7 +100,7 @@ export function ProjectList({ projects, selectedId }: { projects: Task[]; select
         <button aria-label={collapsed ? '展开项目' : '收起项目'} aria-expanded={!collapsed} aria-controls="sidebar-projects" onClick={() => collapse(!collapsed)} className="-ml-1 flex min-h-7 flex-1 items-center gap-1 text-left hover:text-foreground">
           <ChevronRight size={13} className={cn('shrink-0 transition-transform', !collapsed && 'rotate-90')} />
           <span>项目</span>
-          {collapsed && <span className="ml-1 text-[10px] tabular-nums opacity-60">{projects.length}</span>}
+          {collapsed && <span className="ml-1 text-micro tabular-nums opacity-60">{projects.length}</span>}
         </button>
         <button
           aria-label="新建项目"
@@ -151,7 +151,7 @@ export function ProjectList({ projects, selectedId }: { projects: Task[]; select
       </DndContext>
       </div>
       {!collapsed && status && (
-        <span role="status" aria-label="项目排序保存状态" className="px-3 pt-1 text-[10px] text-muted">
+        <span role="status" aria-label="项目排序保存状态" className="px-3 pt-1 text-micro text-muted">
           {status}
         </span>
       )}
@@ -198,7 +198,7 @@ function ProjectRow({ task, selected, view }: { task: Task; selected: boolean; v
       }}
       style={{ transform: CSS.Transform.toString(transform), transition }}
       className={cn(
-        'workspace-project-row group flex items-center rounded-md',
+        'workspace-project-row group flex items-center rounded-[var(--radius-sm)]',
         isDragging && 'relative z-10 bg-[var(--background)] shadow-sm',
       )}
     >

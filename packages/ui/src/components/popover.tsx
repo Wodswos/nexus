@@ -21,7 +21,7 @@ export const PopoverContent = React.forwardRef<
         if (event.key === 'Escape') event.stopPropagation();
       }}
       className={cn(
-        'pointer-events-auto z-[80] w-[310px] max-w-[calc(100vw-24px)] max-h-[var(--radix-popover-content-available-height)] overflow-y-auto rounded-xl border border-[var(--border-strong)] bg-[var(--surface-raised)] p-4 text-foreground shadow-[0_12px_40px_rgb(0_0_0/0.14)] outline-none',
+        'pointer-events-auto z-[80] w-[310px] max-w-[calc(100vw-24px)] max-h-[var(--radix-popover-content-available-height)] overflow-y-auto rounded-[var(--radius-lg)] border border-[var(--border-strong)] bg-[var(--surface-raised)] p-4 text-foreground shadow-md outline-none',
         className,
       )}
       {...props}

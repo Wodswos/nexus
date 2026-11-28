@@ -65,7 +65,7 @@ export function MatrixView() {
     <div ref={region} className="h-full overflow-y-auto p-4 pb-24 md:p-6">
       <DndContext sensors={sensors} onDragEnd={onDragEnd}>
         {/* 轴标 */}
-        <div className="mb-2 flex items-center justify-between px-1 text-[10px] uppercase tracking-widest text-muted/70">
+        <div className="mb-2 flex items-center justify-between px-1 text-micro uppercase tracking-widest text-muted/70">
           <span className="flex items-center gap-1"><Zap className="h-3 w-3" />紧迫 →</span>
           <span className="flex items-center gap-1"><Crosshair className="h-3 w-3" />重要 ↑</span>
         </div>
@@ -78,7 +78,7 @@ export function MatrixView() {
             }} />
           ))}
         </div>
-        <div className="mt-3 px-1 text-[10px] text-muted/60">
+        <div className="mt-3 px-1 text-micro text-muted/60">
           拖动任务在象限间移动 = 改写「重要/紧急」 · 双击象限空白新建 · 未完成任务优先，已完成项跟随右上角设置
         </div>
       </DndContext>
@@ -109,7 +109,7 @@ function QuadrantCell({
       ref={setNodeRef}
       onDoubleClick={onNew}
       className={cn(
-        'flex min-h-[240px] flex-col gap-1.5 rounded-2xl border p-3 transition-all md:min-h-[320px]',
+        'flex min-h-[240px] flex-col gap-1.5 rounded-[var(--radius-lg)] border p-3 transition-all md:min-h-[320px]',
         isOver ? 'glow-border' : 'border-[var(--border)]',
       )}
       style={{ background: style.glow }}
@@ -120,7 +120,7 @@ function QuadrantCell({
             <span className="h-2 w-2 rounded-full" style={{ background: style.chip }} />
             <span className="text-sm font-semibold">{quadrant.title}</span>
           </div>
-          <div className="mt-0.5 text-[10px] text-muted">{quadrant.sub}</div>
+          <div className="mt-0.5 text-micro text-muted">{quadrant.sub}</div>
         </div>
         <Badge>{tasks.length}</Badge>
       </div>
@@ -129,7 +129,7 @@ function QuadrantCell({
           <MatrixChip key={t.id} task={t} focused={t.id === focusedId} progress={subtreeProgress(t.id, childrenMap)} />
         ))}
         {tasks.length > visible.length && (
-          <div className="px-1 text-[10px] text-muted/60">+{tasks.length - visible.length} 条更多</div>
+          <div className="px-1 text-micro text-muted/60">+{tasks.length - visible.length} 条更多</div>
         )}
         {tasks.length === 0 && (
           <div className="flex flex-1 items-center justify-center py-8 text-xs text-muted/40">拖任务进来 / 双击新建</div>
@@ -157,7 +157,7 @@ function MatrixChip({ task, progress, focused }: { task: Task; progress: { done:
         if (!isDragging) ui.openTaskMenu(task.id, e.clientX, e.clientY);
       }}
       className={cn(
-        'group flex cursor-grab touch-none items-center gap-2 rounded-xl glass px-2.5 py-2 text-sm transition-all active:cursor-grabbing active:scale-[0.98]',
+        'group flex cursor-grab touch-none items-center gap-2 rounded-[var(--radius-lg)] glass px-2.5 py-2 text-sm transition-all active:cursor-grabbing active:scale-[0.98]',
         isDragging && 'opacity-40',
         task.status === 'done' && 'opacity-50',
         focused && 'ring-2 ring-[var(--accent-solid)]',

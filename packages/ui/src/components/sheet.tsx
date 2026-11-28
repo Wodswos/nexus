@@ -40,7 +40,7 @@ export const SheetContent = React.forwardRef<
   ) => (
     <DialogPrimitive.Portal>
       {overlay && (
-        <DialogPrimitive.Overlay className="fixed inset-0 z-40 bg-black/55 backdrop-blur-[2px] " />
+        <DialogPrimitive.Overlay className="fixed inset-0 z-40 bg-[var(--bg-overlay)] backdrop-blur-[2px] " />
       )}
       <DialogPrimitive.Content
         ref={ref}
@@ -49,8 +49,8 @@ export const SheetContent = React.forwardRef<
           side === 'right' && 'inset-y-0 right-0 w-full max-w-[380px] border-l ',
           side === 'left' && 'inset-y-0 left-0 w-full max-w-[320px] border-r ',
           side === 'bottom' &&
-            'inset-x-0 bottom-0 max-h-[92vh] rounded-t-2xl border-t pb-[env(safe-area-inset-bottom)] ',
-          side === 'float' && 'right-4 top-16 w-[min(420px,92vw)] rounded-2xl border ',
+            'inset-x-0 bottom-0 max-h-[92vh] rounded-t-[var(--radius-lg)] border-t pb-[env(safe-area-inset-bottom)] ',
+          side === 'float' && 'right-4 top-16 w-[min(420px,92vw)] rounded-[var(--radius-lg)] border ',
           className,
         )}
         {...props}
@@ -66,7 +66,7 @@ export const SheetContent = React.forwardRef<
               <DialogPrimitive.Title className="text-sm font-semibold text-muted">
                 {title ?? ''}
               </DialogPrimitive.Title>
-              <DialogPrimitive.Close className="rounded-md p-1 text-muted transition-colors hover:text-foreground">
+              <DialogPrimitive.Close className="rounded-[var(--radius-sm)] p-1 text-muted transition-colors hover:text-foreground">
                 <X className="h-4 w-4" />
               </DialogPrimitive.Close>
             </div>

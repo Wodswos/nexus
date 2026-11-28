@@ -88,7 +88,7 @@ export function QuickCapture() {
             }
           }}
           placeholder="想到什么写什么… #标签  !P0  ~45m  @明天 @9:30"
-          className="h-12 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 text-base outline-none transition-colors focus:border-[color-mix(in_srgb,var(--accent-from)_60%,transparent)] focus:ring-2 focus:ring-[var(--ring)]/25"
+          className="h-12 w-full rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] px-4 text-base outline-none transition-colors focus:border-[color-mix(in_srgb,var(--accent-from)_60%,transparent)] focus:ring-2 focus:ring-[var(--ring)]/25"
         />
         <div className="mt-3 flex min-h-6 flex-wrap items-center gap-1.5 text-xs text-muted">
           {parsed.tags.length > 0 && (

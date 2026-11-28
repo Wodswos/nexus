@@ -65,7 +65,7 @@ export function Providers() {
       {values.map((value) => (
         <button
           key={value.id}
-          className="flex w-full items-center gap-3 rounded-lg border border-[var(--border)] px-3 py-2 text-left text-sm"
+          className="flex w-full items-center gap-3 rounded-[var(--radius-md)] border border-[var(--border)] px-3 py-2 text-left text-sm"
           onClick={() => setDraft(value)}
         >
           <span className="flex-1">{value.name}</span>
@@ -100,7 +100,7 @@ export function Providers() {
                   required
                   value={draft.name ?? ""}
                   onChange={(e) => setDraft({ ...draft, name: e.target.value })}
-                  className="mt-1 w-full rounded-lg border border-[var(--border)] bg-transparent p-2"
+                  className="mt-1 w-full rounded-[var(--radius-md)] border border-[var(--border)] bg-transparent p-2"
                 />
               </label>
               <SelectField
@@ -136,7 +136,7 @@ export function Providers() {
                     onChange={(e) =>
                       setDraft({ ...draft, [key!]: e.target.value })
                     }
-                    className="mt-1 w-full rounded-lg border border-[var(--border)] bg-transparent p-2"
+                    className="mt-1 w-full rounded-[var(--radius-md)] border border-[var(--border)] bg-transparent p-2"
                   />
                 </label>
               ))}

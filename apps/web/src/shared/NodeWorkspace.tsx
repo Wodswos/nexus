@@ -369,7 +369,7 @@ export function NodeWorkspace({
         <div className="flex min-w-0 items-center gap-2 font-medium">
           <Terminal size={14} />
           <span>Workspace</span>
-          {resolved.disabled && <span className="text-[10px] font-normal text-muted">此分支已停用</span>}
+          {resolved.disabled && <span className="text-micro font-normal text-muted">此分支已停用</span>}
         </div>
       </div>
 
@@ -377,25 +377,25 @@ export function NodeWorkspace({
         <Button type="button" size="sm" variant="outline" disabled={!user || busy} onClick={() => setCreateTemplateOpen(true)}><Plus size={12} />创建 Workspace 模板</Button>
         <Button type="button" size="sm" variant="outline" disabled={!user || busy || resolved.disabled} onClick={() => setCreateOpen(true)}><Plus size={12} />创建 Workspace</Button>
       </div>
-      <details className="rounded-lg border border-[var(--border)] px-3 py-2" aria-label="可用 Workspace 模板">
-        <summary className="cursor-pointer text-[11px] text-muted">可用 Workspace 模板 · {templateChoices.profiles.filter(item => item.sourceId).length}</summary>
+      <details className="rounded-[var(--radius-md)] border border-[var(--border)] px-3 py-2" aria-label="可用 Workspace 模板">
+        <summary className="cursor-pointer text-micro text-muted">可用 Workspace 模板 · {templateChoices.profiles.filter(item => item.sourceId).length}</summary>
         <div className="mt-2 space-y-1">
-          {templateChoices.profiles.filter(item => item.sourceId).map(({ value, sourceId }) => <button key={value.id} type="button" disabled={busy} onClick={() => setEditingTemplate(value)} className="flex w-full items-center justify-between gap-3 rounded-md px-2 py-2 text-left hover:bg-[var(--surface)]">
-            <span className="min-w-0"><span className="block truncate">{value.name}</span><span className="block truncate text-[10px] text-muted">{templateChoices.source(sourceId)} · {runtimeLabels[value.config.runtime]}</span></span><span className="shrink-0 text-[11px] text-muted">编辑</span>
+          {templateChoices.profiles.filter(item => item.sourceId).map(({ value, sourceId }) => <button key={value.id} type="button" disabled={busy} onClick={() => setEditingTemplate(value)} className="flex w-full items-center justify-between gap-3 rounded-[var(--radius-sm)] px-2 py-2 text-left hover:bg-[var(--surface)]">
+            <span className="min-w-0"><span className="block truncate">{value.name}</span><span className="block truncate text-micro text-muted">{templateChoices.source(sourceId)} · {runtimeLabels[value.config.runtime]}</span></span><span className="shrink-0 text-micro text-muted">编辑</span>
           </button>)}
-          {!templateChoices.profiles.some(item => item.sourceId) && <p className="py-1 text-[11px] text-muted">暂无可用模板</p>}
+          {!templateChoices.profiles.some(item => item.sourceId) && <p className="py-1 text-micro text-muted">暂无可用模板</p>}
         </div>
       </details>
       <section aria-label="已创建 Workspace" className="space-y-2">
-        {availableEnvironments.length > 0 && <h3 className="text-[11px] text-muted">已创建 Workspace</h3>}
+        {availableEnvironments.length > 0 && <h3 className="text-micro text-muted">已创建 Workspace</h3>}
         {availableEnvironments.map(value => <button key={value.id} type="button" aria-pressed={selectedId === value.id}
           disabled={busy} onClick={() => { setSelectedId(value.id); setError(''); setMessage(''); }}
-          className={`flex w-full items-center justify-between gap-3 rounded-lg border px-3 py-2 text-left ${selectedId === value.id ? 'border-[var(--border-strong)] bg-[var(--surface)]' : 'border-[var(--border)] hover:bg-[var(--surface)]'}`}>
+          className={`flex w-full items-center justify-between gap-3 rounded-[var(--radius-md)] border px-3 py-2 text-left ${selectedId === value.id ? 'border-[var(--border-strong)] bg-[var(--surface)]' : 'border-[var(--border)] hover:bg-[var(--surface)]'}`}>
           <span className="min-w-0"><span className="block truncate">{value.name || value.session || value.id.slice(0, 8)}</span>
-            {value.taskId !== taskId && <span className="block truncate text-[10px] text-muted">{data.tasks.find(task => task.id === value.taskId)?.title ?? '关联节点'}</span>}
-          </span><span className="shrink-0 text-[10px] text-muted">{environmentLabels[value.state]}</span>
+            {value.taskId !== taskId && <span className="block truncate text-micro text-muted">{data.tasks.find(task => task.id === value.taskId)?.title ?? '关联节点'}</span>}
+          </span><span className="shrink-0 text-micro text-muted">{environmentLabels[value.state]}</span>
         </button>)}
-        {!availableEnvironments.length && <p className="py-1 text-[11px] text-muted">暂无 Workspace</p>}
+        {!availableEnvironments.length && <p className="py-1 text-micro text-muted">暂无 Workspace</p>}
       </section>
       {!resolved.configured && legacy.length > 0 && (
         <div className="space-y-1">
@@ -413,7 +413,7 @@ export function NodeWorkspace({
                 });
                 setMessage('已从关联会话建立配置，可使用已有 Workspace');
               }}
-              className="block text-left text-[11px] text-[var(--accent-solid)]"
+              className="block text-left text-micro text-[var(--accent-solid)]"
             >
               使用已关联的 tmux 配置 · {link.session}
             </button>
@@ -435,17 +435,17 @@ export function NodeWorkspace({
 
           </div>
           {!user && (
-            <p className="text-[10px] text-muted">
+            <p className="text-micro text-muted">
               登录后可连接控制主机并使用 Workspace。
             </p>
           )}
           {configError && (
-            <p className="text-[10px] text-muted">{configError}</p>
+            <p className="text-micro text-muted">{configError}</p>
           )}
         </>
       )}
       {resources && (
-        <div className="space-y-2 rounded-lg border border-[var(--border)] p-2.5">
+        <div className="space-y-2 rounded-[var(--radius-md)] border border-[var(--border)] p-2.5">
           <SelectField
             aria-label="选择已有 Workspace"
             value={resourceId}
@@ -481,7 +481,7 @@ export function NodeWorkspace({
         </div>
       )}
       {environment && (
-        <div className="space-y-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-2.5">
+        <div className="space-y-2 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] p-2.5">
           <div className="flex items-center justify-between gap-2">
             <span className="flex items-center gap-1.5">
               {['queued', 'preparing'].includes(environment.state) && (
@@ -549,16 +549,16 @@ export function NodeWorkspace({
               </button>
             </div>
           </div>
-          {dataUnavailable && <p className="text-[11px] leading-5 text-[var(--danger)]">此 Workspace 的数据已移除，不能恢复或新建 Agent。请在 Workspace 管理中完成资源清理，或选择其他 Workspace。</p>}
+          {dataUnavailable && <p className="text-micro leading-5 text-[var(--danger)]">此 Workspace 的数据已移除，不能恢复或新建 Agent。请在 Workspace 管理中完成资源清理，或选择其他 Workspace。</p>}
           {environment.directory && (
-            <p className="break-all text-[10px] text-muted">
+            <p className="break-all text-micro text-muted">
               {environment.directory}
             </p>
           )}
           {environment.error && (
             <p
               role="alert"
-              className="break-words text-[11px] text-[var(--danger)]"
+              className="break-words text-micro text-[var(--danger)]"
             >
               {environment.error}
             </p>
@@ -566,12 +566,12 @@ export function NodeWorkspace({
           {environment.log && environment.state !== 'ready' && (
             <details>
               <summary className="cursor-pointer text-muted">准备日志</summary>
-              <pre className="max-h-32 overflow-auto whitespace-pre-wrap text-[10px]">
+              <pre className="max-h-32 overflow-auto whitespace-pre-wrap text-micro">
                 {environment.log}
               </pre>
             </details>
           )}
-          {!dataUnavailable && environment.state === 'ready' && hasAgents && <button type="button" onClick={() => setTerminalToolsOpen((value) => !value)} className="flex min-h-7 items-center gap-1 text-[11px] text-muted"><Terminal size={12} />{terminalToolsOpen ? '收起终端工具' : '终端工具'}</button>}
+          {!dataUnavailable && environment.state === 'ready' && hasAgents && <button type="button" onClick={() => setTerminalToolsOpen((value) => !value)} className="flex min-h-7 items-center gap-1 text-micro text-muted"><Terminal size={12} />{terminalToolsOpen ? '收起终端工具' : '终端工具'}</button>}
           {!dataUnavailable && environment.state === 'ready' && (!hasAgents || terminalToolsOpen) && (
             <>
               <div className="flex items-center gap-1">
@@ -600,9 +600,9 @@ export function NodeWorkspace({
                   <RefreshCw size={13} />
                 </button>
               </div>
-              {pane && <button type="button" onClick={() => setTerminalOpen(true)} className="flex min-h-7 items-center gap-1 text-[11px] text-muted"><Terminal size={12} />打开完整终端</button>}
+              {pane && <button type="button" onClick={() => setTerminalOpen(true)} className="flex min-h-7 items-center gap-1 text-micro text-muted"><Terminal size={12} />打开完整终端</button>}
               {pane && (
-                <p className="break-all text-[10px] text-muted">
+                <p className="break-all text-micro text-muted">
                   {pane.command} · {pane.directory}
                 </p>
               )}
@@ -621,9 +621,9 @@ export function NodeWorkspace({
             value={prompt}
             onChange={(event) => setPrompt(event.target.value)}
             placeholder="输入要发布给所选 Agent／pane 的指令…"
-            className="w-full resize-y rounded-lg border border-[var(--border)] bg-transparent px-2.5 py-2 text-xs leading-5 outline-none focus:border-[var(--accent-solid)]"
+            className="w-full resize-y rounded-[var(--radius-md)] border border-[var(--border)] bg-transparent px-2.5 py-2 text-xs leading-5 outline-none focus:border-[var(--accent-solid)]"
           />
-          <div className="flex flex-wrap gap-x-3 gap-y-2 text-[10px] text-muted">
+          <div className="flex flex-wrap gap-x-3 gap-y-2 text-micro text-muted">
             <label className="flex items-center gap-1">
               <input
                 type="checkbox"
@@ -657,7 +657,7 @@ export function NodeWorkspace({
               type="button"
               disabled={!pane}
               onClick={() => setOutputOpen((value) => !value)}
-              className="flex min-h-8 items-center gap-1 text-[11px] text-muted"
+              className="flex min-h-8 items-center gap-1 text-micro text-muted"
             >
               <ChevronDown size={12} />
               {outputOpen ? '收起输出' : '查看输出'}
@@ -675,7 +675,7 @@ export function NodeWorkspace({
           {outputOpen && (
             <pre
               aria-label="目标 pane 输出"
-              className="max-h-64 overflow-auto whitespace-pre-wrap rounded-lg bg-[var(--surface)] p-3 font-mono text-[10px] leading-4"
+              className="max-h-64 overflow-auto whitespace-pre-wrap rounded-[var(--radius-md)] bg-[var(--surface)] p-3 font-mono text-micro leading-4"
             >
               {output || '等待目标输出…'}
             </pre>
@@ -683,14 +683,14 @@ export function NodeWorkspace({
         </div>
       )}
       {busy && (
-        <p role="status" className="text-[10px] text-muted">
+        <p role="status" className="text-micro text-muted">
           正在处理…
         </p>
       )}
       {message && (
         <p
           role="status"
-          className="flex items-center gap-1 text-[10px] text-muted"
+          className="flex items-center gap-1 text-micro text-muted"
         >
           <Check size={11} />
           {message}
@@ -699,14 +699,14 @@ export function NodeWorkspace({
       {error && (
         <p
           role="alert"
-          className="break-words text-[11px] text-[var(--danger)]"
+          className="break-words text-micro text-[var(--danger)]"
         >
           {error}
         </p>
       )}
       {instructions.length > 0 && (
         <details>
-          <summary className="flex cursor-pointer items-center gap-1 text-[11px] text-muted">
+          <summary className="flex cursor-pointer items-center gap-1 text-micro text-muted">
             <Bot size={12} />
             指令记录 · {instructions.length}
           </summary>
@@ -714,9 +714,9 @@ export function NodeWorkspace({
             {instructions.slice(0, 20).map((value) => (
               <li
                 key={value.id}
-                className="space-y-1 rounded-lg border border-[var(--border)] p-2.5"
+                className="space-y-1 rounded-[var(--radius-md)] border border-[var(--border)] p-2.5"
               >
-                <div className="flex items-center justify-between gap-2 text-[10px]">
+                <div className="flex items-center justify-between gap-2 text-micro">
                   <span>
                     {instructionLabels[value.state]} · {value.pane.id}
                   </span>
@@ -727,11 +727,11 @@ export function NodeWorkspace({
                     })}
                   </time>
                 </div>
-                <p className="line-clamp-3 whitespace-pre-wrap break-words text-[11px]">
+                <p className="line-clamp-3 whitespace-pre-wrap break-words text-micro">
                   {value.text}
                 </p>
                 {value.error && (
-                  <p className="text-[10px] text-[var(--danger)]">
+                  <p className="text-micro text-[var(--danger)]">
                     {value.error}
                   </p>
                 )}
@@ -742,7 +742,7 @@ export function NodeWorkspace({
                       setPrompt(value.text);
                       setIncludeNode(false);
                     }}
-                    className="text-[10px] text-muted underline"
+                    className="text-micro text-muted underline"
                   >
                     填回指令编辑器
                   </button>

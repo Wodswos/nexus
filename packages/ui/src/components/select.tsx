@@ -42,7 +42,7 @@ export const SelectField = React.forwardRef<HTMLButtonElement, SelectFieldProps>
           ref={ref}
           data-value={value}
           className={cn(
-            'inline-flex h-9 min-w-0 items-center justify-between gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 text-left text-xs text-foreground outline-none transition-colors hover:border-[var(--border-strong)] focus-visible:ring-2 focus-visible:ring-[var(--ring)] disabled:cursor-not-allowed disabled:opacity-50',
+            'inline-flex h-9 min-w-0 items-center justify-between gap-2 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--bg-canvas)] px-2.5 text-left text-xs text-foreground outline-none transition-colors hover:border-[var(--border-strong)] disabled:cursor-not-allowed disabled:opacity-50',
             className,
           )}
         >
@@ -74,7 +74,7 @@ export const SelectField = React.forwardRef<HTMLButtonElement, SelectFieldProps>
             onKeyDown={(event) => {
               if (event.key === 'Escape') event.stopPropagation();
             }}
-            className="z-[80] max-h-[min(360px,var(--radix-select-content-available-height))] min-w-[max(180px,var(--radix-select-trigger-width))] max-w-[calc(100vw-24px)] overflow-hidden rounded-xl border border-[var(--border-strong)] bg-[var(--surface-raised)] p-1.5 text-foreground shadow-[0_12px_40px_rgb(0_0_0/0.14)] outline-none"
+            className="z-[80] max-h-[min(360px,var(--radix-select-content-available-height))] min-w-[max(180px,var(--radix-select-trigger-width))] max-w-[calc(100vw-24px)] overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border-strong)] bg-[var(--surface-raised)] p-1 text-foreground shadow-md outline-none"
           >
             <SelectPrimitive.ScrollUpButton className="flex h-6 items-center justify-center text-muted">
               <ChevronUp size={14} />
@@ -88,7 +88,7 @@ export const SelectField = React.forwardRef<HTMLButtonElement, SelectFieldProps>
                   aria-description={option.description}
                   disabled={option.disabled}
                   data-value={option.value}
-                  className="relative flex min-h-10 cursor-default select-none items-center gap-2.5 rounded-lg py-2 pl-2.5 pr-8 outline-none data-[highlighted]:bg-[var(--surface)] data-[state=checked]:bg-[var(--selection)] data-[state=checked]:text-[var(--accent-solid)] data-[disabled]:pointer-events-none data-[disabled]:opacity-40"
+                  className="relative flex min-h-10 cursor-default select-none items-center gap-2 rounded-[var(--radius-sm)] py-2 pl-2.5 pr-8 outline-none data-[highlighted]:bg-[var(--surface)] data-[state=checked]:bg-[var(--selection)] data-[state=checked]:text-[var(--accent-solid)] data-[disabled]:pointer-events-none data-[disabled]:opacity-40"
                 >
                   {option.color && (
                     <span
@@ -99,10 +99,10 @@ export const SelectField = React.forwardRef<HTMLButtonElement, SelectFieldProps>
                   )}
                   <span className="min-w-0 flex-1">
                     <SelectPrimitive.ItemText>
-                      <span className="block text-[13px] leading-5">{option.label}</span>
+                      <span className="block text-control leading-5">{option.label}</span>
                     </SelectPrimitive.ItemText>
                     {option.description && (
-                      <span className="mt-0.5 block text-[11px] leading-4 text-muted">
+                      <span className="mt-0.5 block text-micro leading-4 text-muted">
                         {option.description}
                       </span>
                     )}

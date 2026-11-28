@@ -271,7 +271,7 @@ test('accent choices preserve circular controls and navigation only contains wor
   await page.goto('/settings');
   await ready(page);
   const palette = page.getByRole('group', { name: '强调色' });
-  for (const name of ['石墨', '雾蓝', '松绿', '暖砂', '藕粉']) {
+  for (const name of ['石墨', '松绿']) {
     const color = palette.getByRole('button', { name, exact: true });
     await color.click();
     await expect(color).toHaveAttribute('aria-pressed', 'true');

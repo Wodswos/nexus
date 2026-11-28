@@ -6,8 +6,8 @@ export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttribute
     <input
       ref={ref}
       className={cn(
-        'h-9 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-foreground placeholder:text-muted/60 outline-none transition-colors',
-        'focus:border-[color-mix(in_srgb,var(--accent-from)_60%,transparent)] focus:ring-2 focus:ring-[var(--ring)]/30',
+        'h-9 w-full rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--bg-canvas)] px-3 text-sm text-foreground placeholder:text-[var(--text-disabled)] transition-colors',
+        'hover:border-[var(--border-strong)] focus-visible:border-[var(--accent-primary)]',
         'disabled:opacity-50',
         className,
       )}
@@ -22,8 +22,8 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, React.TextareaHTML
     <textarea
       ref={ref}
       className={cn(
-        'w-full resize-none rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-foreground placeholder:text-muted/60 outline-none transition-colors',
-        'focus:border-[color-mix(in_srgb,var(--accent-from)_60%,transparent)] focus:ring-2 focus:ring-[var(--ring)]/30',
+        'w-full resize-none rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--bg-canvas)] px-3 py-2 text-sm text-foreground placeholder:text-[var(--text-disabled)] transition-colors',
+        'hover:border-[var(--border-strong)] focus-visible:border-[var(--accent-primary)]',
         className,
       )}
       {...props}

@@ -73,14 +73,14 @@ export function DateTimeField({
       title={value == null ? title : `${title} · ${new Date(value).toLocaleString()}`}
       aria-label={title}
       className={cn(
-        'inline-flex min-h-8 min-w-[112px] items-center justify-between gap-2 rounded-lg border px-2.5 py-1 text-xs outline-none transition-colors hover:border-[var(--border-strong)] focus-visible:ring-2 focus-visible:ring-[var(--ring)]',
+        'inline-flex min-h-8 min-w-[112px] items-center justify-between gap-2 rounded-[var(--radius-md)] border px-2.5 py-1 text-xs outline-none transition-colors hover:border-[var(--border-strong)] focus-visible:ring-2 focus-visible:ring-[var(--ring)]',
         value == null
           ? 'border-dashed border-[var(--border-strong)] text-muted'
           : 'border-[var(--border)] bg-[var(--surface)]',
         compact && 'min-w-0 w-full gap-1 px-2',
       )}
     >
-      <span className={cn('min-w-0 tabular-nums', compact ? 'flex flex-wrap items-center gap-x-1 text-[11px] leading-4' : 'truncate')}>
+      <span className={cn('min-w-0 tabular-nums', compact ? 'flex flex-wrap items-center gap-x-1 text-micro leading-4' : 'truncate')}>
         {compact && value != null ? <><span>{new Date(value).getMonth() + 1}/{new Date(value).getDate()}</span>{timeOf(value) !== '00:00' && <span className="whitespace-nowrap text-muted"> · {timeOf(value)}</span>}</> : label}
       </span>
       <ChevronDown size={12} className="shrink-0 text-muted" />
@@ -105,7 +105,7 @@ export function DateTimeField({
     >
       <div className="min-h-0 overflow-y-auto">
         {!mobile && (
-          <div className="mb-3 flex items-center gap-2 text-[13px] font-medium">
+          <div className="mb-3 flex items-center gap-2 text-control font-medium">
             <CalendarDays size={15} className="text-muted" />
             {title}
           </div>
@@ -124,7 +124,7 @@ export function DateTimeField({
                 aria-pressed={date === day}
                 onClick={() => setDate(day)}
                 className={cn(
-                  'min-h-8 rounded-lg border text-xs',
+                  'min-h-8 rounded-[var(--radius-md)] border text-xs',
                   date === day
                     ? 'border-transparent bg-[var(--selection)] text-[var(--accent-solid)]'
                     : 'border-[var(--border)] text-muted hover:bg-[var(--surface)]',
@@ -137,7 +137,7 @@ export function DateTimeField({
         </div>
         <CalendarPicker key={date.slice(0, 7)} value={date} onChange={setDate} />
         <div className="mt-3 grid grid-cols-[1.3fr_1fr] gap-2 border-t border-[var(--border)] pt-3">
-          <label className="block min-w-0 space-y-1.5 text-[11px] text-muted">
+          <label className="block min-w-0 space-y-1.5 text-micro text-muted">
             <span>日期</span>
             <input
               aria-label={`${title}日期`}
@@ -145,10 +145,10 @@ export function DateTimeField({
               required
               value={date}
               onChange={(event) => setDate(event.target.value)}
-              className="calendar-date-input h-9 w-full min-w-0 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 text-xs text-foreground outline-none focus:border-[var(--accent-solid)]"
+              className="calendar-date-input h-9 w-full min-w-0 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-2 text-xs text-foreground outline-none focus:border-[var(--accent-solid)]"
             />
           </label>
-          <label className="block min-w-0 space-y-1.5 text-[11px] text-muted">
+          <label className="block min-w-0 space-y-1.5 text-micro text-muted">
             <span className="flex items-center gap-1">
               <Clock3 size={11} />
               时间
@@ -158,7 +158,7 @@ export function DateTimeField({
               type="time"
               value={time}
               onChange={(event) => setTime(event.target.value)}
-              className="h-9 w-full min-w-0 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 text-xs text-foreground outline-none focus:border-[var(--accent-solid)]"
+              className="h-9 w-full min-w-0 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-2 text-xs text-foreground outline-none focus:border-[var(--accent-solid)]"
             />
           </label>
         </div>
@@ -171,7 +171,7 @@ export function DateTimeField({
             setOpen(false);
             onChange(null);
           }}
-          className="min-h-8 rounded-md px-1 text-xs text-muted hover:text-[var(--danger)] disabled:opacity-35"
+          className="min-h-8 rounded-[var(--radius-sm)] px-1 text-xs text-muted hover:text-[var(--danger)] disabled:opacity-35"
         >
           清除日期
         </button>
@@ -231,7 +231,7 @@ export function DateTimeField({
           aria-label={`清除${title}`}
           title="清除时间"
           onClick={() => onChange(null)}
-          className="grid h-8 w-6 shrink-0 place-items-center rounded-md text-muted/60 hover:bg-[var(--surface)] hover:text-[var(--danger)]"
+          className="grid h-8 w-6 shrink-0 place-items-center rounded-[var(--radius-sm)] text-muted/60 hover:bg-[var(--surface)] hover:text-[var(--danger)]"
         >
           <X size={12} />
         </button>

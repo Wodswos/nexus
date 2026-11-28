@@ -108,7 +108,7 @@ export function WorkspaceConfiguration({
         sources: {} as Partial<Record<keyof WorkspaceConfig, string>>,
       };
   const inputClass =
-    'h-9 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 text-xs outline-none focus:border-[var(--accent-solid)]';
+    'h-9 w-full rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-2.5 text-xs outline-none focus:border-[var(--accent-solid)]';
   const fields = WORKSPACE_CONFIG_KEYS.filter((key) => {
     if (['session', 'branch'].includes(key)) return false;
     if (['cpuLimit', 'memoryLimit', 'runUser'].includes(key)) return ['docker', 'kubernetes'].includes(values.runtime);
@@ -219,7 +219,7 @@ export function WorkspaceConfiguration({
       <div key={key} className="block space-y-1.5 text-xs">
         <span className="flex items-center justify-between gap-2">
           <span>{fieldNames[key]}</span>
-          <span className="flex items-center gap-2 text-[10px] text-muted">
+          <span className="flex items-center gap-2 text-micro text-muted">
             {!profileEditor && source && `来自 ${source}`}
             {!profileEditor && own && !inherit.has(key) && (
               <button
@@ -274,14 +274,14 @@ export function WorkspaceConfiguration({
         ) : key === 'workRoot' ? (
           <div className="flex items-center gap-2">
             {editingRoot ? <input aria-label={fieldNames[key]} autoFocus value={values.workRoot ?? ''} onChange={event => update(key, event.target.value)} placeholder={values.directory || workspaceDefaultRoot(values.runtime)} className={inputClass} />
-              : <output aria-label={fieldNames[key]} className="min-w-0 flex-1 break-all rounded-lg bg-[var(--surface)] px-2.5 py-2 font-mono text-xs">{values.workRoot || values.directory || workspaceDefaultRoot(values.runtime)}</output>}
-            <button type="button" aria-label={editingRoot ? '完成工作根目录编辑' : '编辑持久化工作根目录'} title={editingRoot ? '完成编辑' : '编辑'} disabled={busy} onClick={() => setEditingRoot(value => !value)} className="shrink-0 rounded-md p-2 text-muted hover:bg-[var(--surface)]">{editingRoot ? '完成' : <Pencil size={14} />}</button>
-            {(editingRoot || values.workRoot) && <button type="button" aria-label="恢复默认工作根目录" title="恢复默认" disabled={busy} onClick={() => { update('workRoot', ''); setEditingRoot(false); }} className="shrink-0 rounded-md p-2 text-muted hover:bg-[var(--surface)]"><RotateCcw size={14} /></button>}
+              : <output aria-label={fieldNames[key]} className="min-w-0 flex-1 break-all rounded-[var(--radius-md)] bg-[var(--surface)] px-2.5 py-2 font-mono text-xs">{values.workRoot || values.directory || workspaceDefaultRoot(values.runtime)}</output>}
+            <button type="button" aria-label={editingRoot ? '完成工作根目录编辑' : '编辑持久化工作根目录'} title={editingRoot ? '完成编辑' : '编辑'} disabled={busy} onClick={() => setEditingRoot(value => !value)} className="shrink-0 rounded-[var(--radius-sm)] p-2 text-muted hover:bg-[var(--surface)]">{editingRoot ? '完成' : <Pencil size={14} />}</button>
+            {(editingRoot || values.workRoot) && <button type="button" aria-label="恢复默认工作根目录" title="恢复默认" disabled={busy} onClick={() => { update('workRoot', ''); setEditingRoot(false); }} className="shrink-0 rounded-[var(--radius-sm)] p-2 text-muted hover:bg-[var(--surface)]"><RotateCcw size={14} /></button>}
           </div>
         ) : key === 'prTarget' ? (
           <div className="space-y-1.5">
             <input aria-label={fieldNames[key]} value={values.prTarget || values.ref} onChange={event => update(key, event.target.value === values.ref ? '' : event.target.value)} placeholder="自动采用仓库默认分支" className={inputClass} />
-            {values.prTarget && <button type="button" onClick={() => update('prTarget', '')} className="text-[10px] text-muted underline underline-offset-2">跟随基准分支</button>}
+            {values.prTarget && <button type="button" onClick={() => update('prTarget', '')} className="text-micro text-muted underline underline-offset-2">跟随基准分支</button>}
           </div>
         ) : key === 'agentCommand' ? (
           <textarea
@@ -290,7 +290,7 @@ export function WorkspaceConfiguration({
             onChange={(event) => update(key, event.target.value)}
             rows={2}
             placeholder="已安装的 ACP Agent 命令，创建时可再次调整"
-            className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-2 font-mono text-xs outline-none"
+            className="w-full rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-2 font-mono text-xs outline-none"
           />
         ) : (
           <input
@@ -318,12 +318,12 @@ export function WorkspaceConfiguration({
           onValueChange={(value) => update('kubeConnectionId', value === 'direct' ? '__new__' : '')}
           options={[{ value: 'direct', label: '直接连接 Kubernetes API' }, { value: 'ssh', label: '通过 SSH 主机上的 kubectl' }]} className="w-full" />}
         {key === 'serverId' && (
-          <span className="block text-[10px] leading-4 text-muted">
+          <span className="block text-micro leading-4 text-muted">
             SSH 连接在应用设置中管理。Docker 或 kubectl 在所选主机上执行。
           </span>
         )}
         {key === 'secretRef' && (
-          <span className="block text-[10px] leading-4 text-muted">
+          <span className="block text-micro leading-4 text-muted">
             环境通过引用读取 Git／Agent 凭据，例如
             GITHUB_TOKEN。配置中保存引用。
           </span>
@@ -374,16 +374,16 @@ export function WorkspaceConfiguration({
                 setEditingRoot(false);
                 setMode(selected || value === '__inherit__' ? 'inherit' : 'override');
               }} />
-            <div className="flex gap-3 text-[11px] text-muted">
+            <div className="flex gap-3 text-micro text-muted">
               <button type="button" disabled={!user || busy} onClick={() => editShared('new')} className="min-h-7 underline underline-offset-2 disabled:opacity-40">创建 Workspace 模板</button>
               {selectedProfile && <button type="button" disabled={!user || busy} onClick={() => editShared('edit')} className="min-h-7 underline underline-offset-2">编辑此 Workspace 模板</button>}
             </div>
-            {profileChoice === '__inherit__' && initial.workspaceId && <p className="text-[10px] text-muted">当前继承 {profiles.find((profile) => profile.id === initial.workspaceId)?.name ?? '父节点 Workspace 模板'}</p>}
+            {profileChoice === '__inherit__' && initial.workspaceId && <p className="text-micro text-muted">当前继承 {profiles.find((profile) => profile.id === initial.workspaceId)?.name ?? '父节点 Workspace 模板'}</p>}
           </div>
-          {profileEditor && <div className="space-y-3 rounded-lg border border-[var(--border)] p-3">
+          {profileEditor && <div className="space-y-3 rounded-[var(--radius-md)] border border-[var(--border)] p-3">
             <label className="block space-y-1.5 text-xs"><span>Workspace 模板名称</span><input aria-label="Workspace 模板名称" value={profileName} onChange={(event) => setProfileName(event.target.value)} required maxLength={100} className={inputClass} /></label>
-            <p className="text-[10px] leading-5 text-muted">{profileEditor === 'edit' ? '保存后，所有引用此 Workspace 模板的节点都会采用这组配置。已创建的环境保留原配置。' : '保存为独立配置，其他任务也可以选择这个 Workspace 模板。'}</p>
-            {!manageProfile && <button type="button" className="text-[11px] text-muted underline" onClick={cancelShared}>取消编辑共享配置</button>}
+            <p className="text-micro leading-5 text-muted">{profileEditor === 'edit' ? '保存后，所有引用此 Workspace 模板的节点都会采用这组配置。已创建的环境保留原配置。' : '保存为独立配置，其他任务也可以选择这个 Workspace 模板。'}</p>
+            {!manageProfile && <button type="button" className="text-micro text-muted underline" onClick={cancelShared}>取消编辑共享配置</button>}
           </div>}
           {!manageProfile && <SelectField
             aria-label="Workspace 继承方式"
@@ -399,12 +399,12 @@ export function WorkspaceConfiguration({
           />}
           {mode === 'override' && fieldGroups.map(group => {
             const content = <div className="space-y-3">{group.fields.filter(key => fields.includes(key)).map(renderField)}</div>;
-            return group.advanced ? <details key={group.title} className="rounded-xl border border-[var(--border)] p-4"><summary className="cursor-pointer text-xs font-medium">{group.title}</summary><div className="mt-3">{content}</div></details>
-              : <fieldset key={group.title} className="rounded-xl border border-[var(--border)] p-4"><legend className="px-1 text-xs font-medium">{group.title}</legend>{content}</fieldset>;
+            return group.advanced ? <details key={group.title} className="rounded-[var(--radius-lg)] border border-[var(--border)] p-4"><summary className="cursor-pointer text-xs font-medium">{group.title}</summary><div className="mt-3">{content}</div></details>
+              : <fieldset key={group.title} className="rounded-[var(--radius-lg)] border border-[var(--border)] p-4"><legend className="px-1 text-xs font-medium">{group.title}</legend>{content}</fieldset>;
           })}
           {profileEditor === 'edit' && selectedProfile && <div className="space-y-2">
             {deleteProfile && <p className="text-xs text-muted">确认删除此共享配置？正在被节点引用的 Workspace 模板需要先解除绑定。</p>}
-            <button type="button" disabled={busy} className="min-h-7 text-[11px] text-[var(--danger)]" onClick={() => {
+            <button type="button" disabled={busy} className="min-h-7 text-micro text-[var(--danger)]" onClick={() => {
               if (!deleteProfile) { setDeleteProfile(true); return; }
               setBusy(true); setError('');
               void agentWorkspaceApi.deleteProfile(selectedProfile.id).then(() => {

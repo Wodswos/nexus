@@ -92,7 +92,7 @@ export function WorkAreaCleanup({
                 <label className="block">
                   输入完整路径确认
                   <input
-                    className="mt-2 w-full rounded-md border border-[var(--border)] bg-transparent p-2"
+                    className="mt-2 w-full rounded-[var(--radius-sm)] border border-[var(--border)] bg-transparent p-2"
                     aria-label="确认清理目录"
                     value={confirmation}
                     onChange={(e) => setConfirmation(e.target.value)}

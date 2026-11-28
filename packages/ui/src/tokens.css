@@ -1,0 +1,158 @@
+/* UI_ENGINEERING_SPEC.md is the source of truth. Raw palette values live here. */
+:root {
+  --bg-canvas: #ffffff;
+  --bg-subtle: #f8fafc;
+  --bg-muted: #f1f5f9;
+  --bg-hover: rgba(15, 23, 42, 0.04);
+  --bg-active: rgba(15, 23, 42, 0.07);
+  --bg-overlay: rgba(15, 23, 42, 0.4);
+  --border-hairline: rgba(15, 23, 42, 0.06);
+  --border-default: rgba(15, 23, 42, 0.10);
+  --border-strong: rgba(15, 23, 42, 0.18);
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  --text-disabled: #94a3b8;
+  --text-inverse: #ffffff;
+  --text-on-custom-light: #0f172a;
+  --text-on-custom-dark: #ffffff;
+  --accent-primary: #2e6f5e;
+  --accent-surface: rgba(46, 111, 94, 0.08);
+  --accent-hover: color-mix(in srgb, var(--accent-primary), var(--text-primary) 12%);
+  --accent-pressed: color-mix(in srgb, var(--accent-primary), var(--text-primary) 24%);
+  --status-danger: #dc2626;
+  --status-warning: #d97706;
+  --status-success: #16a34a;
+  /* Status fills and readable status text are deliberately separate. */
+  --status-warning-text: #92400e;
+  --status-success-text: #166534;
+  --canvas-grid: #e2e8f0;
+  --canvas-edge: #cbd5e1;
+  --canvas-root: var(--accent-primary);
+  --canvas-root-text: #ffffff;
+  --canvas-root-muted: #f1f5f9;
+  --canvas-progress-track: rgba(255, 255, 255, 0.25);
+  --terminal-bg: #0f172a;
+  --terminal-text: #e2e8f0;
+  --terminal-cursor: #f8fafc;
+  --terminal-selection: #475569;
+  /* Content palette: only explicit user-authored node / habit colors use these. */
+  --content-blue: #57799b;
+  --content-sage: #628575;
+  --content-sand: #9b8157;
+  --content-rose: #a06e7b;
+  --content-lavender: #82749d;
+
+  --font-ui: 'Inter Variable', Inter, -apple-system, 'SF Pro Text', 'PingFang SC', 'Noto Sans SC', sans-serif;
+  --font-code: 'JetBrains Mono Variable', 'JetBrains Mono', 'SF Mono', monospace;
+  --text-page-title: 18px;
+  --text-section-title: 14px;
+  --text-body: 13.5px;
+  --text-control: 13px;
+  --text-caption: 12px;
+  --text-micro: 11px;
+  --leading-page: 24px;
+  --leading-section: 20px;
+  --leading-body: 20px;
+  --leading-control: 18px;
+  --leading-caption: 16px;
+  --leading-micro: 14px;
+  --weight-title: 600;
+  --weight-body: 450;
+  --weight-control: 500;
+  --weight-selected: 550;
+  --tracking-page: -0.02em;
+  --tracking-section: -0.01em;
+  --tracking-caption: 0.01em;
+  --tracking-micro: 0.02em;
+  --space-0: 0px;
+  --space-2: 2px;
+  --space-4: 4px;
+  --space-6: 6px;
+  --space-8: 8px;
+  --space-12: 12px;
+  --space-16: 16px;
+  --space-20: 20px;
+  --space-24: 24px;
+  --space-32: 32px;
+  /* Component dimensions explicitly specified by the design (not general gaps). */
+  --control-inset: 10px;
+  --badge-inset: 5px;
+  --node-inset: 14px;
+  --sidebar-width-default: 232px;
+  --header-height: 52px;
+  --filter-height: 40px;
+  --nav-height: 32px;
+  --capture-height: 34px;
+  --control-height: 32px;
+  --pill-height: 28px;
+  --badge-height: 18px;
+  --icon-size: 16px;
+  --icon-small: 14px;
+  --icon-stroke: 1.5px;
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-pill: 999px;
+  --shadow-xs: 0 1px 2px 0 rgba(15, 23, 42, 0.05);
+  --shadow-sm: 0 4px 12px -2px rgba(15, 23, 42, 0.10), 0 0 0 1px rgba(15, 23, 42, 0.06);
+  --shadow-md: 0 12px 28px -4px rgba(15, 23, 42, 0.14), 0 0 0 1px rgba(15, 23, 42, 0.08);
+  --duration-color: 120ms;
+  --duration-move: 180ms;
+  --ease-ui: cubic-bezier(0.2, 0, 0, 1);
+  --opacity-disabled: 0.45;
+}
+
+/* Dark mode preserves Slate surfaces and a single forest accent. */
+.dark {
+  --bg-canvas: #0f172a;
+  --bg-subtle: #0f172a;
+  --bg-muted: #1e293b;
+  --bg-hover: rgba(148, 163, 184, 0.08);
+  --bg-active: rgba(148, 163, 184, 0.14);
+  --border-hairline: rgba(148, 163, 184, 0.10);
+  --border-default: rgba(148, 163, 184, 0.18);
+  --border-strong: rgba(148, 163, 184, 0.32);
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --text-disabled: #64748b;
+  --accent-primary: #80c7b2;
+  --accent-surface: rgba(128, 199, 178, 0.12);
+  --text-inverse: #0f172a;
+  --status-danger: #f87171;
+  --status-warning: #fbbf24;
+  --status-success: #4ade80;
+  --status-warning-text: #fbbf24;
+  --status-success-text: #4ade80;
+  --canvas-grid: #334155;
+  --canvas-edge: #475569;
+  --canvas-root: #2e6f5e;
+}
+
+[data-accent='emerald'] {
+  --accent-primary: #2e6f5e;
+  --accent-surface: rgba(46, 111, 94, 0.08);
+  --canvas-root: #2e6f5e;
+}
+.dark[data-accent='emerald'], .dark [data-accent='emerald'] {
+  --accent-primary: #80c7b2;
+  --accent-surface: rgba(128, 199, 178, 0.12);
+}
+[data-accent='mono'] {
+  --accent-primary: #18181b;
+  --accent-surface: rgba(24, 24, 27, 0.08);
+  --canvas-root: #18181b;
+}
+.dark[data-accent='mono'] {
+  --accent-primary: #e2e8f0;
+  --accent-surface: rgba(226, 232, 240, 0.10);
+  --canvas-root: #1e293b;
+}
+
+/* Register the semantic size names as Tailwind utilities. */
+@theme {
+  --text-micro: 11px;
+  --text-control: 13px;
+}

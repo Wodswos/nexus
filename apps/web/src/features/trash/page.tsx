@@ -97,7 +97,7 @@ function TrashContents() {
         ) : !rows.length ? (
           <EmptyState icon={<Search size={24} />} title="没有找到匹配内容" sub="试试其他标题或备注关键词。" />
         ) : (
-          <div className="mx-auto max-w-5xl overflow-hidden rounded-xl border border-[var(--border)]">
+          <div className="mx-auto max-w-5xl overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border)]">
             {rows.map(({ task, depth, kids }) => (
               <div key={task.id} data-trash-id={task.id} className="flex min-w-0 items-center gap-2 border-b border-[var(--border)] py-3 pr-2 last:border-b-0 hover:bg-[var(--surface)] sm:pr-3" style={{ paddingLeft: 8 + Math.min(depth, 4) * 16 }}>
                 {kids.length ? <button
@@ -110,7 +110,7 @@ function TrashContents() {
                 {isStructural(task) ? <Folder size={15} className="shrink-0 text-muted" /> : <Circle size={14} className="shrink-0 text-muted" />}
                 <button aria-label={`查看已删除的 ${task.title}`} onClick={() => setPreviewId(task.id)} className="min-w-0 flex-1 text-left">
                   <span className="block truncate text-sm">{task.title || '未命名'}</span>
-                  <span className="mt-1 block truncate text-[10px] text-muted">{labelOf(task)} · {dateOf(task.deletedAt!)}{depth === 0 && task.parentId ? ` · ${context(task)}` : ''}</span>
+                  <span className="mt-1 block truncate text-micro text-muted">{labelOf(task)} · {dateOf(task.deletedAt!)}{depth === 0 && task.parentId ? ` · ${context(task)}` : ''}</span>
                 </button>
                 <Button aria-label={`恢复 ${task.title}`} size="sm" variant="ghost" disabled={busy} onClick={() => restore(task)} className="shrink-0 !px-2"><RotateCcw size={14} /><span className="hidden sm:inline">恢复</span></Button>
                 <Button aria-label={`彻底删除 ${task.title}`} size="icon-sm" variant="ghost" disabled={busy} onClick={() => askPermanent(task)} className="shrink-0 text-muted hover:text-[var(--danger)]"><Trash2 size={14} /></Button>

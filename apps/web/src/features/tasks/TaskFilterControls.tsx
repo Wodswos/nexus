@@ -71,15 +71,10 @@ export function TaskFilterControls() {
             }
             setParams(next, { replace: true });
           }}
-          className={cn(
-            'h-8 shrink-0 whitespace-nowrap rounded-md px-2.5 transition-colors',
-            selected === key
-              ? 'bg-[var(--selection)] font-medium text-[var(--accent-solid)]'
-              : 'text-muted hover:bg-[var(--surface)] hover:text-foreground',
-          )}
+          className="filter-pill"
         >
           {label}
-          {(key === 'high' || key === 'unreviewed') && <span className="ml-1 tabular-nums opacity-70">{counts[key]}</span>}
+          {(key === 'high' || key === 'unreviewed') && <span className="ui-count">{counts[key] > 999 ? '999+' : counts[key]}</span>}
         </button>
       ))}
     </div>
@@ -148,7 +143,7 @@ export function MoreTaskFilters() {
           setOpen((value) => !value);
         }}
         className={cn(
-          'inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-xs',
+          'inline-flex h-8 items-center gap-1.5 rounded-[var(--radius-sm)] px-2.5 text-xs',
           count
             ? 'bg-[var(--selection)] text-[var(--accent-solid)]'
             : 'text-muted hover:bg-[var(--surface)] hover:text-foreground',
@@ -162,11 +157,11 @@ export function MoreTaskFilters() {
           role="dialog"
           aria-label="更多任务筛选"
           style={position}
-          className="fixed z-40 max-h-[calc(100dvh-24px)] w-60 max-w-[calc(100vw-24px)] space-y-3 overflow-y-auto rounded-xl border border-[var(--border-strong)] bg-[var(--surface-raised)] p-3 shadow-[0_12px_40px_rgb(0_0_0/0.12)]"
+          className="fixed z-40 max-h-[calc(100dvh-24px)] w-60 max-w-[calc(100vw-24px)] space-y-3 overflow-y-auto rounded-[var(--radius-lg)] border border-[var(--border-strong)] bg-[var(--surface-raised)] p-3 shadow-md"
         >
           <div className="flex items-center justify-between border-b border-[var(--border)] pb-2">
             <span className="text-xs font-medium">筛选任务</span>
-            <span className="text-[10px] text-muted">{count ? `${count} 个条件` : '全部任务'}</span>
+            <span className="text-micro text-muted">{count ? `${count} 个条件` : '全部任务'}</span>
           </div>
           <label className="block space-y-1.5 text-xs">
             <span className="text-muted">状态</span>
@@ -239,7 +234,7 @@ export function TaskSortControl() {
   return <SelectField
     aria-label="任务排序"
     value={readTaskSort(params)}
-    className="h-8 w-28 shrink-0 text-[11px]"
+    className="h-8 w-28 shrink-0 text-micro"
     options={[{ value: 'manual', label: '手动顺序' }, { value: 'priority', label: '优先级排序', description: 'P0 → P3，已完成靠后，父级随最高优先级子任务排列' }]}
     onValueChange={value => {
       const next = new URLSearchParams(window.location.search);

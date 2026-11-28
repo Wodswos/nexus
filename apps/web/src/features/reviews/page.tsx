@@ -60,9 +60,9 @@ export default function ReviewsPage() {
         {timeline ? <ReviewTimeline key={store.userId} reviews={data.reviews} /> : <>
         {params.get('from') === 'timeline' && <Link to={`/reviews?${timelineParams}`} className="mb-4 inline-flex items-center gap-1.5 text-xs text-muted hover:text-foreground"><ArrowLeft size={13} />返回时间线</Link>}
         <div className="mb-5 flex flex-wrap items-center gap-2">
-          <button aria-label="上一期复盘" className="grid h-8 w-8 place-items-center rounded-md text-muted hover:bg-[var(--surface)]" onClick={() => navigate(reviewPeriod(kind, addDays(dateFromDayKey(period.start), kind === 'daily' ? -1 : -7), data.settings.weekStartsOn))}><ArrowLeft size={15} /></button>
-          <input aria-label="复盘日期" type="date" max={dayKeyOf(now)} value={period.start} onChange={event => { if (validDayKey(event.target.value)) navigate(reviewPeriod(kind, dateFromDayKey(event.target.value), data.settings.weekStartsOn)); }} className="h-8 min-w-0 rounded-md border border-[var(--border)] bg-transparent px-2 text-xs outline-none focus:border-[var(--accent-solid)]" />
-          <button aria-label="下一期复盘" disabled={period.start >= current.start} className="grid h-8 w-8 place-items-center rounded-md text-muted hover:bg-[var(--surface)] disabled:opacity-30" onClick={() => navigate(reviewPeriod(kind, dateFromDayKey(period.end), data.settings.weekStartsOn))}><ArrowRight size={15} /></button>
+          <button aria-label="上一期复盘" className="grid h-8 w-8 place-items-center rounded-[var(--radius-sm)] text-muted hover:bg-[var(--surface)]" onClick={() => navigate(reviewPeriod(kind, addDays(dateFromDayKey(period.start), kind === 'daily' ? -1 : -7), data.settings.weekStartsOn))}><ArrowLeft size={15} /></button>
+          <input aria-label="复盘日期" type="date" max={dayKeyOf(now)} value={period.start} onChange={event => { if (validDayKey(event.target.value)) navigate(reviewPeriod(kind, dateFromDayKey(event.target.value), data.settings.weekStartsOn)); }} className="h-8 min-w-0 rounded-[var(--radius-sm)] border border-[var(--border)] bg-transparent px-2 text-xs outline-none focus:border-[var(--accent-solid)]" />
+          <button aria-label="下一期复盘" disabled={period.start >= current.start} className="grid h-8 w-8 place-items-center rounded-[var(--radius-sm)] text-muted hover:bg-[var(--surface)] disabled:opacity-30" onClick={() => navigate(reviewPeriod(kind, dateFromDayKey(period.end), data.settings.weekStartsOn))}><ArrowRight size={15} /></button>
           <Button variant="ghost" size="sm" onClick={() => navigate(current)}>{kind === 'daily' ? '今天' : '本周'}</Button>
           <span className="ml-auto text-xs text-muted">{kind === 'daily' ? '约 3 分钟' : '约 10 分钟'}</span>
         </div>
@@ -156,7 +156,7 @@ function ReviewEditor({ period, now }: { period: ReviewPeriod; now: number }) {
   const dailyEntries = data.reviews.filter(review => review.kind === 'daily' && review.periodStart >= period.start && review.periodStart < period.end).sort((a, b) => a.periodStart.localeCompare(b.periodStart));
   return (
     <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
-      <article className="min-w-0 rounded-xl border border-[var(--border)] bg-[var(--background)]">
+      <article className="min-w-0 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--background)]">
         <div className="border-b border-[var(--border)] px-5 py-5 sm:px-7">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-base font-medium">{periodLabel(period)}</h2>
@@ -185,14 +185,14 @@ function ReviewEditor({ period, now }: { period: ReviewPeriod; now: number }) {
                 onCompositionEnd={draft.compositionEnd}
                 readOnly={completed} disabled={busy} maxLength={100000}
                 placeholder={question.prompt}
-                className="min-h-24 w-full resize-y rounded-lg border border-[var(--border)] bg-[var(--background)] px-3.5 py-3 text-sm leading-7 text-foreground outline-none transition-colors placeholder:text-muted/65 focus:border-[var(--accent-solid)] read-only:border-transparent read-only:bg-[var(--surface)] disabled:opacity-70"
+                className="min-h-24 w-full resize-y rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--background)] px-3.5 py-3 text-sm leading-7 text-foreground outline-none transition-colors placeholder:text-muted/65 focus:border-[var(--accent-solid)] read-only:border-transparent read-only:bg-[var(--surface)] disabled:opacity-70"
               />
             </section>
           ))}
         </div>
         <footer className="flex flex-wrap items-center gap-3 border-t border-[var(--border)] px-5 py-4 sm:px-7">
-          <span role="status" aria-label="复盘保存状态" className="mr-auto text-[11px] text-muted">{draft.status || (draft.review ? '已保存' : '填写后自动保存')}</span>
-          <button aria-label="导出复盘 Markdown" disabled={!hasContent || busy} onClick={() => void download()} title="导出 Markdown" className="grid h-8 w-8 place-items-center rounded-md text-muted hover:bg-[var(--surface)] disabled:opacity-30"><Download size={15} /></button>
+          <span role="status" aria-label="复盘保存状态" className="mr-auto text-micro text-muted">{draft.status || (draft.review ? '已保存' : '填写后自动保存')}</span>
+          <button aria-label="导出复盘 Markdown" disabled={!hasContent || busy} onClick={() => void download()} title="导出 Markdown" className="grid h-8 w-8 place-items-center rounded-[var(--radius-sm)] text-muted hover:bg-[var(--surface)] disabled:opacity-30"><Download size={15} /></button>
           {completed ? <Button variant="outline" size="sm" onClick={async () => {
             store.stopUndoCapture(); store.updateReview(period, { completedAt: null }); store.stopUndoCapture();
             try { await store.flushPersistence(); } catch { setError('本地保存失败，请保留页面'); }
@@ -201,12 +201,12 @@ function ReviewEditor({ period, now }: { period: ReviewPeriod; now: number }) {
         </footer>
       </article>
       <aside className="min-w-0 space-y-6">
-        <section aria-label="工作回顾" className="rounded-xl bg-[var(--surface)] p-4">
+        <section aria-label="工作回顾" className="rounded-[var(--radius-lg)] bg-[var(--surface)] p-4">
           <h2 className="text-sm font-medium">工作回顾</h2>
-          <p className="mt-1.5 text-[11px] leading-5 text-muted">{completed ? '完成复盘时的记录快照' : '按现有任务状态和专注记录汇总'}</p>
+          <p className="mt-1.5 text-micro leading-5 text-muted">{completed ? '完成复盘时的记录快照' : '按现有任务状态和专注记录汇总'}</p>
           <div className="mt-4 grid grid-cols-2 gap-3 border-b border-[var(--border)] pb-4">
-            <div><div className="text-xl font-medium tabular-nums" data-testid="review-completed-count">{facts.completed.length}<span className="ml-1 text-xs font-normal text-muted">项</span></div><div className="mt-1 text-[11px] text-muted">完成任务</div></div>
-            <div><div className="text-xl font-medium tabular-nums" data-testid="review-focus-duration">{fmtDuration(facts.focusMin)}</div><div className="mt-1 text-[11px] text-muted">专注时间</div></div>
+            <div><div className="text-xl font-medium tabular-nums" data-testid="review-completed-count">{facts.completed.length}<span className="ml-1 text-xs font-normal text-muted">项</span></div><div className="mt-1 text-micro text-muted">完成任务</div></div>
+            <div><div className="text-xl font-medium tabular-nums" data-testid="review-focus-duration">{fmtDuration(facts.focusMin)}</div><div className="mt-1 text-micro text-muted">专注时间</div></div>
           </div>
           <p className="mt-3 text-xs text-muted">计划 {facts.planned?.length ?? '—'} 项<span className="mx-2">·</span>尚未完成 {facts.pending.length} 项</p>
           {facts.projects.length > 0 && <details className="mt-4 border-t border-[var(--border)] pt-3">
@@ -219,7 +219,7 @@ function ReviewEditor({ period, now }: { period: ReviewPeriod; now: number }) {
         </section>
         {weekly && <section aria-label="本周日报" className="px-1">
           <h2 className="text-xs font-medium">这一周的日报 <span className="ml-1 text-muted">{dailyEntries.filter(review => review.completedAt != null).length} 篇已复盘</span></h2>
-          {dailyEntries.length ? <div className="mt-3 space-y-2">{dailyEntries.map(review => <Link key={review.id} to={`/reviews?kind=daily&date=${review.periodStart}`} className="block rounded-md px-2 py-2 hover:bg-[var(--surface)]"><span className="flex justify-between text-xs"><span>{review.periodStart}</span><span className="text-muted">{review.completedAt != null ? '已复盘' : '草稿'}</span></span><span className="mt-1 block truncate text-xs text-muted">{review.highlights || review.facts?.completed.map(task => task.title).join('、') || review.plan || review.friction || review.resolution || review.nextSteps}</span></Link>)}</div> : <p className="mt-3 text-xs leading-5 text-muted">写下的日报会汇集在这里，帮你回想这一周。</p>}
+          {dailyEntries.length ? <div className="mt-3 space-y-2">{dailyEntries.map(review => <Link key={review.id} to={`/reviews?kind=daily&date=${review.periodStart}`} className="block rounded-[var(--radius-sm)] px-2 py-2 hover:bg-[var(--surface)]"><span className="flex justify-between text-xs"><span>{review.periodStart}</span><span className="text-muted">{review.completedAt != null ? '已复盘' : '草稿'}</span></span><span className="mt-1 block truncate text-xs text-muted">{review.highlights || review.facts?.completed.map(task => task.title).join('、') || review.plan || review.friction || review.resolution || review.nextSteps}</span></Link>)}</div> : <p className="mt-3 text-xs leading-5 text-muted">写下的日报会汇集在这里，帮你回想这一周。</p>}
         </section>}
         <ReviewHistory reviews={data.reviews} selectedId={reviewId(period)} />
         <ReminderSettings settings={data.settings} />
@@ -238,20 +238,20 @@ function ReviewTaskList({ label, tasks, empty, done = false, readOnly, busy, onC
   onChange: (id: string, done: boolean) => Promise<void>;
 }) {
   const selectTask = useUI(state => state.selectTask);
-  return tasks.length ? <ul aria-label={label} className="mb-3 max-h-80 space-y-1 overflow-y-auto rounded-lg border border-[var(--border)] p-2">
+  return tasks.length ? <ul aria-label={label} className="mb-3 max-h-80 space-y-1 overflow-y-auto rounded-[var(--radius-md)] border border-[var(--border)] p-2">
     {tasks.map(task => {
       const checked = done || task.done === true;
-      return <li key={task.id} className="flex items-start gap-1 rounded-md hover:bg-[var(--surface)]">
+      return <li key={task.id} className="flex items-start gap-1 rounded-[var(--radius-sm)] hover:bg-[var(--surface)]">
         <button role="checkbox" aria-checked={checked} aria-label={`${checked ? '标记未完成' : '完成'} ${task.title}`} disabled={readOnly || busy} onClick={() => void onChange(task.id, !checked)} className="task-check mt-1 shrink-0 disabled:cursor-default">
           <span className="task-check-mark">{checked && <Check size={11} strokeWidth={1.8} />}</span>
         </button>
         <button onClick={() => selectTask(task.id)} className="min-w-0 flex-1 rounded px-1 py-2 text-left text-sm leading-5">
           <span className={cn('block break-words', checked && 'text-muted')}>{task.title}</span>
-          <span className="mt-0.5 block truncate text-[10px] text-muted">{task.project}</span>
+          <span className="mt-0.5 block truncate text-micro text-muted">{task.project}</span>
         </button>
       </li>;
     })}
-  </ul> : <p className="mb-3 rounded-lg bg-[var(--surface)] px-3 py-2.5 text-xs leading-5 text-muted">{empty}</p>;
+  </ul> : <p className="mb-3 rounded-[var(--radius-md)] bg-[var(--surface)] px-3 py-2.5 text-xs leading-5 text-muted">{empty}</p>;
 }
 
 function ReviewHistory({ reviews, selectedId }: { reviews: Review[]; selectedId: string }) {
@@ -260,9 +260,9 @@ function ReviewHistory({ reviews, selectedId }: { reviews: Review[]; selectedId:
   return <section aria-label="复盘历史" className="px-1">
     <h2 className="flex items-center gap-2 text-xs font-medium"><BookOpen size={13} />复盘记录<span className="font-normal text-muted">{reviews.length}</span></h2>
     <Link to="/reviews?view=timeline" className="mt-2 inline-flex items-center gap-1 text-xs text-[var(--accent-solid)]">查看全部时间线<ArrowRight size={12} /></Link>
-    {reviews.length > 6 && <input aria-label="搜索复盘" value={search} onChange={event => setSearch(event.target.value)} placeholder="搜索日期或内容" className="mt-3 h-8 w-full rounded-md border border-[var(--border)] bg-transparent px-2 text-xs outline-none focus:border-[var(--accent-solid)]" />}
-    <nav aria-label="历史复盘" className="mt-3 max-h-64 space-y-1 overflow-y-auto">{sorted.map(review => <Link key={review.id} aria-current={review.id === selectedId ? 'page' : undefined} to={`/reviews?kind=${review.kind}&date=${review.periodStart}`} className={cn('flex items-center gap-2 rounded-md px-2 py-2 text-xs', review.id === selectedId ? 'bg-[var(--surface)]' : 'text-muted hover:bg-[var(--surface)] hover:text-foreground')}>
-      <span>{review.periodStart}</span><span>{labelOf(review.kind)}</span><span className="ml-auto text-[10px]">{review.completedAt != null ? '已复盘' : '草稿'}</span>
+    {reviews.length > 6 && <input aria-label="搜索复盘" value={search} onChange={event => setSearch(event.target.value)} placeholder="搜索日期或内容" className="mt-3 h-8 w-full rounded-[var(--radius-sm)] border border-[var(--border)] bg-transparent px-2 text-xs outline-none focus:border-[var(--accent-solid)]" />}
+    <nav aria-label="历史复盘" className="mt-3 max-h-64 space-y-1 overflow-y-auto">{sorted.map(review => <Link key={review.id} aria-current={review.id === selectedId ? 'page' : undefined} to={`/reviews?kind=${review.kind}&date=${review.periodStart}`} className={cn('flex items-center gap-2 rounded-[var(--radius-sm)] px-2 py-2 text-xs', review.id === selectedId ? 'bg-[var(--surface)]' : 'text-muted hover:bg-[var(--surface)] hover:text-foreground')}>
+      <span>{review.periodStart}</span><span>{labelOf(review.kind)}</span><span className="ml-auto text-micro">{review.completedAt != null ? '已复盘' : '草稿'}</span>
     </Link>)}</nav>
     {!sorted.length && <p className="text-xs leading-5 text-muted">{reviews.length ? '没有匹配的复盘。' : '写下第一句，开始积累自己的复盘记录。'}</p>}
   </section>;
@@ -282,8 +282,8 @@ function ReminderSettings({ settings }: { settings: Settings }) {
       <div className="flex items-center justify-between gap-2"><label className="flex items-center gap-2"><input type="checkbox" checked={settings.reviewDailyEnabled} onChange={event => void update({ reviewDailyEnabled: event.target.checked })} />日报提醒</label><input aria-label="日报提醒时间" type="time" value={settings.reviewDailyTime} onChange={event => { if (event.target.validity.valid && event.target.value) void update({ reviewDailyTime: event.target.value }); }} className="min-w-0 rounded border border-[var(--border)] bg-transparent p-1" /></div>
       <label className="flex items-center gap-2"><input type="checkbox" checked={settings.reviewWeeklyEnabled} onChange={event => void update({ reviewWeeklyEnabled: event.target.checked })} />周报提醒</label>
       <div className="flex gap-2"><select aria-label="周报提醒星期" value={settings.reviewWeeklyDay} onChange={event => void update({ reviewWeeklyDay: Number(event.target.value) })} className="min-w-0 flex-1 rounded border border-[var(--border)] bg-[var(--background)] p-1.5">{['日', '一', '二', '三', '四', '五', '六'].map((day, index) => <option key={day} value={index}>星期{day}</option>)}</select><input aria-label="周报提醒时间" type="time" value={settings.reviewWeeklyTime} onChange={event => { if (event.target.validity.valid && event.target.value) void update({ reviewWeeklyTime: event.target.value }); }} className="min-w-0 rounded border border-[var(--border)] bg-transparent p-1" /></div>
-      <p className="text-[11px] leading-5 text-muted">按设备本地时间，在打开应用时提醒；离开网页后不会定时推送。未完成的复盘会在下次打开时提示。</p>
-      {status && <p role="status" className="text-[11px] text-muted">{status}</p>}
+      <p className="text-micro leading-5 text-muted">按设备本地时间，在打开应用时提醒；离开网页后不会定时推送。未完成的复盘会在下次打开时提示。</p>
+      {status && <p role="status" className="text-micro text-muted">{status}</p>}
     </div>
   </details>;
 }

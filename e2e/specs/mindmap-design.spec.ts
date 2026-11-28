@@ -33,8 +33,8 @@ test('rightward hierarchy wraps long Chinese titles; focus and selection keep th
     task('future', { title: '其他工作', parentId: 'left' }),
   ]);
   await page.goto('/tasks?project=project&view=mindmap');
-  await expect(node(page, 'project').locator('[data-mind-title]')).toHaveCSS('font-size', '16px');
-  await expect(node(page, 'group').locator('[data-mind-title]')).toHaveCSS('font-size', '16px');
+  await expect(node(page, 'project').locator('[data-mind-title]')).toHaveCSS('font-size', '14px');
+  await expect(node(page, 'group').locator('[data-mind-title]')).toHaveCSS('font-size', '14px');
   await expect(node(page, 'left').locator('[data-mind-side]')).toHaveAttribute('data-mind-side', 'right');
   const title = node(page, 'long').locator('[data-mind-title]');
   await expect(title).toHaveText(long);
@@ -96,7 +96,7 @@ test('large maps open near the root and remember each project camera through nav
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
-test('default WenKai and optional licensed fonts load locally, inherit to children and survive reload', async ({ page }) => {
+test('default Inter and optional licensed fonts load locally, inherit to children and survive reload', async ({ page }) => {
   test.setTimeout(60000);
   const externalFonts: string[] = [], fontRequests: string[] = [], failures: string[] = [];
   page.on('request', (request) => { if (/\.(woff2?|ttf)(\?|$)/.test(request.url())) { fontRequests.push(request.url()); if (new URL(request.url()).origin !== new URL(page.url()).origin) externalFonts.push(request.url()); } });
@@ -104,11 +104,11 @@ test('default WenKai and optional licensed fonts load locally, inherit to childr
   await seed(page, [task('fonts', { kind: 'node', project: true, title: '中文字体 ABC 123' }), task('child', { parentId: 'fonts', title: '子任务：复盘与计划 ABC 123' })]);
   await page.goto('/tasks?project=fonts&view=mindmap');
   await expect(node(page, 'fonts')).toBeVisible();
-  await expect(node(page, 'fonts').locator('[data-mind-title]')).toHaveCSS('font-family', /LXGW WenKai/);
-  await expect(node(page, 'fonts').locator('[data-mind-title]')).toHaveCSS('font-size', '16px');
-  await expect(node(page, 'fonts').locator('[data-mind-title]')).toHaveCSS('font-weight', '700');
-  await expect.poll(() => page.evaluate(async () => (await document.fonts.load('700 16px "LXGW WenKai"', '中文 ABC 123')).length)).toBeGreaterThan(0);
-  expect(fontRequests.every((url) => url.includes('lxgw-wenkai'))).toBe(true);
+  await expect(node(page, 'fonts').locator('[data-mind-title]')).toHaveCSS('font-family', /Inter/);
+  await expect(node(page, 'fonts').locator('[data-mind-title]')).toHaveCSS('font-size', '14px');
+  await expect(node(page, 'fonts').locator('[data-mind-title]')).toHaveCSS('font-weight', '600');
+  await expect.poll(() => page.evaluate(async () => (await document.fonts.load('600 14px "Inter Variable"', '中文 ABC 123')).length)).toBeGreaterThan(0);
+  expect(fontRequests.some((url) => url.includes('inter'))).toBe(true);
   await node(page, 'fonts').locator('[data-mind-title]').click();
   await page.getByRole('button', { name: '调整所选节点样式', exact: true }).click();
   const panel = page.getByRole('dialog', { name: '节点样式', exact: true });

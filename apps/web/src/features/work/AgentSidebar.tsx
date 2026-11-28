@@ -179,7 +179,7 @@ export function AgentSidebar() {
                       <span className="block truncate">
                         {task?.title || agent.name}
                       </span>
-                      <span className="block truncate text-[11px] text-muted">
+                      <span className="block truncate text-micro text-muted">
                         {agent.name} · {agentStateLabels[agent.state]}
                       </span>
                     </span>

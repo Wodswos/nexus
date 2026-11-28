@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 
-const MIN = 208;
-const MAX = 360;
-const DEFAULT = 256;
+const MIN = 220;
+const MAX = 240;
+const DEFAULT = 232;
 const KEY = 'cortex:sidebar-width';
 const clamp = (width: number) => Math.round(Math.max(MIN, Math.min(MAX, width)));
 

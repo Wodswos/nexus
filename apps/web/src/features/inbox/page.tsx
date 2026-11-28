@@ -20,7 +20,7 @@ export default function InboxPage() {
         <h1 className="text-lg font-semibold">收集箱</h1>
         <Badge variant={items.length > 0 ? 'warning' : 'success'}>待处理 {items.length}</Badge>
         <Button size="sm" variant="secondary" className="ml-auto" onClick={() => ui.setQuickCapture(true)}>
-          <Plus className="h-3.5 w-3.5" /> 收集 <span className="font-mono text-[10px] opacity-60">N</span>
+          <Plus className="h-3.5 w-3.5" /> 收集 <span className="font-mono text-micro opacity-60">N</span>
         </Button>
       </div>
 
@@ -36,7 +36,7 @@ export default function InboxPage() {
             {items.map((t) => (
               <div
                 key={t.id}
-                className="group flex animate-fade-up items-center gap-3 rounded-2xl glass px-4 py-3 transition-all hover:border-[var(--border-strong)]"
+                className="group flex animate-fade-up items-center gap-3 rounded-[var(--radius-lg)] glass px-4 py-3 transition-all hover:border-[var(--border-strong)]"
               >
                 {!isStructural(t) && (
                   <TaskCheckbox
@@ -50,7 +50,7 @@ export default function InboxPage() {
                 {!isStructural(t) && <PriorityDot task={t} />}
                 <button className="min-w-0 flex-1 text-left" onClick={() => ui.selectTask(t.id)}>
                   <div className="truncate text-sm">{t.title || '(未命名草稿)'}</div>
-                  <div className="mt-0.5 flex items-center gap-1.5 text-[10px] text-muted/70">
+                  <div className="mt-0.5 flex items-center gap-1.5 text-micro text-muted/70">
                     {new Date(t.createdAt).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                     {t.tags.map((tid) => {
                       const tag = data.tags.find((x) => x.id === tid);
@@ -87,7 +87,7 @@ export default function InboxPage() {
               </div>
             ))}
 
-            <div className="pt-2 text-center text-[11px] text-muted/60">
+            <div className="pt-2 text-center text-micro text-muted/60">
               「升级为任务」后进入列表/四象限/导图 · 标题支持 #标签 !P0 ~45m @明天 语法(
               {(() => {
                 const p = parseCapture('#提示');

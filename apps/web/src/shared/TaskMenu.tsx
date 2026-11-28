@@ -17,7 +17,7 @@ const TIME_OPTIONS: { label: string; apply: (now: Date) => number | null }[] = [
 ];
 
 const itemCls =
-  'flex w-full cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm outline-none transition-colors text-foreground hover:bg-[color-mix(in_srgb,var(--accent-from)_14%,transparent)] focus-visible:bg-[var(--surface)] disabled:opacity-50';
+  'flex w-full cursor-pointer select-none items-center gap-2 rounded-[var(--radius-sm)] px-2.5 py-2 text-left text-sm outline-none transition-colors text-foreground hover:bg-[color-mix(in_srgb,var(--accent-from)_14%,transparent)] focus-visible:bg-[var(--surface)] disabled:opacity-50';
 
 function MenuItem({ children, onSelect, danger, onHover, disabled = false }: {
   disabled?: boolean;
@@ -181,7 +181,7 @@ export function TaskMenu() {
         onClick={(e) => e.stopPropagation()}
         onMouseLeave={scheduleCloseSub}
         aria-label="任务菜单"
-        className="glass-raised fixed max-h-[calc(100dvh-16px)] w-[232px] overflow-y-auto rounded-xl p-1.5 shadow-xl"
+        className="glass-raised fixed max-h-[calc(100dvh-16px)] w-[232px] overflow-y-auto rounded-[var(--radius-lg)] p-1 shadow-xl"
         style={{ left: x, top: y }}
       >
         <div className="flex flex-col">
@@ -201,7 +201,7 @@ export function TaskMenu() {
             <MenuItem disabled={busy || toTaskCount === 0} onHover={clearSub} onSelect={() => { void persistAction(() => { store.setTaskKinds(ids, 'todo'); }); }}>
               <CircleDot className="h-4 w-4 shrink-0" />转为 TODO 任务<span className="ml-auto text-xs text-muted">{toTaskCount} 项</span>
             </MenuItem>
-            {projectCount > 0 && <p className="px-2.5 py-1 text-[10px] text-muted">{projectCount} 个项目保留项目身份，不参与类型转换</p>}
+            {projectCount > 0 && <p className="px-2.5 py-1 text-micro text-muted">{projectCount} 个项目保留项目身份，不参与类型转换</p>}
           </>}
           {!project && !multi && <MenuItem disabled={busy}
             onHover={clearSub}
@@ -225,7 +225,7 @@ export function TaskMenu() {
             </>
           )}
           {multi && editableCount > 0 && (
-            <div className="truncate px-2.5 pb-0.5 text-[10px] text-[var(--accent-from)]">
+            <div className="truncate px-2.5 pb-0.5 text-micro text-[var(--accent-from)]">
               时间与优先级可设置 {editableCount} 项 Task
             </div>
           )}
@@ -259,7 +259,7 @@ export function TaskMenu() {
           onMouseEnter={cancelCloseSub}
           onMouseLeave={scheduleCloseSub}
           aria-label={sub === 'views' ? '跳转到视图' : undefined}
-          className={cn('glass-raised fixed z-50 max-h-[min(440px,calc(100dvh-16px))] overflow-y-auto rounded-xl p-1.5 shadow-xl', sub === 'views' ? 'w-56' : 'min-w-[176px]')}
+          className={cn('glass-raised fixed z-50 max-h-[min(440px,calc(100dvh-16px))] overflow-y-auto rounded-[var(--radius-lg)] p-1 shadow-xl', sub === 'views' ? 'w-56' : 'min-w-[176px]')}
           style={{ left: subPos.left, top: subPos.top }}
         >
           {sub === 'time' && (
@@ -294,14 +294,14 @@ export function TaskMenu() {
             </div>
           )}
           {sub === 'views' && <div className="flex flex-col">
-            <p className="px-2.5 py-1.5 text-[11px] text-muted">所属项目／任务分支</p>
+            <p className="px-2.5 py-1.5 text-micro text-muted">所属项目／任务分支</p>
             {TASK_VIEWS.map(({ key, label, icon: Icon }) => {
               const href = taskViewHref(data, task.id, key);
               return <MenuItem key={key} disabled={busy || !href} onSelect={() => { if (href) void goTo(href); }}><Icon size={14} />{label}</MenuItem>;
             })}
             <div className="my-1 h-px bg-[var(--border)]" />
             <MenuItem disabled={busy || !taskCurrentViewHref(data, task.id)} onSelect={() => { const href = taskCurrentViewHref(data, task.id); if (href) void goTo(href); }}>本周任务</MenuItem>
-            {data.settings.savedViews.length > 0 && <><div className="my-1 h-px bg-[var(--border)]" /><p className="px-2.5 py-1.5 text-[11px] text-muted">快捷视图</p></>}
+            {data.settings.savedViews.length > 0 && <><div className="my-1 h-px bg-[var(--border)]" /><p className="px-2.5 py-1.5 text-micro text-muted">快捷视图</p></>}
             {data.settings.savedViews.map(saved => {
               const href = taskSavedViewHref(data, task.id, saved);
               return <MenuItem key={saved.id} disabled={busy || !href} onSelect={() => { if (href) void goTo(href); }}><span className="truncate" title={href ? saved.name : `${saved.name}：不包含此节点的项目，或视图不支持文本节点`}>{saved.name}</span></MenuItem>;

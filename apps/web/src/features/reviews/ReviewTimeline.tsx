@@ -54,7 +54,7 @@ export function ReviewTimeline({ reviews }: { reviews: Review[] }) {
           <SegmentedTrigger value="weekly">周报</SegmentedTrigger>
         </SegmentedList>
       </Segmented>
-      <label className="flex h-9 min-w-0 flex-1 items-center gap-2 rounded-lg border border-[var(--border)] px-3 sm:ml-auto sm:max-w-xs">
+      <label className="flex h-9 min-w-0 flex-1 items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border)] px-3 sm:ml-auto sm:max-w-xs">
         <Search size={14} aria-hidden="true" className="shrink-0 text-muted" />
         <input aria-label="搜索时间线" type="search" value={search} onChange={event => update(filter, event.target.value)} placeholder="搜索日期、内容或解决办法" className="min-w-0 w-full bg-transparent text-xs outline-none placeholder:text-muted" />
       </label>
@@ -79,14 +79,14 @@ export function ReviewTimeline({ reviews }: { reviews: Review[] }) {
           const hasSnapshot = review.facts && (review.facts.completed.length > 0 || (review.facts.planned?.length ?? 0) > 0 || review.facts.pending.length > 0 || review.facts.focusMin > 0);
           return <li key={review.id} className="relative">
             <span aria-hidden="true" className={cn('absolute -left-[25px] top-6 h-2 w-2 rounded-full ring-4 ring-[var(--background)] sm:-left-[33px]', completed ? 'bg-[var(--accent-solid)]' : 'bg-[var(--muted-foreground)]')} />
-            <article aria-label={`${label} ${review.periodStart}`} className="min-w-0 rounded-xl border border-[var(--border)] bg-[var(--background)] p-4 sm:p-5">
+            <article aria-label={`${label} ${review.periodStart}`} className="min-w-0 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--background)] p-4 sm:p-5">
               <header className="flex flex-wrap items-center justify-between gap-3">
                 <Link to={detailHref(review)} aria-label={`查看${label} ${review.periodStart}`} className="group flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 rounded text-sm font-medium hover:text-[var(--accent-solid)]">
-                  <span className={cn('rounded px-1.5 py-0.5 text-[11px] font-normal', review.kind === 'weekly' ? 'bg-[color-mix(in_srgb,var(--accent-solid)_10%,transparent)] text-[var(--accent-solid)]' : 'bg-[var(--surface)] text-muted')}>{label}</span>
+                  <span className={cn('rounded px-1.5 py-0.5 text-micro font-normal', review.kind === 'weekly' ? 'bg-[color-mix(in_srgb,var(--accent-solid)_10%,transparent)] text-[var(--accent-solid)]' : 'bg-[var(--surface)] text-muted')}>{label}</span>
                   <span className="tabular-nums"><time dateTime={review.periodStart}>{review.periodStart}</time>{review.kind === 'weekly' && <> ～ <time dateTime={end}>{end}</time></>}</span>
                   <ArrowUpRight size={14} aria-hidden="true" className="shrink-0 text-muted group-hover:text-[var(--accent-solid)]" />
                 </Link>
-                <span className={cn('inline-flex items-center gap-1 text-[11px]', completed ? 'text-[var(--accent-solid)]' : 'text-muted')}>{completed ? <Check size={12} /> : <PencilLine size={12} />}{completed ? '已复盘' : '草稿'}</span>
+                <span className={cn('inline-flex items-center gap-1 text-micro', completed ? 'text-[var(--accent-solid)]' : 'text-muted')}>{completed ? <Check size={12} /> : <PencilLine size={12} />}{completed ? '已复盘' : '草稿'}</span>
               </header>
               {!!review.facts?.completed.length && <ul aria-label="已完成任务" className="mt-4 space-y-1 text-sm leading-6">
                 {review.facts.completed.slice(0, 3).map(task => <li key={task.id} className="flex min-w-0 items-start gap-2"><Check size={13} aria-hidden="true" className="mt-1.5 shrink-0 text-[var(--accent-solid)]" /><span className="break-words">{task.title}</span></li>)}
@@ -98,21 +98,21 @@ export function ReviewTimeline({ reviews }: { reviews: Review[] }) {
                 </div>}
                 {details.length > 0 && <dl className={cn('space-y-1.5 text-xs text-muted', review.highlights.trim() && 'mt-4 border-t border-[var(--border)] pt-3')}>
                   {details.map(section => <div key={section.title} className="flex min-w-0 items-baseline gap-2">
-                    <dt className="shrink-0 text-[11px]">{section.title}</dt>
+                    <dt className="shrink-0 text-micro">{section.title}</dt>
                     <dd className="min-w-0 flex-1 truncate">{section.text}</dd>
                   </div>)}
                 </dl>}
               </div> : <div className="mt-4 grid gap-4 sm:grid-cols-2">{sections.map(section => <div key={section.title} className="min-w-0">
-                <h4 className="text-[11px] text-muted">{section.title}</h4>
+                <h4 className="text-micro text-muted">{section.title}</h4>
                 <p className="mt-1 line-clamp-3 whitespace-pre-wrap break-words text-sm leading-6">{section.text}</p>
               </div>)}</div> : !hasSnapshot && <p className="mt-4 text-xs text-muted">尚未填写内容，点击日期继续编辑。</p>}
-              {completed && review.facts && <p className="mt-4 border-t border-[var(--border)] pt-3 text-[11px] text-muted">完成 {review.facts.completed.length} 项任务<span className="mx-2">·</span>专注 {fmtDuration(review.facts.focusMin)}</p>}
+              {completed && review.facts && <p className="mt-4 border-t border-[var(--border)] pt-3 text-micro text-muted">完成 {review.facts.completed.length} 项任务<span className="mx-2">·</span>专注 {fmtDuration(review.facts.focusMin)}</p>}
             </article>
           </li>;
         })}
       </ol>
     </section>)}
-    {!count && <div className="rounded-xl border border-dashed border-[var(--border)] px-5 py-14 text-center">
+    {!count && <div className="rounded-[var(--radius-lg)] border border-dashed border-[var(--border)] px-5 py-14 text-center">
       <BookOpen size={24} aria-hidden="true" className="mx-auto mb-4 text-muted" />
       <p className="text-sm">{reviews.length ? '没有匹配的复盘' : '时间线从第一篇复盘开始'}</p>
       <p className="mt-2 text-xs leading-5 text-muted">{reviews.length ? '试试其他关键词，或切换日报、周报筛选。' : '写下日报或周报后，就能在这里按时间回看。'}</p>

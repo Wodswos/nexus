@@ -2,7 +2,7 @@ import * as React from 'react';
 import { cn } from '../utils';
 
 export function Card({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn('glass rounded-2xl', className)} {...props} />;
+  return <div className={cn('glass rounded-[var(--radius-md)]', className)} {...props} />;
 }
 
 export function CardHeader({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {

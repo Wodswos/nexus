@@ -49,7 +49,7 @@ export function AgentQuestionForm({
               key={option.label}
               type="button"
               aria-pressed={(choices[q.id] ?? []).includes(option.label)}
-              className="flex w-full items-start gap-2 rounded-md border border-[var(--border)] px-3 py-2 text-left aria-pressed:border-[var(--accent-solid)] aria-pressed:bg-[var(--surface-raised)]"
+              className="flex w-full items-start gap-2 rounded-[var(--radius-sm)] border border-[var(--border)] px-3 py-2 text-left aria-pressed:border-[var(--accent-solid)] aria-pressed:bg-[var(--surface-raised)]"
               onClick={() => {
                 setChoices((old) => ({
                   ...old,
@@ -85,7 +85,7 @@ export function AgentQuestionForm({
               setCustom((old) => ({ ...old, [q.id]: event.target.value }));
               if (!q.multiSelect) setChoices((old) => ({ ...old, [q.id]: [] }));
             }}
-            className="w-full rounded-md border border-[var(--border)] bg-transparent px-3 py-2 text-sm"
+            className="w-full rounded-[var(--radius-sm)] border border-[var(--border)] bg-transparent px-3 py-2 text-sm"
           />
         </fieldset>
       ))}

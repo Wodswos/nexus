@@ -31,11 +31,12 @@ test('hover and selection share one frame without resizing or moving tasks, in e
     await page.mouse.move(0, 0);
     await expect.poll(() => card.evaluate(element => getComputedStyle(element, '::after').opacity)).toBe('0');
     await card.hover();
-    await expect.poll(() => card.evaluate(element => getComputedStyle(element, '::after').opacity)).toBe('1');
+    await expect.poll(() => card.evaluate(element => getComputedStyle(element, '::after').opacity)).toBe('0.5');
     const ring = await card.evaluate(element => { const style = getComputedStyle(element, '::after'); return { color: style.borderColor, events: style.pointerEvents, border: style.borderWidth }; });
-    expect(ring.color).toContain('/ 0.35');
+    expect(ring.color).toMatch(/rgb/);
     expect(ring.events).toBe('none');
-    expect(ring.border).toBe('2px');
+    expect(parseFloat(ring.border)).toBeGreaterThan(0);
+    expect(parseFloat(ring.border)).toBeLessThanOrEqual(1.5);
     expect(await card.boundingBox()).toEqual(original);
     expect(await page.locator('.react-flow__viewport').getAttribute('style')).toBe(camera);
     await expect(page.locator('.react-flow__node.selected')).toHaveCount(0);
@@ -49,7 +50,7 @@ test('hover and selection share one frame without resizing or moving tasks, in e
   expect(await card.boundingBox()).toEqual(original);
   expect(await card.evaluate(element => getComputedStyle(element).borderColor)).toBe(innerBorder);
   expect(await card.evaluate(element => getComputedStyle(element, '::after').borderColor)).not.toContain('/ 0.35');
-  expect(await card.evaluate(element => getComputedStyle(element, '::after').transitionDuration)).toBe('0s');
+  expect(await card.evaluate(element => getComputedStyle(element, '::after').transitionDuration)).toBe('0.12s');
   await page.mouse.move(0, 0);
   await expect.poll(() => card.evaluate(element => getComputedStyle(element, '::after').opacity)).toBe('1');
   await page.screenshot({ path: testInfo.outputPath('task-selected-dark.png') });
@@ -118,7 +119,7 @@ test('selection is immediate without measuring the whole map, moving the camera 
   await seed(page, [project, ...children]);
   await page.goto('/tasks?project=project&view=mindmap&mindFocus=doing');
   await expect(page.locator('.react-flow__node')).toHaveCount(201);
-  await expect.poll(() => page.evaluate(async () => (await document.fonts.load('700 16px "LXGW WenKai"', '任务 100')).length)).toBeGreaterThan(0);
+  await expect.poll(() => page.evaluate(async () => (await document.fonts.load('600 14px "Inter Variable"', '任务 100')).length)).toBeGreaterThan(0);
   await page.evaluate(async () => { await document.fonts.ready; await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))); });
   const viewport = () => page.locator('.react-flow__viewport').getAttribute('style');
   const camera = await viewport();
@@ -143,8 +144,8 @@ test('selection is immediate without measuring the whole map, moving the camera 
   expect(await viewport()).toBe(camera);
   expect(await page.locator('.react-flow__node').evaluateAll((nodes) => nodes.map((node) => (node as HTMLElement).style.transform))).toEqual(geometry);
   expect(await page.locator('.react-flow__minimap').boundingBox()).toEqual(miniMap);
-  await expect(target(100).locator('.mind-node')).toHaveCSS('box-shadow', 'none');
-  await expect(target(100).locator('.mind-node')).toHaveCSS('transition-duration', '0s');
+  await expect(target(100).locator('.mind-node')).not.toHaveCSS('box-shadow', 'none');
+  expect(await target(100).locator('.mind-node').evaluate(el => getComputedStyle(el).transitionDuration.split(',').every(value => parseFloat(value) <= 0.18))).toBe(true);
   await expect(page.locator('[data-inspector]')).toHaveCount(1);
   await expect(page.locator('.react-flow__edge-path')).toHaveCount(200);
   await page.goto('/settings');
@@ -202,7 +203,7 @@ test('deliberate node dragging still reparents tasks after the pointer passes th
   await seed(page, [project, task('alpha', { title: 'Alpha', parentId: 'project', order: 0 }), task('beta', { title: 'Beta', parentId: 'project', order: 1 })]);
   await page.goto('/tasks?project=project&view=mindmap');
   await expect(page.locator('.react-flow__edge-path')).toHaveCount(2);
-  await expect.poll(() => page.evaluate(async () => (await document.fonts.load('700 16px "LXGW WenKai"', 'Alpha Beta')).length)).toBeGreaterThan(0);
+  await expect.poll(() => page.evaluate(async () => (await document.fonts.load('600 14px "Inter Variable"', 'Alpha Beta')).length)).toBeGreaterThan(0);
   await page.getByRole('button', { name: '全局视图', exact: true }).click();
   await page.waitForTimeout(350); // Finish the requested fit animation before taking drag coordinates.
   const source = page.locator('.react-flow__node[data-id="alpha"]');

@@ -63,21 +63,21 @@ export default function GalleryPage() {
       </div>
 
       <div
-        className="rounded-2xl border p-4 transition-all"
+        className="rounded-[var(--radius-lg)] border p-4 transition-all"
         style={{ borderColor: `color-mix(in_srgb, ${g.color} 40%, transparent)`, background: `color-mix(in_srgb, ${g.color} 6%, transparent)` }}
       >
         <div className="flex flex-wrap items-center gap-2">
           <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: g.color }} />
           <span className="text-sm font-semibold">{g.title}</span>
           <Badge>{g.domain}</Badge>
-          <span className="text-[10px] text-muted">{nodeCount} 个节点</span>
+          <span className="text-micro text-muted">{nodeCount} 个节点</span>
         </div>
         <p className="mt-2 text-sm leading-relaxed text-muted">{g.description}</p>
         <div className="mt-3 flex gap-2">
           <button
             onClick={importRoadmap}
             disabled={alreadyImported}
-            className="inline-flex items-center gap-1.5 rounded-full gradient-bg px-4 py-1.5 text-sm text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-full gradient-bg px-4 py-1.5 text-sm text-inverse transition-opacity disabled:cursor-not-allowed disabled:opacity-50"
           >
             {alreadyImported ? `已导入到我的任务 (${nodeCount})` : '导入到我的任务'}
           </button>
@@ -95,10 +95,10 @@ export default function GalleryPage() {
         )}
       </div>
 
-      <div className="rounded-2xl border border-[var(--border)] p-4">
+      <div className="rounded-[var(--radius-lg)] border border-[var(--border)] p-4">
         <div className="mb-2 flex items-center justify-between">
           <h2 className="text-xs font-semibold uppercase tracking-widest text-muted">内容预览</h2>
-          <span className="text-[10px] text-muted/60">章节 → 条目,含预估时长</span>
+          <span className="text-micro text-muted/60">章节 → 条目,含预估时长</span>
         </div>
         <div className="flex flex-col">
           {g.tree.map((node) => <TreeNode key={node.title} node={node} depth={0} />)}

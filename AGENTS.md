@@ -1,5 +1,7 @@
 # 项目协作约定
 
+- 所有 UI 改动必须遵守 `docs/UI_ENGINEERING_SPEC.md`；改版按 `docs/UI_REFACTOR_PLAYBOOK.md` 的 P0 → P1 → P2 顺序执行。颜色、字号、阴影、间距与交互状态使用共享语义 Token，提交前运行 `pnpm lint:ui`，并按规范执行视觉审查清单。
+
 - 用户已明确授权：以后若没有额外说明，每次改动完成并通过必要检查后，都要同步更新线上部署，无需再次确认。
 - 当前线上入口为 `http://115.190.3.4:30090`，通过 `docker compose --env-file .env.local` 管理 `cortex` 服务；保留现有来源与 Cookie 配置，不输出配置中的敏感信息。
 - 部署先构建镜像、保留可回滚镜像，再按 `docs/RUNBOOK.md` 备份完整 `data/` 并替换容器。不得清空数据卷或浏览器数据库。

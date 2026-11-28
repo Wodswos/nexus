@@ -21,7 +21,7 @@ export function SaveViewButton({ view, trigger, restoreFocus }: { view: TaskView
       setInitial({ id: '', name: `${project ? project.title + ' · ' : ''}${filters.priority === 'high' ? '高优' : filters.priority === 'unreviewed' ? '待分级' : focusName || scopeName}${TASK_VIEWS.find((item) => item.key === current)!.label}`.slice(0, 60), view: current, scope: range.scope, projectId: params.get('project'), work: filters.focus, taskStatus: filters.status, taskPriority: filters.priority, taskSort: readTaskSort(params), taskTag: filters.tagId, ...(range.scope === 'custom' ? { from: dayKeyOf(range.start), to: dayKeyOf(addDays(range.start, range.days - 1)) } : {}) });
     };
   return <>
-    {trigger ? trigger(open) : <button aria-label="保存为快捷视图" title="保存为快捷视图" onClick={open} className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-muted hover:bg-[var(--surface)] hover:text-foreground"><BookmarkPlus size={15} /></button>}
+    {trigger ? trigger(open) : <button aria-label="保存为快捷视图" title="保存为快捷视图" onClick={open} className="grid h-8 w-8 shrink-0 place-items-center rounded-[var(--radius-sm)] text-muted hover:bg-[var(--surface)] hover:text-foreground"><BookmarkPlus size={15} /></button>}
     {initial && <SaveViewDialog initial={initial} onClose={() => setInitial(null)} restoreFocus={restoreFocus} />}
   </>;
 }

@@ -80,11 +80,11 @@ export default function FocusPage() {
             <ProgressRing progress={progress} size={300} paused={timer.status !== 'running'} />
             <div className="absolute inset-0 flex flex-col items-center justify-center">
               <div className="text-5xl font-bold tabular">{mm}:{ss}</div>
-              <div className="mt-1 text-[11px] text-muted">
+              <div className="mt-1 text-micro text-muted">
                 {timer.mode === 'focus' ? `专注 ${timer.plannedMin}m` : timer.mode === 'short-break' ? '短休息' : '长休息'}
                 {timer.status === 'running' && <span className="ml-1 animate-breathe">·</span>}
               </div>
-              {timer.distractions > 0 && <div className="mt-1 text-[10px] text-[var(--warning)]">分心 {timer.distractions} 次</div>}
+              {timer.distractions > 0 && <div className="mt-1 text-micro text-[var(--warning)]">分心 {timer.distractions} 次</div>}
             </div>
           </div>
 
@@ -132,7 +132,7 @@ export default function FocusPage() {
                 }}
                 className={cn(
                   'rounded-full px-3 py-1 text-xs transition-all',
-                  timer.plannedMin === m ? 'gradient-bg text-white' : 'glass text-muted hover:text-foreground',
+                  timer.plannedMin === m ? 'gradient-bg text-inverse' : 'glass text-muted hover:text-foreground',
                 )}
               >
                 {m} 分钟
@@ -154,7 +154,7 @@ export default function FocusPage() {
                 onClick={() => useTimer.setState({ noise: n.key })}
                 className={cn(
                   'inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs',
-                  timer.noise === n.key ? 'gradient-bg text-white' : 'glass text-muted hover:text-foreground',
+                  timer.noise === n.key ? 'gradient-bg text-inverse' : 'glass text-muted hover:text-foreground',
                 )}
               >
                 {n.key === 'off' ? <VolumeX className="h-3 w-3" /> : <Volume2 className="h-3 w-3" />}
@@ -167,25 +167,25 @@ export default function FocusPage() {
         {/* 统计区 */}
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-2">
-            <div className="glass rounded-xl p-3">
-              <div className="text-[10px] text-muted">今日专注</div>
+            <div className="glass rounded-[var(--radius-lg)] p-3">
+              <div className="text-micro text-muted">今日专注</div>
               <div className="mt-1 text-xl font-semibold tabular">{fmtDuration(stats.todayMin)}</div>
             </div>
-            <div className="glass rounded-xl p-3">
-              <div className="text-[10px] text-muted">今日番茄</div>
+            <div className="glass rounded-[var(--radius-lg)] p-3">
+              <div className="text-micro text-muted">今日番茄</div>
               <div className="mt-1 text-xl font-semibold tabular">🍅 {todayCount}</div>
             </div>
-            <div className="glass rounded-xl p-3">
-              <div className="flex items-center gap-1 text-[10px] text-muted"><Flame className="h-3 w-3 text-[var(--warning)]" />连续</div>
+            <div className="glass rounded-[var(--radius-lg)] p-3">
+              <div className="flex items-center gap-1 text-micro text-muted"><Flame className="h-3 w-3 text-[var(--warning)]" />连续</div>
               <div className="mt-1 text-xl font-semibold tabular">{stats.streakDays} 天</div>
             </div>
-            <div className="glass rounded-xl p-3">
-              <div className="flex items-center gap-1 text-[10px] text-muted"><Target className="h-3 w-3" />累计</div>
+            <div className="glass rounded-[var(--radius-lg)] p-3">
+              <div className="flex items-center gap-1 text-micro text-muted"><Target className="h-3 w-3" />累计</div>
               <div className="mt-1 text-xl font-semibold tabular">{fmtDuration(stats.totalMin)}</div>
             </div>
           </div>
 
-          <div className="glass rounded-2xl p-4">
+          <div className="glass rounded-[var(--radius-lg)] p-4">
             <div className="mb-2 text-xs font-semibold text-muted">近 7 天</div>
             <div className="h-32">
               <ResponsiveContainer width="100%" height="100%">
@@ -202,7 +202,7 @@ export default function FocusPage() {
           </div>
 
           {/* 今日习惯迷你条 */}
-          <div className="glass rounded-2xl p-4">
+          <div className="glass rounded-[var(--radius-lg)] p-4">
             <div className="mb-2 text-xs font-semibold text-muted">今日习惯</div>
             <HabitMini />
           </div>
@@ -235,7 +235,7 @@ function ProgressRing({ progress, size, paused }: { progress: number; size: numb
         strokeDasharray={c}
         strokeDashoffset={c * (1 - Math.min(1, Math.max(0, progress)))}
         transform={`rotate(-90 ${size / 2} ${size / 2})`}
-        style={{ transition: 'stroke-dashoffset 0.4s linear', filter: 'drop-shadow(0 0 6px color-mix(in srgb, var(--accent-from) 60%, transparent))' }}
+        style={{ transition: 'stroke-dashoffset var(--duration-move) var(--ease-ui)' }}
       />
       {/* 外圈装饰虚线 */}
       <circle
@@ -268,7 +268,7 @@ function HabitMini() {
             key={h.id}
             onClick={() => store.logHabit(h.id, today, done ? -1 : 1, h.targetPerDay ?? 1)}
             className={cn(
-              'flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-xs transition-all',
+              'flex w-full items-center gap-2 rounded-[var(--radius-md)] px-2 py-1.5 text-xs transition-all',
               done ? 'text-[var(--success)]' : 'text-muted hover:text-foreground',
             )}
           >

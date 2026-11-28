@@ -22,7 +22,7 @@ function foldSections() {
   };
 }
 export const MarkdownDocument = memo(function MarkdownDocument({ text }: { text: string }) {
-  return <div className="task-markdown break-words text-[14px] leading-7 [overflow-wrap:anywhere]">
+  return <div className="task-markdown break-words text-base leading-7 [overflow-wrap:anywhere]">
     {!text ? <p className="text-muted">暂无正文</p> : <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[foldSections]} components={{
       a: ({ node: _node, ...props }) => <a {...props} target="_blank" rel="noopener noreferrer" />,
       img: ({ src, alt }) => <a href={src} target="_blank" rel="noopener noreferrer">{alt || '查看图片'}</a>,
